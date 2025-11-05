@@ -31,8 +31,222 @@
 
   <title>sonalyze_frontend</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --loader-background: #020617;
+      --loader-text: #e2e8f0;
+      --loader-accent: #38bdf8;
+      --loader-shadow: rgba(15, 23, 42, 0.45);
+      --loader-spinner-base: rgba(255, 255, 255, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.preload {
+      background-color: var(--loader-background);
+      color: var(--loader-text);
+      transition: background-color 200ms ease, color 200ms ease;
+    }
+
+    #loading-container {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      text-align: center;
+      pointer-events: none;
+      background: var(--loader-background);
+      transition: opacity 200ms ease;
+      z-index: 9999;
+    }
+
+    #loading-container.hidden {
+      opacity: 0;
+    }
+
+    .loading-spinner {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 6px solid var(--loader-spinner-base);
+      border-top-color: var(--loader-accent);
+      animation: spin 1.1s linear infinite;
+      box-shadow: 0 0 24px var(--loader-shadow);
+    }
+
+    .loading-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .loading-subtitle {
+      max-width: 320px;
+      font-size: 0.875rem;
+      color: var(--loader-text);
+      opacity: 0.75;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="preload">
+  <div id="loading-container" role="status" aria-live="polite">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p class="loading-title"></p>
+    <p class="loading-subtitle"></p>
+  </div>
+
+  <noscript>
+    <div style="padding: 2rem; text-align: center;">
+      JavaScript is required to run Sonalyze on the web. Please enable JavaScript in your browser settings.
+    </div>
+  </noscript>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const body = document.body;
+      const loader = document.getElementById('loading-container');
+      const loaderTitle = document.querySelector('.loading-title');
+      const loaderSubtitle = document.querySelector('.loading-subtitle');
+
+      const resolveHtmlLang = (code) => {
+        if (typeof code !== 'string') {
+          return 'en';
+        }
+        const normalized = code.toLowerCase();
+        if (normalized === 'us') {
+          return 'en';
+        }
+        return normalized;
+      };
+
+      const setLoadingMessage = (message) => {
+        if (!loaderSubtitle) {
+          return;
+        }
+        loaderSubtitle.textContent = typeof message === 'string' ? message : '';
+      };
+
+      const setLoadingTitle = (title) => {
+        if (!loaderTitle) {
+          return;
+        }
+        loaderTitle.textContent = typeof title === 'string' ? title : '';
+      };
+
+      const applyLoaderPalette = (palette, themeKey) => {
+        if (palette && typeof palette === 'object') {
+          const entries = {
+            '--loader-background': palette.background,
+            '--loader-text': palette.text,
+            '--loader-accent': palette.accent,
+            '--loader-shadow': palette.shadow,
+            '--loader-spinner-base': palette.spinner_base
+          };
+
+          Object.entries(entries).forEach(([cssVar, value]) => {
+            if (typeof value === 'string' && value.trim()) {
+              root.style.setProperty(cssVar, value);
+            }
+          });
+        }
+
+        if (themeKey) {
+          root.style.setProperty('color-scheme', themeKey === 'light' ? 'light' : 'dark');
+        }
+      };
+
+      const fetchJson = (path) => fetch(path, { cache: 'no-cache' }).then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load ' + path + ': ' + response.status);
+        }
+        return response.json();
+      });
+
+      const applyTheme = (themeKey) => {
+        return fetchJson('assets/lib/l10n/themes/' + themeKey + '.json')
+          .then((themeData) => {
+            applyLoaderPalette(themeData?.loader, themeKey);
+          })
+          .catch((error) => {
+            console.warn(error);
+          });
+      };
+
+      const applyLanguage = (languageKey) => {
+        const normalized = /^[a-z]{2}$/i.test(languageKey) ? languageKey.toLowerCase() : 'us';
+        root.setAttribute('lang', resolveHtmlLang(normalized));
+        setLoadingTitle('');
+        setLoadingMessage('');
+
+        return fetchJson('assets/lib/l10n/translations/' + normalized + '.json')
+          .then((translations) => {
+            const title = translations?.app?.loading_title;
+            if (typeof title === 'string' && title.trim()) {
+              setLoadingTitle(title);
+            }
+
+            const message = translations?.app?.loading_message;
+            if (typeof message === 'string' && message.trim()) {
+              setLoadingMessage(message);
+            }
+          })
+          .catch((error) => {
+            console.warn(error);
+            setLoadingTitle('');
+            setLoadingMessage('');
+          });
+      };
+
+      // Load configuration so the preload matches the selected theme and language.
+      fetchJson('assets/lib/l10n/configuration/default_configuration.json')
+        .then((config) => {
+          const themeKey = String(config?.defaultTheme || 'dark').toLowerCase();
+          const resolvedTheme = themeKey === 'light' ? 'light' : 'dark';
+
+          const languageKey = String(config?.defaultLanguage || 'us').toLowerCase();
+          const resolvedLanguage = /^[a-z]{2}$/i.test(languageKey) ? languageKey : 'us';
+
+          return Promise.all([
+            applyTheme(resolvedTheme),
+            applyLanguage(resolvedLanguage)
+          ]);
+        })
+        .catch((error) => {
+          console.warn(error);
+          setLoadingTitle('');
+          setLoadingMessage('');
+        });
+
+      // Hide the loader once Flutter paints its first frame.
+      window.addEventListener('flutter-first-frame', () => {
+        body.classList.remove('preload');
+        if (loader) {
+          loader.classList.add('hidden');
+          setTimeout(() => loader.remove(), 300);
+        }
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
