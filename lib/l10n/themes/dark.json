@@ -11,6 +11,13 @@
         "error": "#F87171",
         "on_error": "#0F172A"
     },
+    "loader": {
+        "background": "#020617",
+        "text": "#E2E8F0",
+        "accent": "#38BDF8",
+        "spinner_base": "#1E293B",
+        "shadow": "rgba(15, 23, 42, 0.45)"
+    },
     "landing_page": {
         "background_gradient": ["#020617", "#0F172A"],
         "hero_badge_background": "#1E293B",

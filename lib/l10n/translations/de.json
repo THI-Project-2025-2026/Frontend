@@ -1,4 +1,8 @@
 {
+    "app": {
+        "loading_title": "Sonalyze wird geladen",
+        "loading_message": "Akustische Arbeitsumgebung wird vorbereitet..."
+    },
     "landing_page": {
         "hero": {
             "badge": "Akustische Intelligenz",
