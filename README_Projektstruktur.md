@@ -1,7 +1,7 @@
 
 ## Projektstruktur (Kurzbeschreibung)
 
-Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts. Aufgeführt werden nur die README-Dateien im Projekt-Root, die `pubspec.yaml`-Datei sowie die Verzeichnisse `lib/` und `assets/` (rekursiv) mit einer kurzen Erklärung, welche Artefakte dort abgelegt werden sollten.
+Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts. Aufgeführt werden die README-Dateien im Projekt-Root, die `pubspec.yaml`-Datei sowie die Verzeichnisse `lib/` und – sofern vorhanden – `assets/` (rekursiv) mit einer kurzen Erklärung, welche Artefakte dort abgelegt werden.
 
 ## Projekt - Verzeichnisbaum (relevant für dieses README)
 
@@ -10,98 +10,118 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 ├── README.md
 ├── README_Projektstruktur.md
 ├── pubspec.yaml
-├── lib/
-│   ├── main.dart
-│   ├── blocs/
-│   ├── cubits/
-│   ├── services/
-│   ├── utilities/
-│   └── views/
-└── assets/
-	└── icons/
+├── .github/
+│   └── copilot-instructions.md
+└── lib/
+		├── main.dart
+		├── blocs/
+		│   ├── json_hot_reload/
+		│   │   ├── json_hot_reload_bloc.dart
+		│   │   ├── json_hot_reload_event.dart
+		│   │   └── json_hot_reload_state.dart
+		│   ├── landing_page/
+		│   │   ├── landing_page_bloc.dart
+		│   │   ├── landing_page_event.dart
+		│   │   └── landing_page_state.dart
+		│   ├── measurement_page/
+		│   │   ├── measurement_page_bloc.dart
+		│   │   ├── measurement_page_event.dart
+		│   │   └── measurement_page_state.dart
+		│   └── simulation_page/
+		│       ├── simulation_page_bloc.dart
+		│       ├── simulation_page_event.dart
+		│       └── simulation_page_state.dart
+		├── constants/
+		│   └── app_constants.dart
+		├── l10n/
+		│   ├── configuration/
+		│   │   └── default_configuration.json
+		│   ├── json_parser.dart
+		│   ├── themes/
+		│   │   ├── dark.json
+		│   │   └── light.json
+		│   └── translations/
+		│       ├── de.json
+		│       └── us.json
+		├── utilities/
+		│   └── ui/
+		│       └── common/
+		│           ├── sonalyze_accordion_tile.dart
+		│           ├── sonalyze_button.dart
+		│           └── sonalyze_surface.dart
+		└── views/
+				├── landing_page/
+				│   └── landing_page.dart
+				├── measurement_page/
+				│   └── measurement_page.dart
+				└── simulation_page/
+						└── simulation_page.dart
 ```
+
+> Hinweis: Ein dediziertes `assets/`-Verzeichnis ist derzeit nicht angelegt. Sobald statische Ressourcen hinzukommen, sollten sie dort strukturiert werden (siehe Abschnitt „`assets/` (statische Ressourcen)“).
 
 ## Root-Dateien
 
 - `README.md` — Allgemeine Projekt-Informationen, How-to, Entwicklerhinweise.
 - `README_Projektstruktur.md` — Dieses Dokument: Detaillierte Beschreibung der Ordnerstruktur.
 - `pubspec.yaml` — Abhängigkeiten, Assets-Registrierung, App-Metadaten (App-Name, Version, Fonts usw.).
+- `.github/copilot-instructions.md` — Handlungsanweisungen für AI-Coding-Agents (Coding-Guidelines, Projekt-Kontext).
 
 ## `lib/` (Quellcode)
 
-In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuelle Verzeichnisstruktur ist:
-
-- lib/
-	- blocs/
-	- cubits/
-	- main.dart
-	- services/
-	- utilities
-	- views/
-
-Erklärung der einzelnen Ordner/Dateien:
+In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuelle Verzeichnisstruktur ist oben als Baum dargestellt. Die wichtigsten Ordner im Detail:
 
 - `main.dart`
-	- Einstiegspunkt der App. Initialisiert Services, Themes, Routen und startet die App mit `runApp()`.
+	- Einstiegspunkt der App. Stellt sicher, dass `AppConstants.initialize()` ausgeführt wird und registriert die Routen (`/`, `/simulation`, `/measurement`).
 
 - `blocs/`
-	- Enthält BLoC-Klassen (Business Logic Components) für komplexere Zustandsmaschinen und event-getriebene Logik. Hier kommen Events, States und BLoC-Implementierungen hin.
-	- Typische Inhalte: `auth_bloc.dart`, `settings_bloc.dart`, event-/state-definitionen und ggf. `bloc_observer`-Konfiguration.
+	- Feature-spezifische BLoCs.
+	- `json_hot_reload/` — Beobachtet die JSON-Konfigurationsdateien und lädt sie bei Änderungen im Desktop-Modus nach.
+	- `landing_page/` — Steuert Demo-Inhalte der Landing Page (Feature-Rotation, FAQ, Kontaktformular-Simulation).
+	- `measurement_page/` — Simuliert Lobbys, Geräte und Telemetrie der Measurement Page.
+	- `simulation_page/` — Verarbeitet Raumparameter, Presets und Möbelplatzierungen für die Simulation.
 
-- `cubits/`
-	- Für einfachere State-Management-Fälle, die sich gut mit Cubits abbilden lassen (leichtere Alternative zu vollständigen BLoCs).
-	- Typische Inhalte: `theme_cubit.dart`, `locale_cubit.dart`, `simple_form_cubit.dart`.
+- `constants/`
+	- `app_constants.dart` — Kapselt den Zugriff auf Konfigurations-, Theme- und Übersetzungsdaten.
 
-- `services/`
-	- Klassen, die externe Dienste kapseln: API-Clients, Repositories, Datenbanken, lokale Storage-Adapter, Auth-Provider, Push-Notification-Wrapper, etc.
-	- Trennung von Schnittstellen (abstract classes) und Implementierungen ist empfohlen, um Testbarkeit zu erhöhen.
+- `l10n/`
+	- `json_parser.dart` — Hilfsklasse zum dynamischen Laden/Mergen der JSON-Dateien.
+	- `configuration/` — Standardkonfigurationen (`default_configuration.json`).
+	- `themes/` — Theme-Dateien (`dark.json`, `light.json`).
+	- `translations/` — Sprachressourcen (`de.json`, `us.json`).
 
-- `utilities/`
-	- Allgemeine Hilfsfunktionen, Extensions, Konstanten, Enums und kleine Helper-Klassen. Beispiele: `date_utils.dart`, `validators.dart`, `app_constants.dart`, `extensions.dart`.
+- `utilities/ui/common/`
+	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) für ein konsistentes Erscheinungsbild.
 
 - `views/`
-	- Alle UI-Bildschirme (Screens) und größere Widgets. Hier können weitere Unterordner wie `screens/`, `widgets/` oder `components/` angelegt werden.
-	- Empfehlungen:
-		- `views/screens/` → einzelne Seiten (z. B. `login_screen.dart`, `home_screen.dart`).
-		- `views/widgets/` → wiederverwendbare UI-Komponenten (z. B. `primary_button.dart`, `custom_appbar.dart`).
-
-Hinweise zur Organisation:
-
-- Behalte eine klare Trennung zwischen Präsentation (UI in `views/`), Logik (in `blocs/`/`cubits/`) und Datenzugriff/Services (`services/`).
-- Module/Feature-Ordner (feature-first) sind optional: Bei wachsendem Projekt kann es sinnvoll sein, nach Feature zu strukturieren (z. B. `lib/features/auth/...`).
+	- Feature-spezifische Screens als Widgets.
+	- `landing_page/landing_page.dart` — Komplettes Landing-Page-Layout mit BLoC-Anbindung.
+	- `measurement_page/measurement_page.dart` — Screens & Komponenten für Messungs-Workflows.
+	- `simulation_page/simulation_page.dart` — UI für die akustische Simulation (Konfigurator, Grid, Charts).
 
 ## `assets/` (statische Ressourcen)
 
-In `assets/` liegen alle statischen Ressourcen der App (Bilder, Icons, Schriftarten, Lokalisationsdateien, etc.). Aktueller Inhalt:
+Ein physisches `assets/`-Verzeichnis ist aktuell nicht vorhanden. Sobald Assets benötigt werden, sollte folgende Struktur als Leitlinie dienen:
 
-- assets/
-	- icons/
-
-Was in `assets/` gehört und wie es zu strukturieren ist:
-
-- `icons/` — App-Icons, Launcher-Icons, SVG- oder PNG-Icons, die in der UI verwendet werden.
-- `images/` (empfohlen) — Screenshots, Hintergrundbilder, illustrative Grafiken. Nutze Unterordner wie `images/backgrounds/` oder `images/onboarding/`.
-- `fonts/` — Benutzerdefinierte Schriftarten (bei Verwendung diese in `pubspec.yaml` registrieren).
-- `svgs/` — Vektor-Icons im SVG-Format (bei Nutzung entsprechender Packages wie `flutter_svg`).
-- `locales/` oder `i18n/` — Übersetzungsdateien (z. B. JSON/ARB) für die Internationalisierung.
+- `icons/` — App-Icons, Launcher-Icons, SVG- oder PNG-Icons.
+- `images/` — Hintergrundbilder oder Illustrationen.
+- `fonts/` — Benutzerdefinierte Schriftarten (Registrierung in `pubspec.yaml` nicht vergessen).
+- `locales/` oder `i18n/` — Weitere Übersetzungsdateien (falls nicht über `lib/l10n/` abgewickelt).
 
 Gute Praktiken für `assets/`:
 
-- Organisiere Assets nach Typ und Zweck (z. B. `icons/`, `images/`, `fonts/`, `locales/`).
-- Trage alle genutzten Assets in `pubspec.yaml` unter `flutter:` → `assets:` bzw. `fonts:` ein, damit Flutter sie in die App-Builds aufnimmt.
-- Vermeide große, unübersichtliche Ordner; nutze sprechende Dateinamen und Unterordner.
-- Optional: eine `assets/README.md` für Team-Konventionen (Benennung, Formate, Auflösung, Optimierungsregeln) anlegen.
+- Assets in `pubspec.yaml` unter `flutter:` → `assets:` bzw. `fonts:` registrieren.
+- Ordner klar nach Zweck trennen und sprechende Dateinamen vergeben.
+- Bilddateien optimieren (Kompression, Auflösung) bevor sie eingecheckt werden.
 
 ## Kurze Checkliste für Entwickler
 
-- Neue Bilder/Fonts → in `assets/` ablegen und `pubspec.yaml` aktualisieren.
-- Neue State-Logik:
-	- komplexe/Event-getriebene → `blocs/`
-	- einfache Zustände → `cubits/`
-- API-/Datenzugriffscode → `services/`
--- UI-Komponenten → `views/` (bei wiederverwendbaren Komponenten in `views/widgets/`).
+- Neue JSON-Konfigurationen oder Übersetzungen → in `lib/l10n/` ablegen und ggf. `JsonHotReloadBloc` berücksichtigen.
+- Neue State-Logik → passendes Feature unter `lib/blocs/` erweitern.
+- UI-Erweiterungen → in den jeweiligen `lib/views/<feature>/`-Ordnern oder als wiederverwendbare Komponenten unter `lib/utilities/ui/common/` ergänzen.
+- Assets hinzufügen → `assets/` anlegen/strukturieren und `pubspec.yaml` aktualisieren.
 
 ## Abschluss
 
-Dieses README beschreibt die aktuelle, einfache Struktur des Projekts. Bei wachsendem Projektumfang kann eine Feature-basiere Struktur sinnvoll sein. Bei Fragen zur Konvention oder beim Umstrukturieren bitte im Team abstimmen.
+Dieses README bildet den aktuellen Stand der Projektstruktur ab. Bitte abgestimmte Änderungen hier dokumentieren, damit das Team sowie AI-Agents stets denselben Überblick besitzen.
 
