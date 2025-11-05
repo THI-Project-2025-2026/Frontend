@@ -1,0 +1,255 @@
+{
+    "landing_page": {
+        "hero": {
+            "badge": "Akustische Intelligenz",
+            "title": "Verstehe den Klang jedes Raums",
+            "subtitle": "Sonalyze verwandelt rohe Akustikaufnahmen in verwertbare Raum-Insights für Architektinnen, Audio Engineers und Forschende.",
+            "primary_cta": "Simulation starten",
+            "secondary_cta": "Messwerkzeuge ansehen"
+        },
+        "metrics": {
+            "title": "Verlässliche Akustikdaten",
+            "items": {
+                "0": {
+                    "label": "Profilierte Räume",
+                    "value": "1,2k+"
+                },
+                "1": {
+                    "label": "Durchschnittliche Aufbauzeit",
+                    "value": "3 Min"
+                },
+                "2": {
+                    "label": "Prognosegenauigkeit",
+                    "value": "+/- 1,4 dB"
+                }
+            }
+        },
+        "features": {
+            "0": {
+                "title": "Impulsantwort-Mapping",
+                "description": "Visualisiere 3D-Energieabfall, modale Hotspots und Klarheitskoeffizienten, um Behandlungen in Sekunden zu planen.",
+                "metric_label": "Flächenabdeckung",
+                "metric_value": "92%"
+            },
+            "1": {
+                "title": "Echtzeitanalysator",
+                "description": "Streame binaurale Messungen mit Geräuschklassifikation, RT60-Tracking und smarten Hinweisen für Richtlinienkonformität.",
+                "metric_label": "Geräuschklassen",
+                "metric_value": "11"
+            },
+            "2": {
+                "title": "KI-Geräuschprofiling",
+                "description": "Prognostiziere, wie Layoutänderungen Nachhall, frühe Reflexionen und Sprachverständlichkeit vor dem Bau beeinflussen.",
+                "metric_label": "Szenarien pro Stunde",
+                "metric_value": "45/h"
+            }
+        },
+        "workflow": {
+            "title": "Vom Capture zur Erkenntnis",
+            "steps": {
+                "0": {
+                    "title": "Erfassen",
+                    "description": "Setze Sonalyze-Beacons ein oder lade vorhandene Sweeps hoch, um Mehrkanalaufnahmen zu vereinheitlichen."
+                },
+                "1": {
+                    "title": "Modellieren",
+                    "description": "Kombiniere Sensoren, CAD-Geometrie und Materialpresets, um hochauflösende Simulationsnetze zu erzeugen."
+                },
+                "2": {
+                    "title": "Optimieren",
+                    "description": "Variiere Akustikmaßnahmen, Bestuhlungspläne und Lautsprecherarrays mit unmittelbaren Wirkungsvorhersagen."
+                }
+            }
+        },
+        "live_preview": {
+            "title": "Höre, bevor du baust",
+            "description": "Wechsle Demo-Szenen, um Veränderungen zu erleben. Die Vorschau kombiniert Faltung, frühe Reflexionen und Maskierung in Echtzeit.",
+            "toggle_label": "Vorschau abspielen",
+            "scene_a": "Konzertsaal - unbehandelt",
+            "scene_b": "Konzertsaal - optimiert"
+        },
+        "contact": {
+            "title": "Teste Sonalyze mit deinem Team",
+            "subtitle": "Teile Eckdaten deines Projekts und wir richten innerhalb von 48 Stunden einen Pilotversuch ein.",
+            "email_label": "Arbeits-E-Mail",
+            "message_label": "Projektziele",
+            "submit": "Pilot anfragen",
+            "success": "Danke! Wir melden uns kurzfristig."
+        },
+        "faq": {
+            "title": "Häufig gestellte Fragen",
+            "items": {
+                "0": {
+                    "question": "Kann Sonalyze Bestandsmessungen verarbeiten?",
+                    "answer": "Ja. Importiere WAV-, AAF- oder SON-Dateien und Sonalyze richtet Impulsantworten kanalübergreifend automatisch aus."
+                },
+                "1": {
+                    "question": "Läuft die Simulation offline?",
+                    "answer": "Standardmäßig erfolgt die Verarbeitung lokal. Optional lassen sich rechenintensive Geometrien in die Sonalyze Cloud auslagern."
+                },
+                "2": {
+                    "question": "Wie funktioniert die Lizenzierung?",
+                    "answer": "Wähle projektbasierte Pässe oder Organisationslizenzen mit gemeinsamen Simulationsstunden und Asset-Bibliotheken."
+                }
+            }
+        }
+    },
+    "measurement_page": {
+        "badge": "Kooperative Messung",
+        "title": "Feldmessungen in Echtzeit koordinieren",
+        "subtitle": "Starte eine Sonalyze-Lobby, weise Geräte-Rollen zu und überwache die Verbindung, während dein Team gemeinsam Impulsantworten erfasst.",
+        "lobby": {
+            "title": "Lobby-Steuerung",
+            "status_idle": "Lobby inaktiv – generiere einen Code, um Geräte einzuladen.",
+            "status_active": "Lobby aktiv. Teile Code oder Einladungslink.",
+            "code_refreshed": "Lobby-Code erneuert.",
+            "link_copied": "Einladungslink kopiert.",
+            "device_joined": "Neues Gerät ist der Lobby beigetreten.",
+            "device_left": "Ein Gerät hat die Lobby verlassen.",
+            "actions": {
+                "create": "Lobby erstellen",
+                "refresh": "Code aktualisieren",
+                "copy": "Link kopieren",
+                "toggle_qr": "QR-Vorschau umschalten"
+            },
+            "code_label": "Lobby-Code",
+            "link_label": "Einladungslink",
+            "link_placeholder": "Lobby erstellen, um einen teilbaren Link zu erhalten"
+        },
+        "qr_panel": {
+            "helper": "Teile die Einladung als QR-Code für schnelle Teilnahme vor Ort.",
+            "placeholder": "Lobby erstellen, um den QR-Code zu erzeugen"
+        },
+        "roles": {
+            "title": "Rolle dieses Geräts",
+            "helper": "Wechsle zwischen Empfänger, Sweep-Quelle und Koordinator, um Verantwortlichkeiten zu sehen.",
+            "receiver": "Empfänger-Mikrofonarray",
+            "sender": "Sweep-Quelle",
+            "coordinator": "Sitzungskoordinator",
+            "updated": "Geräterolle aktualisiert."
+        },
+        "scanning": {
+            "title": "Erkennungs-Scan",
+            "toggle": "Scan umschalten",
+            "active": "Suche nach Sonalyze-Beacons...",
+            "inactive": "Scan pausiert"
+        },
+        "devices": {
+            "title": "Verbundene Geräte",
+            "helper": "Schalte die Bereitschaft um, um Bestätigungen vor jeder Aufnahme zu simulieren.",
+            "empty": "Noch keine Geräte verbunden.",
+            "demo_join": "Demo-Gerät hinzufügen",
+            "demo_leave": "Letztes Remote-Gerät entfernen",
+            "local_badge": "Dieses Gerät",
+            "headers": {
+                "device": "Gerät",
+                "role": "Rolle",
+                "latency": "Latenz",
+                "battery": "Akku",
+                "ready": "Bereit"
+            },
+            "ready": "Bereit",
+            "not_ready": "Wartet"
+        },
+        "telemetry": {
+            "title": "Sitzungs-Telemetrie",
+            "last_updated": "Letzte Aktualisierung",
+            "uplink": {
+                "label": "Uplink-RSSI",
+                "unit": "dBm"
+            },
+            "downlink": {
+                "label": "Downlink-RSSI",
+                "unit": "dBm"
+            },
+            "jitter": {
+                "label": "Netzwerk-Jitter",
+                "unit": "ms"
+            }
+        },
+        "timeline": {
+            "title": "Ablauf der Aufnahme",
+            "advance": "Nächster Schritt",
+            "steps": {
+                "0": {
+                    "title": "Empfänger platzieren",
+                    "description": "Kalibrierte Mikrofone positionieren und Grundgeräusch prüfen."
+                },
+                "1": {
+                    "title": "Quelle positionieren",
+                    "description": "Sweep-Lautsprecher aufstellen und Pegelausgleich prüfen."
+                },
+                "2": {
+                    "title": "Sweep starten",
+                    "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
+                },
+                "3": {
+                    "title": "Impuls prüfen",
+                    "description": "Energieabfall analysieren und Session bestätigen."
+                }
+            }
+        }
+    },
+    "simulation_page": {
+        "badge": "Akustik-Sandbox",
+        "title": "Gestalte den Raum, höre die Zukunft",
+        "subtitle": "Modelliere Geometrie, platziere Behandlungen und erhalte Sonalyze-Prognosen in Echtzeit, bevor Hardware aufgebaut wird.",
+        "presets": {
+            "title": "Raum-Presets",
+            "items": {
+                "0": {
+                    "label": "Projektstudio",
+                    "description": "Kompakter Regieraum für Nahfeldabhören"
+                },
+                "1": {
+                    "label": "Konzertsaal",
+                    "description": "Tiefe Bühne mit gestaffelten Rängen"
+                },
+                "2": {
+                    "label": "Hörsaal",
+                    "description": "Fächerförmige Bestuhlung"
+                }
+            }
+        },
+        "dimensions": {
+            "title": "Raumgeometrie",
+            "width": "Breite",
+            "length": "Länge",
+            "height": "Höhe",
+            "unit": "m"
+        },
+        "palette": {
+            "title": "Behandlungs-Palette",
+            "absorber": "Breitbandabsorber",
+            "diffuser": "Diffusor-Array",
+            "seating": "Publikumsbestuhlung",
+            "stage": "Bühnenpodest",
+            "clear": "Layout zurücksetzen"
+        },
+        "grid": {
+            "title": "Draufsicht",
+            "helper": "Tippe ein Feld, um die ausgewählte Behandlung zu platzieren. Erneut tippen, um sie zu entfernen.",
+            "legend": {
+                "absorber": "Absorber",
+                "diffuser": "Diffusor",
+                "seating": "Bestuhlung",
+                "stage": "Bühne"
+            }
+        },
+        "metrics": {
+            "title": "Prognostizierte Kennzahlen",
+            "rt60": {
+                "label": "RT60",
+                "unit": "s"
+            },
+            "sti": {
+                "label": "STI",
+                "unit": "Index"
+            },
+            "d50": {
+                "label": "D50",
+                "unit": "Verhältnis"
+            }
+        }
+    }
+}
