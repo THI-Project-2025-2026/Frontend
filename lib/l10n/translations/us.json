@@ -1,0 +1,255 @@
+{
+    "landing_page": {
+        "hero": {
+            "badge": "Acoustic intelligence",
+            "title": "Understand the sound of every space",
+            "subtitle": "Sonalyze transforms raw acoustic captures into actionable spatial insights for architects, audio engineers, and researchers.",
+            "primary_cta": "Start simulation",
+            "secondary_cta": "View measurement tools"
+        },
+        "metrics": {
+            "title": "Trusted acoustic insights",
+            "items": {
+                "0": {
+                    "label": "Rooms profiled",
+                    "value": "1.2k+"
+                },
+                "1": {
+                    "label": "Average setup time",
+                    "value": "3 min"
+                },
+                "2": {
+                    "label": "Prediction accuracy",
+                    "value": "+/- 1.4 dB"
+                }
+            }
+        },
+        "features": {
+            "0": {
+                "title": "Impulse response mapping",
+                "description": "Visualize 3D energy decay, modal hotspots, and clarity coefficients to optimize acoustic treatments in seconds.",
+                "metric_label": "Spatial coverage",
+                "metric_value": "92%"
+            },
+            "1": {
+                "title": "Real-time analyzer",
+                "description": "Stream binaural readings with noise classification, RT60 tracking, and smart alerts for regulatory compliance.",
+                "metric_label": "Noise classes",
+                "metric_value": "11"
+            },
+            "2": {
+                "title": "AI noise profiling",
+                "description": "Predict how layout changes impact reverberation, early reflections, and speech intelligibility before construction.",
+                "metric_label": "Scenario throughput",
+                "metric_value": "45/hr"
+            }
+        },
+        "workflow": {
+            "title": "From capture to insight",
+            "steps": {
+                "0": {
+                    "title": "Capture",
+                    "description": "Deploy Sonalyze beacons or upload existing sweeps to unify multi-channel recordings."
+                },
+                "1": {
+                    "title": "Model",
+                    "description": "Combine sensors, CAD geometry, and material presets to generate high-fidelity simulation meshes."
+                },
+                "2": {
+                    "title": "Optimize",
+                    "description": "Iterate acoustic treatments, seating layouts, and speaker arrays with instant impact projections."
+                }
+            }
+        },
+        "live_preview": {
+            "title": "Listen before you build",
+            "description": "Toggle demo scenes to experience acoustic changes. The preview stacks convolution, early reflections, and noise masking in real time.",
+            "toggle_label": "Play preview",
+            "scene_a": "Concert hall - untreated",
+            "scene_b": "Concert hall - tuned"
+        },
+        "contact": {
+            "title": "Try Sonalyze with your team",
+            "subtitle": "Share a project outline and we will set up a tailored pilot within 48 hours.",
+            "email_label": "Work email",
+            "message_label": "Project goals",
+            "submit": "Request pilot",
+            "success": "Thanks! We will reach out shortly."
+        },
+        "faq": {
+            "title": "Frequently asked questions",
+            "items": {
+                "0": {
+                    "question": "Can Sonalyze process legacy measurements?",
+                    "answer": "Yes. Import WAV, AAF, or SON files and Sonalyze will auto-align impulse responses across channels."
+                },
+                "1": {
+                    "question": "Does the simulation engine run offline?",
+                    "answer": "All processing runs on-device by default. Optionally push workloads to Sonalyze Cloud for heavy geometries."
+                },
+                "2": {
+                    "question": "How does licensing work?",
+                    "answer": "Choose from project-based passes or organization seats with shared simulation hours and asset libraries."
+                }
+            }
+        }
+    },
+    "measurement_page": {
+        "badge": "Collaborative capture",
+        "title": "Coordinate field measurements in real time",
+        "subtitle": "Spin up a Sonalyze lobby, assign device roles, and monitor connection health as your team captures impulse responses together.",
+        "lobby": {
+            "title": "Lobby controls",
+            "status_idle": "Lobby idle — generate a code to start inviting devices.",
+            "status_active": "Lobby live. Share the code or invite link below.",
+            "code_refreshed": "Lobby code rotated.",
+            "link_copied": "Invite link copied.",
+            "device_joined": "New device joined the lobby.",
+            "device_left": "Device left the lobby.",
+            "actions": {
+                "create": "Create lobby",
+                "refresh": "Refresh code",
+                "copy": "Copy invite link",
+                "toggle_qr": "Toggle QR preview"
+            },
+            "code_label": "Lobby code",
+            "link_label": "Invite link",
+            "link_placeholder": "Create a lobby to generate a shareable link"
+        },
+        "qr_panel": {
+            "helper": "Share the invite as a QR code for on-site quick joins.",
+            "placeholder": "Generate a lobby to render the QR"
+        },
+        "roles": {
+            "title": "Your device role",
+            "helper": "Switch between receiver, sweep source, and session coordinator to preview responsibilities.",
+            "receiver": "Receiver mic array",
+            "sender": "Sweep source",
+            "coordinator": "Session coordinator",
+            "updated": "Device role updated."
+        },
+        "scanning": {
+            "title": "Discovery scanning",
+            "toggle": "Toggle scanning",
+            "active": "Scanning for Sonalyze beacons...",
+            "inactive": "Scanning paused"
+        },
+        "devices": {
+            "title": "Connected devices",
+            "helper": "Toggle readiness to simulate operators confirming placement before each capture.",
+            "empty": "No devices connected yet.",
+            "demo_join": "Add demo device",
+            "demo_leave": "Remove last remote",
+            "local_badge": "This device",
+            "headers": {
+                "device": "Device",
+                "role": "Role",
+                "latency": "Latency",
+                "battery": "Battery",
+                "ready": "Ready"
+            },
+            "ready": "Ready",
+            "not_ready": "Waiting"
+        },
+        "telemetry": {
+            "title": "Session telemetry",
+            "last_updated": "Last update",
+            "uplink": {
+                "label": "Uplink RSSI",
+                "unit": "dBm"
+            },
+            "downlink": {
+                "label": "Downlink RSSI",
+                "unit": "dBm"
+            },
+            "jitter": {
+                "label": "Network jitter",
+                "unit": "ms"
+            }
+        },
+        "timeline": {
+            "title": "Capture timeline",
+            "advance": "Next step",
+            "steps": {
+                "0": {
+                    "title": "Deploy receivers",
+                    "description": "Place calibrated microphones and confirm baseline noise levels."
+                },
+                "1": {
+                    "title": "Position source",
+                    "description": "Set the swept sine source and verify level compensation."
+                },
+                "2": {
+                    "title": "Run sweep",
+                    "description": "Trigger synchronized sweeps while monitoring headroom and clipping indicators."
+                },
+                "3": {
+                    "title": "Review impulse",
+                    "description": "Validate energy decay curves before finalizing the session."
+                }
+            }
+        }
+    },
+    "simulation_page": {
+        "badge": "Acoustic sandbox",
+        "title": "Shape the room, hear the future",
+        "subtitle": "Model geometry, place treatments, and preview Sonalyze's real-time response estimates before deploying hardware.",
+        "presets": {
+            "title": "Room presets",
+            "items": {
+                "0": {
+                    "label": "Project studio",
+                    "description": "Compact control room tuned for nearfields"
+                },
+                "1": {
+                    "label": "Concert hall",
+                    "description": "Deep stage with tiered balconies"
+                },
+                "2": {
+                    "label": "Lecture theatre",
+                    "description": "Fan shaped audience seating"
+                }
+            }
+        },
+        "dimensions": {
+            "title": "Room geometry",
+            "width": "Width",
+            "length": "Length",
+            "height": "Height",
+            "unit": "m"
+        },
+        "palette": {
+            "title": "Treatment palette",
+            "absorber": "Broadband absorber",
+            "diffuser": "Diffuser array",
+            "seating": "Audience seating",
+            "stage": "Stage riser",
+            "clear": "Clear layout"
+        },
+        "grid": {
+            "title": "Plan view",
+            "helper": "Tap a cell to drop the selected treatment. Tap again to remove it.",
+            "legend": {
+                "absorber": "Absorber",
+                "diffuser": "Diffuser",
+                "seating": "Seating",
+                "stage": "Stage"
+            }
+        },
+        "metrics": {
+            "title": "Predicted responses",
+            "rt60": {
+                "label": "RT60",
+                "unit": "s"
+            },
+            "sti": {
+                "label": "STI",
+                "unit": "index"
+            },
+            "d50": {
+                "label": "D50",
+                "unit": "ratio"
+            }
+        }
+    }
+}

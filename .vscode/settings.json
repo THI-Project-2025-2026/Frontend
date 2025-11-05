@@ -1,0 +1,7 @@
+{
+    "editor.colorDecorators": true,
+    "zeng-color-picker.Filter.ApplyForTheseLanguages": "html,css,javascript,typescript,xml,json",
+    "zeng-color-picker.Filter.ApplyForTheseFiles": "**/*.json",
+    "editor.defaultColorDecorators": "always",
+    "cmake.sourceDirectory": "/home/valentin/Documents/git/leetnotes/linux"
+}
