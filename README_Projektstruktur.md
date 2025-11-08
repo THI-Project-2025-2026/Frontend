@@ -12,53 +12,61 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 ├── pubspec.yaml
 ├── .github/
 │   └── copilot-instructions.md
+├── assets/
+│   └── room_creator/
+│       ├── app.js
+│       ├── index.html
+│       └── styles.css
 └── lib/
-		├── main.dart
-		├── blocs/
-		│   ├── json_hot_reload/
-		│   │   ├── json_hot_reload_bloc.dart
-		│   │   ├── json_hot_reload_event.dart
-		│   │   └── json_hot_reload_state.dart
-		│   ├── landing_page/
-		│   │   ├── landing_page_bloc.dart
-		│   │   ├── landing_page_event.dart
-		│   │   └── landing_page_state.dart
-		│   ├── measurement_page/
-		│   │   ├── measurement_page_bloc.dart
-		│   │   ├── measurement_page_event.dart
-		│   │   └── measurement_page_state.dart
-		│   └── simulation_page/
-		│       ├── simulation_page_bloc.dart
-		│       ├── simulation_page_event.dart
-		│       └── simulation_page_state.dart
-		├── constants/
-		│   └── app_constants.dart
-		├── l10n/
-		│   ├── configuration/
-		│   │   └── default_configuration.json
-		│   ├── json_parser.dart
-		│   ├── themes/
-		│   │   ├── dark.json
-		│   │   └── light.json
-		│   └── translations/
-		│       ├── de.json
-		│       └── us.json
-		├── utilities/
-		│   └── ui/
-		│       └── common/
-		│           ├── sonalyze_accordion_tile.dart
-		│           ├── sonalyze_button.dart
-		│           └── sonalyze_surface.dart
-		└── views/
-				├── landing_page/
-				│   └── landing_page.dart
-				├── measurement_page/
-				│   └── measurement_page.dart
-				└── simulation_page/
-						└── simulation_page.dart
+	├── main.dart
+	├── blocs/
+	│   ├── json_hot_reload/
+	│   │   ├── json_hot_reload_bloc.dart
+	│   │   ├── json_hot_reload_event.dart
+	│   │   └── json_hot_reload_state.dart
+	│   ├── landing_page/
+	│   │   ├── landing_page_bloc.dart
+	│   │   ├── landing_page_event.dart
+	│   │   └── landing_page_state.dart
+	│   ├── measurement_page/
+	│   │   ├── measurement_page_bloc.dart
+	│   │   ├── measurement_page_event.dart
+	│   │   └── measurement_page_state.dart
+	│   └── simulation_page/
+	│       ├── simulation_page_bloc.dart
+	│       ├── simulation_page_event.dart
+	│       └── simulation_page_state.dart
+	├── constants/
+	│   └── app_constants.dart
+	├── l10n/
+	│   ├── configuration/
+	│   │   └── default_configuration.json
+	│   ├── json_parser.dart
+	│   ├── themes/
+	│   │   ├── dark.json
+	│   │   └── light.json
+	│   └── translations/
+	│       ├── de.json
+	│       └── us.json
+	├── utilities/
+	│   └── ui/
+	│       └── common/
+	│           ├── sonalyze_accordion_tile.dart
+	│           ├── sonalyze_button.dart
+	│           └── sonalyze_surface.dart
+	├── services/
+	│   └── room_creation/
+	│       └── room_creation_loader.dart
+	└── views/
+		├── landing_page/
+		│   └── landing_page.dart
+		├── measurement_page/
+		│   └── measurement_page.dart
+		└── simulation_page/
+			└── simulation_page.dart
 ```
 
-> Hinweis: Ein dediziertes `assets/`-Verzeichnis ist derzeit nicht angelegt. Sobald statische Ressourcen hinzukommen, sollten sie dort strukturiert werden (siehe Abschnitt „`assets/` (statische Ressourcen)“).
+> Hinweis: Das Verzeichnis `assets/room_creator/` liefert das eingebettete HTML/JS-Demo für den Room-Creation-Loader (siehe Abschnitt „`assets/` (statische Ressourcen)“).
 
 ## Root-Dateien
 
@@ -93,6 +101,9 @@ In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuell
 - `utilities/ui/common/`
 	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) für ein konsistentes Erscheinungsbild.
 
+- `services/`
+	- Integrationslogik für externe/technologieübergreifende Komponenten. `room_creation/room_creation_loader.dart` lädt das HTML/JS-Raum-Tool per `flutter_inappwebview` und stellt Messaging-Hooks bereit.
+
 - `views/`
 	- Feature-spezifische Screens als Widgets.
 	- `landing_page/landing_page.dart` — Komplettes Landing-Page-Layout mit BLoC-Anbindung.
@@ -101,12 +112,7 @@ In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuell
 
 ## `assets/` (statische Ressourcen)
 
-Ein physisches `assets/`-Verzeichnis ist aktuell nicht vorhanden. Sobald Assets benötigt werden, sollte folgende Struktur als Leitlinie dienen:
-
-- `icons/` — App-Icons, Launcher-Icons, SVG- oder PNG-Icons.
-- `images/` — Hintergrundbilder oder Illustrationen.
-- `fonts/` — Benutzerdefinierte Schriftarten (Registrierung in `pubspec.yaml` nicht vergessen).
-- `locales/` oder `i18n/` — Weitere Übersetzungsdateien (falls nicht über `lib/l10n/` abgewickelt).
+- `room_creator/` — Beinhaltet das HTML/JS/CSS-Demo für den Room-Creation-Loader (`index.html`, `app.js`, `styles.css`). Die Dateien sind in `pubspec.yaml` als Flutter-Assets registriert.
 
 Gute Praktiken für `assets/`:
 

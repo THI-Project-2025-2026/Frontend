@@ -240,6 +240,14 @@
                 "stage": "Bühne"
             }
         },
+        "room_creator": {
+            "title": "Raum-Tool (Web)",
+            "description": "Bindet das webbasierte Raum-Tool direkt in die Sandbox ein.",
+            "send_demo": "Demo-Nachricht senden",
+            "last_message_prefix": "Web-Antwort: ",
+            "last_message_placeholder": "Verbindung wird aufgebaut...",
+            "demo_message": "Hallo aus Flutter"
+        },
         "metrics": {
             "title": "Prognostizierte Kennzahlen",
             "rt60": {

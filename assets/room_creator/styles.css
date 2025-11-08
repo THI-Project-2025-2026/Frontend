@@ -1,0 +1,86 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  background: var(--surface-bg);
+  color: var(--surface-fg);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+body.light {
+  --surface-bg: #f4f6fb;
+  --surface-fg: #1a1c1f;
+  --panel-bg: #ffffff;
+  --panel-border: rgba(26, 28, 31, 0.1);
+  --accent: #1c6cf0;
+}
+
+body.dark {
+  --surface-bg: #0f1115;
+  --surface-fg: #f5f6f9;
+  --panel-bg: rgba(36, 41, 51, 0.72);
+  --panel-border: rgba(245, 246, 249, 0.1);
+  --accent: #5b8dff;
+}
+
+.-container {
+  max-width: 720px;
+  margin: 56px auto;
+  padding: 32px;
+  background: var(--panel-bg);
+  border-radius: 24px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 22px 60px rgba(12, 15, 21, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.header p {
+  margin: 0;
+  color: rgba(245, 246, 249, 0.72);
+}
+
+body.light .header p {
+  color: rgba(26, 28, 31, 0.6);
+}
+
+.status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px dashed var(--panel-border);
+}
+
+.controls {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#send-button {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#send-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(28, 108, 240, 0.35);
+}

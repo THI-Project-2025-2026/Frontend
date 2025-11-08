@@ -64,6 +64,7 @@ flutter:
     - lib/l10n/configuration/
     - lib/l10n/themes/
     - lib/l10n/translations/
+    - assets/room_creator/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

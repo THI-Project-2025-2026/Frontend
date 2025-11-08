@@ -4,6 +4,7 @@ import 'package:sonalyze_frontend/blocs/simulation_page/simulation_page_bloc.dar
 import 'package:sonalyze_frontend/constants/app_constants.dart';
 import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_button.dart';
 import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_surface.dart';
+import 'package:sonalyze_frontend/services/room_creation/room_creation_loader.dart';
 
 class SimulationPageScreen extends StatelessWidget {
   const SimulationPageScreen({super.key});
@@ -78,6 +79,8 @@ class _SimulationPageView extends StatelessWidget {
                         isWide: isWide,
                         isMedium: isMedium,
                       ),
+                      SizedBox(height: isWide ? 48 : 36),
+                      const _RoomCreationSection(),
                       SizedBox(height: isWide ? 48 : 36),
                       const _SimulationMetricSection(),
                     ],
@@ -219,6 +222,116 @@ class _SimulationPrimaryLayout extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _RoomCreationSection extends StatefulWidget {
+  const _RoomCreationSection();
+
+  @override
+  State<_RoomCreationSection> createState() => _RoomCreationSectionState();
+}
+
+class _RoomCreationSectionState extends State<_RoomCreationSection> {
+  final RoomCreationController _controller = RoomCreationController();
+  String _lastMessage = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final surfaceColor = _themeColor('simulation_page.panel_background');
+    final onSurface = theme.colorScheme.onSurface;
+    final helperColor = onSurface.withValues(alpha: 0.7);
+    final brightness = theme.brightness;
+    final title = _tr('simulation_page.room_creator.title');
+    final description = _tr('simulation_page.room_creator.description');
+    final lastPrefix = _tr('simulation_page.room_creator.last_message_prefix');
+    final lastPlaceholder = _tr(
+      'simulation_page.room_creator.last_message_placeholder',
+    );
+    final sendLabel = _tr('simulation_page.room_creator.send_demo');
+    final demoPayload = _tr('simulation_page.room_creator.demo_message');
+    final mode = brightness == Brightness.dark
+        ? RoomCreationThemeMode.dark
+        : RoomCreationThemeMode.light;
+
+    final lastLabel = _lastMessage.isEmpty
+        ? '$lastPrefix$lastPlaceholder'
+        : '$lastPrefix$_lastMessage';
+
+    return SonalyzeSurface(
+      padding: const EdgeInsets.all(28),
+      backgroundColor: surfaceColor.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              color: onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            style: textTheme.bodyMedium?.copyWith(
+              color: helperColor,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: SizedBox(
+              height: 440,
+              width: double.infinity,
+              child: RoomCreationView(
+                controller: _controller,
+                themeMode: mode,
+                onMessage: (message) {
+                  setState(() {
+                    _lastMessage = message;
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  lastLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelLarge?.copyWith(color: helperColor),
+                ),
+              ),
+              const SizedBox(width: 16),
+              SonalyzeButton(
+                onPressed: () {
+                  _controller.sendMessage(demoPayload);
+                },
+                borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                child: Text(
+                  sendLabel,
+                  style: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

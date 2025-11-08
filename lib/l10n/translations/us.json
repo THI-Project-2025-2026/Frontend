@@ -240,6 +240,14 @@
                 "stage": "Stage"
             }
         },
+        "room_creator": {
+            "title": "Room creation tool",
+            "description": "Integrate the web-powered builder directly inside the acoustic sandbox.",
+            "send_demo": "Send demo message",
+            "last_message_prefix": "Web response: ",
+            "last_message_placeholder": "waiting for bridge...",
+            "demo_message": "Hello from Flutter"
+        },
         "metrics": {
             "title": "Predicted responses",
             "rt60": {
