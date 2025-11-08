@@ -13,10 +13,7 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 ├── .github/
 │   └── copilot-instructions.md
 ├── assets/
-│   └── room_creator/
-│       ├── app.js
-│       ├── index.html
-│       └── styles.css
+│   └── room_creator/ (Git-Submodul → THI-Project-2025-2026/Frontend-RoomCreator)
 └── lib/
 	├── main.dart
 	├── blocs/
@@ -66,7 +63,7 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 			└── simulation_page.dart
 ```
 
-> Hinweis: Das Verzeichnis `assets/room_creator/` liefert das eingebettete HTML/JS-Demo für den Room-Creation-Loader (siehe Abschnitt „`assets/` (statische Ressourcen)“).
+> Hinweis: Das Verzeichnis `assets/room_creator/` ist ein Git-Submodul (Repository: `THI-Project-2025-2026/Frontend-RoomCreator`) und stellt die HTML/JS/CSS-Assets für den Room-Creation-Loader bereit. Bitte Submodul aktualisieren, bevor neue Builds erzeugt werden (siehe Abschnitt „`assets/` (statische Ressourcen)“).
 
 ## Root-Dateien
 
@@ -102,7 +99,7 @@ In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuell
 	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) für ein konsistentes Erscheinungsbild.
 
 - `services/`
-	- Integrationslogik für externe/technologieübergreifende Komponenten. `room_creation/room_creation_loader.dart` lädt das HTML/JS-Raum-Tool per `flutter_inappwebview` und stellt Messaging-Hooks bereit.
+	- Integrationslogik für externe/technologieübergreifende Komponenten. `room_creation/room_creation_loader.dart` lädt das HTML/JS-Raum-Tool per `flutter_inappwebview` bzw. Web-IFrame und stellt Messaging-Hooks bereit.
 
 - `views/`
 	- Feature-spezifische Screens als Widgets.
@@ -112,7 +109,7 @@ In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuell
 
 ## `assets/` (statische Ressourcen)
 
-- `room_creator/` — Beinhaltet das HTML/JS/CSS-Demo für den Room-Creation-Loader (`index.html`, `app.js`, `styles.css`). Die Dateien sind in `pubspec.yaml` als Flutter-Assets registriert.
+- `room_creator/` — Git-Submodul (`THI-Project-2025-2026/Frontend-RoomCreator`). Enthält den React/TypeScript-Quellcode sowie die gebauten HTML/JS/CSS-Bundles für den Room-Creation-Loader. Vor Flutter-Builds Submodul aktualisieren und ggf. das Web-Build (`npm run build`) ausführen.
 
 Gute Praktiken für `assets/`:
 
