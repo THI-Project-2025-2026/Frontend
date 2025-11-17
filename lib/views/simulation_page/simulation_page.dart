@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:sonalyze_frontend/blocs/simulation_page/simulation_page_bloc.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_button.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_surface.dart';
 
 class SimulationPageScreen extends StatelessWidget {
   const SimulationPageScreen({super.key});

@@ -3,12 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:sonalyze_frontend/blocs/landing_page/landing_page_bloc.dart';
 import 'package:sonalyze_frontend/views/measurement_page/measurement_page.dart';
 import 'package:sonalyze_frontend/views/simulation_page/simulation_page.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_accordion_tile.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_button.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_surface.dart';
 
 /// Landing page entry point wiring the BLoC to the widget tree.
 class LandingPageScreen extends StatelessWidget {

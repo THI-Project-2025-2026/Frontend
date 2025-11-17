@@ -159,7 +159,7 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
 
      | Package | Purpose | Allowed dependencies |
      | --- | --- | --- |
-     | `core/ui` | Shared Sonalyze widgets exported via `lib/core_ui.dart`. | `flutter`, `meta` |
+   | `core/ui` | Shared Sonalyze widgets exported via `lib/core_ui.dart`. | `flutter`, `meta`, `l10n_service` |
      | `services/l10n` | Localization assets, `AppConstants`, JSON parser, JSON hot reload bloc. | `flutter`, `flutter_bloc`, `path`, file APIs |
      | `features/landing_page` | Landing page screen + bloc + demo data. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
      | `features/measurement_page` | Measurement lobby simulation experience. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
@@ -196,15 +196,12 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   5. Update main app and any other code to import from `package:l10n_service/l10n_service.dart` instead of `sonalyze_frontend/...`.
   6. Remove original constants and l10n folders once all references are updated.
 
-- [ ] **Step 5: Create `core/ui` shared UI package**
-  1. Move `lib/utilities/ui/common/*` into `packages/core/ui/lib/src/common/` and adjust imports to be local.
-  2. In `packages/core/ui/lib/core_ui.dart`:
-     - Export the shared widgets intended to be public.
-  3. Configure `packages/core/ui/pubspec.yaml`:
-     - Add `flutter` and any other UI-related dependencies.
-  4. In features and app:
-     - Replace old imports (`lib/utilities/ui/common/...`) with `package:core_ui/core_ui.dart`.
-  5. Remove old common folder after all imports are migrated.
+- [x] **Step 5: Create `core/ui` shared UI package**
+  1. Moved `SonalyzeSurface`, `SonalyzeButton`, and `SonalyzeAccordionTile` from `lib/utilities/ui/common/` into `packages/core/ui/lib/src/common/` with package-local imports.
+  2. Updated `lib/core_ui.dart` to export the shared widgets and removed the placeholder source file.
+  3. Added a dependency on `l10n_service` inside `packages/core/ui/pubspec.yaml` so widgets can continue to read theme colors, and documented the new contract in `packages/core/ui/README.md`.
+  4. Declared the `core_ui` path dependency in the main app’s `pubspec.yaml`, updated all feature views to import `package:core_ui/core_ui.dart`, and cleaned up the obsolete `lib/utilities/` folder.
+  5. Refreshed internal docs (`README_Projektstruktur.md`, `.github/copilot-instructions.md`) to point contributors to the new shared UI package.
 
 - [ ] **Step 6: Modularize feature code into feature packages**
   1. For each feature (landing, measurement, simulation):
@@ -304,14 +301,11 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
    6. Remove original constants and l10n folders once all references are updated.
 
 5. **Create `core/ui` shared UI package**
-   1. Move `lib/utilities/ui/common/*` into `packages/core/ui/lib/src/common/` and adjust imports to be local.
-   2. In `packages/core/ui/lib/core_ui.dart`:
-      - Export the shared widgets intended to be public.
-   3. Configure `packages/core/ui/pubspec.yaml`:
-      - Add `flutter` and any other UI-related dependencies.
-   4. In features and app:
-      - Replace old imports (`lib/utilities/ui/common/...`) with `package:core_ui/core_ui.dart`.
-   5. Remove old common folder after all imports are migrated.
+   1. Keep reusable widgets (`SonalyzeSurface`, `SonalyzeButton`, accordions, etc.) inside `packages/core/ui/lib/src/common/` with local imports.
+   2. Export the public widgets via `packages/core/ui/lib/core_ui.dart` so consumers only need `package:core_ui/core_ui.dart`.
+   3. Configure `packages/core/ui/pubspec.yaml` with the required dependencies (`flutter`, `l10n_service`, etc.).
+   4. Ensure features and the app depend on `core_ui` via `pubspec.yaml` and update imports accordingly.
+   5. Clean up any legacy `lib/utilities/ui/common/` folders once migration is complete.
 
 6. **Modularize feature code into feature packages**
    1. For each feature (landing, measurement, simulation):

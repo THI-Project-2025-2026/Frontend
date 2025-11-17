@@ -13,7 +13,7 @@
 - `l10n_service` exports `JsonHotReloadBloc`, which polls the active config/theme/translation files on desktop; web builds skip file watching via `kIsWeb`.
 - Fire `StartFileWatching` once `AppConstants.initialize()` completes during dev to hot-reload JSON; use `ReloadTheme` / `ReloadLanguage` events for manual refreshes.
 **Shared UI**
-- `lib/utilities/ui/common/` holds `SonalyzeSurface`, `SonalyzeButton`, and accordion tiles—reuse them instead of ad-hoc `Container`/`TextButton` setups for consistent styling.
+- `package:core_ui/core_ui.dart` exports `SonalyzeSurface`, `SonalyzeButton`, and accordion tiles—reuse them instead of ad-hoc `Container`/`TextButton` setups for consistent styling.
 - Gradients and color palettes come from theme keys like `landing_page.feature_card_gradients.*`; introduce new keys in JSON before referencing them in widgets.
 **Landing Page**
 - `LandingPageBloc` seeds demo data (`LandingPageFeature.demoFeatures`) and rotates the active feature every 8s via a `Timer`; cancel timers in overrides if you extend bloc lifecycles.

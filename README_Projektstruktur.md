@@ -116,8 +116,8 @@ In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuell
 	- `themes/` — Theme-Dateien (`dark.json`, `light.json`).
 	- `translations/` — Sprachressourcen (`de.json`, `us.json`).
 
-- `utilities/ui/common/`
-	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) für ein konsistentes Erscheinungsbild.
+- ehemals `utilities/ui/common/`
+	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) sind nach `packages/core/ui` umgezogen und werden via `package:core_ui/core_ui.dart` importiert.
 
 - `views/`
 	- Feature-spezifische Screens als Widgets.
@@ -144,7 +144,7 @@ Gute Praktiken für `assets/`:
 
 - Neue JSON-Konfigurationen oder Übersetzungen → in `packages/services/l10n/assets/` ablegen und ggf. `JsonHotReloadBloc` berücksichtigen.
 - Neue State-Logik → passendes Feature unter `lib/blocs/` erweitern.
-- UI-Erweiterungen → in den jeweiligen `lib/views/<feature>/`-Ordnern oder als wiederverwendbare Komponenten unter `lib/utilities/ui/common/` ergänzen.
+- UI-Erweiterungen → in den jeweiligen `lib/views/<feature>/`-Ordnern ergänzen oder als wiederverwendbare Komponenten in `packages/core/ui` ablegen und über `package:core_ui/core_ui.dart` exportieren.
 - Assets hinzufügen → `assets/` anlegen/strukturieren und `pubspec.yaml` aktualisieren.
 
 ## Abschluss

@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   meta: ^1.16.0
+  l10n_service:
+    path: ../../services/l10n
 
 dev_dependencies:
   flutter_test:

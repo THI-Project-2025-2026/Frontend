@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:l10n_service/l10n_service.dart';
-import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_surface.dart';
+import 'sonalyze_surface.dart';
 
 /// Reusable accordion tile that expands and collapses within a SonalyzeSurface.
 class SonalyzeAccordionTile extends StatelessWidget {
