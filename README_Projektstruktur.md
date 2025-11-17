@@ -1,7 +1,29 @@
 
 ## Projektstruktur (Kurzbeschreibung)
 
-Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. Der Fokus liegt auf den Root-Dateien, dem Melos-Workspace unter `packages/` sowie dem verbleibenden Code im App-Paket (`lib/`).
+Dieses Dokument beschreibt die aktuelle Struktur des Flutter-/Melos-Workspaces. Es fasst zusammen, welche Pakete existieren, wie der App-Einstieg aufgebaut ist und welche Befehle bzw. Regeln beim Arbeiten zu beachten sind.
+
+## Setup & Basisbefehle
+
+```bash
+flutter pub get
+melos run bootstrap
+melos run analyze
+melos run lint:imports
+melos run test
+melos run format
+```
+
+- `tool/custom_analyze.dart` analysiert jedes Paket einzeln und beendet sich beim ersten Fehler.
+- `tool/lint_imports.dart` liest `import_rules.yaml` und verhindert unerlaubte Cross-Package-Imports.
+- `melos run test` startet Tests nur in Paketen mit `test/`-Ordner, `melos run format` formatiert alle `lib/`-Verzeichnisse.
+
+## Architekturüberblick
+
+- Root-`lib/` enthält ausschließlich `main.dart` und DI-Glue unter `lib/di/` (aktuell `injector.dart`).
+- Fachliche Implementierung lebt in Paketen unter `packages/{core,services,features,helpers}`; jedes Paket folgt dem `lib/` + `lib/src/`-Pattern und exportiert nur über seinen Barrel (`lib/<paket>.dart`).
+- `packages/services/l10n` vereint Konfig/Theme/Translation-JSONs, `AppConstants`, `JsonParser` und den `JsonHotReloadBloc`. Alle Screens beziehen Texte/Farben über diese APIs – niemals direkt aus Assets lesen.
+- Feature-Pakete (Landing/Measurement/Simulation) bringen ihren Screen + Bloc selbst mit und stellen nur das Barrel bereit; UI-Unterbau sitzt in `packages/core/ui`, rein funktionale Utilities in `packages/helpers/common`.
 
 ## Projekt - Verzeichnisbaum (relevant für dieses README)
 
@@ -80,6 +102,13 @@ Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. De
 
 > Hinweis: Alle Feature-spezifischen Blöcke, Views und Assets befinden sich nun in eigenen Paketen unter `packages/`. Das App-Paket enthält nur noch den Einstiegspunkt und ggf. zukünftige App-spezifische Glue-Code-Dateien (`di/`, `router/` usw.).
 
+## Abhängigkeitsregeln & Import-Linter
+
+- `import_rules.yaml` definiert, welche Pakete andere Pakete importieren dürfen. Gruppen (`services`, `features`, `core`, `helpers`) referenzieren komplette Unterordner.
+- Das App-Paket (`sonalyze_frontend`) darf nur `services` + `features` importieren. Feature-Pakete dürfen auf `core`, `services`, `helpers` zugreifen, aber niemals aufeinander.
+- `core_ui` konsumiert ausschließlich `helpers` und `l10n_service`, `common_helpers` bleibt komplett abhängigkeitsfrei.
+- `melos run lint:imports` bricht ab, sobald ein Paket gegen diese Regeln verstößt. Nach neuen Paketen oder Umbauten immer `pubspec.yaml` (workspace-Section) + `import_rules.yaml` synchron halten und anschließend `melos run bootstrap` ausführen.
+
 ## Root-Dateien
 
 - `README.md` — Allgemeine Projekt-Informationen, How-to, Entwicklerhinweise.
@@ -92,50 +121,48 @@ Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. De
 
 ## Melos-Workspace und `packages/`
 
-Der Workspace bündelt sämtliche Pakete unter `packages/**`. Wichtige Bestandteile:
+Der Workspace bündelt sämtliche Pakete unter `packages/**` und nutzt Melos-Skripte als einheitliche Eintrittspunkte:
 
-- **Skripte:**
-  - `melos run bootstrap` installiert Abhängigkeiten und verknüpft alle Path-Dependencies.
-  - `melos run analyze` führt `flutter analyze` in jedem Paket mit `pubspec.yaml` aus.
-  - `melos run lint:imports` prüft anhand von `import_rules.yaml`, ob sich alle Pakete an die erlaubten Cross-Package-Imports halten.
-  - `melos run test` startet Paket-Tests (sofern ein `test/`-Ordner vorhanden ist).
-  - `melos run format` formatiert pro Paket den jeweiligen `lib/`-Ordner.
-- **Paketfamilien:**
-  - `packages/core/ui` — Shared UI-Bausteine wie `SonalyzeSurface`, `SonalyzeButton`, Accordion-Tiles. Öffentliche API über `lib/core_ui.dart`.
-  - `packages/services/l10n` — Lokalisation + JSON-Konfigurationen (`AppConstants`, `JsonParser`, `JsonHotReloadBloc` samt Assets unter `assets/`).
-  - `packages/features/landing_page` — Landing-Page-Screen inkl. `LandingPageBloc`, Demo-Daten, kompletter View-Tree.
-  - `packages/features/measurement_page` — Measurement-Flow mit Lobby-, Gerätelisten-, Telemetrie- und Timeline-Widgets plus zugehörigem Bloc.
-  - `packages/features/simulation_page` — Simulation-Sandbox (Konfigurator, Grid, Kennzahlen) samt BLoC und akustischen Helfern.
-  - `packages/helpers/common` — Pure-Dart stateless Helper-Funktionen (aktuell z. B. `formatNumber`, `roundToDigits`).
+- `melos run bootstrap` ruft intern `melos bootstrap` auf und verlinkt alle Path-Dependencies nach Änderungen an `pubspec.yaml` oder den Paketordnern.
+- `melos run analyze` startet `flutter analyze --no-pub` pro Paket (siehe `tool/custom_analyze.dart`) und stoppt beim ersten Fehler inklusive farbiger Zusammenfassung.
+- `melos run lint:imports` (siehe `tool/lint_imports.dart`) setzt die oben beschriebenen Abhängigkeitsregeln durch.
+- `melos run test` führt `flutter test` nur in Paketen aus, die einen `test/`-Ordner besitzen, `melos run format` formatiert jeden Paket-`lib/`-Ordner mit `dart format`.
 
-Alle Pakete verwenden das `lib/` + `lib/src/`-Konventionsmuster: Die öffentliche API wird ausschließlich über `lib/<paketname>.dart` exportiert, Implementierungen verbleiben in `lib/src/`.
+**Paketfamilien:**
+
+- `packages/core/ui` – Shared UI-Bausteine wie `SonalyzeSurface`, `SonalyzeButton`, `SonalyzeAccordionTile`; öffentlicher Einstieg `lib/core_ui.dart`.
+- `packages/services/l10n` – L10n-/Theme-/Konfig-Service inklusive Assets und `JsonHotReloadBloc`.
+- `packages/features/landing_page`, `measurement_page`, `simulation_page` – Feature-Pakete mit Screen + Bloc unter `lib/src/{view,bloc}` und Barrel-Export.
+- `packages/helpers/common` – Rein funktionale Helfer (`formatNumber`, `roundToDigits`…), keine Flutter-Abhängigkeit.
+
+Alle Pakete halten strikt das `lib/` + `lib/src/`-Muster ein: öffentliche API via Barrel, Implementierungsdetails verbleiben unter `lib/src/**` und dürfen von außen nicht importiert werden.
 
 ## `lib/` (App-spezifischer Code)
 
 Nach der Modularisierung enthält das App-Paket nur noch den Einstiegspunkt:
 
 - `main.dart`
-  - Initialisiert `AppConstants` aus `l10n_service`.
-  - Baut das `MaterialApp`, erzeugt das Theme über die JSON-Design-Tokens.
-  - Registriert alle Feature-Routen und importiert die Screens direkt aus den Feature-Paketen (`package:landing_page/…`, `package:measurement_page/…`, `package:simulation_page/…`).
-  - Ist der einzige Ort, an dem zukünftig DI (`get_it`) oder globale Router-Logik zusammenlaufen.
+  - Ruft vor `runApp` `configureDependencies()` auf, was `AppConstants.initialize()` sowie den `JsonHotReloadBloc` über `get_it` registriert.
+  - Baut das `MaterialApp`, erzeugt das Theme über die JSON-Design-Tokens aus `AppConstants` und registriert alle Feature-Routen (`LandingPageScreen.routeName`, …).
+  - Bleibt die zentrale Stelle für Routing, theming und zukünftige App-weite Glue-Komponenten.
 
-Weitere App-spezifische Dateien liegen ausschließlich im `lib/di/`-Ordner (derzeit `injector.dart`). Layout-Shells oder Router-Erweiterungen würden ebenfalls dort entstehen, ohne in Feature-Code einzugreifen.
+Weitere App-spezifische Dateien liegen ausschließlich im Ordner `lib/di/`. Aktuell beherbergt `injector.dart` die gesamte `get_it`-Konfiguration inklusive Desktop-spezifischem Start des JSON-Hot-Reloads (auf Web wird aufgrund fehlendem `dart:io` automatisch geblockt).
 
-## Assets und Übersetzungen
+## Assets, Lokalisierung & Hot Reload
 
-- Alle Konfigurations-, Theme- und Übersetzungsdateien liegen unter `packages/services/l10n/assets/` (`configuration/`, `themes/`, `translations/`).
-- Das Service-Paket registriert die Assets in seiner eigenen `pubspec.yaml` und stellt Zugriffsfunktionen (`AppConstants.config`, `AppConstants.translation`, `AppConstants.getThemeColor`) bereit.
-- Desktop-Hot-Reload für JSON-Dateien erfolgt über `JsonHotReloadBloc`, ebenfalls Teil des `l10n_service`-Pakets.
-- Sollten zusätzliche statische Assets benötigt werden (Bilder, Fonts usw.), können sie entweder im App-Paket oder in einem passenden Feature-/Core-Paket angelegt werden. In jedem Fall gehören sie in die jeweilige `pubspec.yaml` unter `flutter:` → `assets:` bzw. `fonts:`.
+- Alle Konfigurations-, Theme- und Übersetzungsdateien liegen unter `packages/services/l10n/assets/{configuration,themes,translations}` und werden in der `pubspec.yaml` des Service-Pakets registriert.
+- Zugriff erfolgt ausschließlich über `AppConstants.config('pfad')`, `AppConstants.translation('pfad')`, `AppConstants.getThemeColor('pfad')` bzw. `AppConstants.getThemeColors('pfad')` – keine Hardcodes im UI-Code.
+- `JsonHotReloadBloc` (aus `l10n_service`) beobachtet im Desktop-Debug die aktiven JSON-Dateien im 500-ms-Intervall und lädt sie neu. Auf Web wird Watching automatisch deaktiviert (`kIsWeb`), man kann aber weiterhin Reload-Events dispatchen.
+- Möchten Features neue Asset-Typen überwachen, wird der bestehende Bloc um neue Events/States erweitert; zusätzliche Watcher sind nicht nötig.
+- Weitere statische Assets (z. B. Images) liegen entweder im App-Paket oder in einem passenden Feature/Core-Paket und müssen dort im jeweiligen `pubspec.yaml`-Abschnitt `flutter/assets` bzw. `fonts` eingetragen werden.
 
 ## Kurze Checkliste für Entwickler
 
-- **Lokalisierung/Themes:** Änderungen an Konfiguration, Themes oder Übersetzungen → `packages/services/l10n/assets/` + ggf. `JsonHotReloadBloc` anstoßen.
-- **Shared UI:** Neue wiederverwendbare Widgets → `packages/core/ui/lib/src/…` implementieren und über `lib/core_ui.dart` exportieren.
-- **Feature-Code:** UI + BLoC-Logik ausschließlich im jeweiligen Feature-Paket ergänzen (`lib/src/view`, `lib/src/bloc`). Keine direkten Abhängigkeiten zwischen Features; stattdessen Services/Core verwenden oder Callbacks nach außen reichen.
-- **App-Glue:** Route-/DI-Anpassungen sowie globale Theme- oder State-Wiring geschehen in `lib/main.dart` (später ggf. `lib/di/`).
-- **Neue Pakete:** Beim Anlegen weiterer Features/Services unbedingt das `lib/` vs. `lib/src/`-Pattern sowie die Abhängigkeitsregeln aus `packages/README.md` beachten.
+- **Lokalisierung/Themes:** Änderungen an JSON-Dateien immer unter `packages/services/l10n/assets/` durchführen und den bestehenden `JsonHotReloadBloc` nutzen (Events erweitern statt neue Watcher bauen).
+- **Shared UI:** Neue wiederverwendbare Widgets kommen nach `packages/core/ui/lib/src/...` und werden über `lib/core_ui.dart` exportiert; Designs lesen ihre Farben/Texte über `AppConstants` oder via Parameter.
+- **Feature-Code:** Screens + Bloc-Logik bleiben im jeweiligen Feature-Paket unter `lib/src/view` bzw. `lib/src/bloc`. Features importieren keine anderen Features, sondern bedienen sich bei `core_ui`, `l10n_service`, `common_helpers`.
+- **App-Glue/DI:** Anpassungen an Routing, globalem Theme oder Dependency Injection erfolgen ausschließlich in `lib/main.dart` und `lib/di/injector.dart` (hier `get_it`-Registrierungen pflegen).
+- **Neue Pakete:** Immer Barrel + `lib/src`-Pattern einhalten, `pubspec.yaml` (root workspace + Paket) aktualisieren, `import_rules.yaml` ergänzen und danach `melos run bootstrap` + `melos run lint:imports` ausführen.
 
 ## Abschluss
 
