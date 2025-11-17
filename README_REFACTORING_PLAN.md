@@ -147,18 +147,125 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
 
 ### Migration Steps
 
-1. **Define target package layout and rules**
-   1. Create `packages/features/`, `packages/services/`, `packages/core/`, `packages/helpers/` folders.
-   2. Decide on packages:
-      - `packages/core/ui` (shared widgets: `SonalyzeSurface`, `SonalyzeButton`, etc.).
-      - `packages/services/l10n` (configuration, themes, translations, `AppConstants`, `JsonParser`, `JsonHotReloadBloc`).
-      - `packages/features/landing_page`.
-      - `packages/features/measurement_page`.
-      - `packages/features/simulation_page`.
-      - `packages/helpers/common` (future stateless helpers).
-   3. For each package, document:
-      - Its purpose and allowed dependencies.
-      - That it must expose only via `lib/<package_name>.dart` (public) and put internals in `lib/src/`.
+- [ ] **Step 1: Define target package layout and rules**
+  1. Create `packages/features/`, `packages/services/`, `packages/core/`, `packages/helpers/` folders.
+  2. Decide on packages:
+     - `packages/core/ui` (shared widgets: `SonalyzeSurface`, `SonalyzeButton`, etc.).
+     - `packages/services/l10n` (configuration, themes, translations, `AppConstants`, `JsonParser`, `JsonHotReloadBloc`).
+     - `packages/features/landing_page`.
+     - `packages/features/measurement_page`.
+     - `packages/features/simulation_page`.
+     - `packages/helpers/common` (future stateless helpers).
+  3. For each package, document:
+     - Its purpose and allowed dependencies.
+     - That it must expose only via `lib/<package_name>.dart` (public) and put internals in `lib/src/`.
+
+- [ ] **Step 2: Introduce Melos workspace at root**
+  1. Add `melos.yaml` with:
+     - `packages: ["packages/**"]`.
+     - Scripts for `bootstrap`, `analyze`, test, `format`.
+  2. Run `melos bootstrap` after initial scaffolding to ensure workspace wiring.
+  3. Update README_Projektstruktur.md to describe the workspace and `packages/` layout.
+
+- [ ] **Step 3: Scaffold empty packages with lib/`src` convention**
+  1. For each planned package:
+     - For UI and features: create Flutter packages (they depend on `flutter`).
+     - For services/helpers: create Dart or Flutter packages depending on whether they need Flutter.
+  2. In each package:
+     - Create `lib/<package_name>.dart` as the barrel/public interface.
+     - Create `lib/src/` and place internal files there (even if initially empty).
+  3. Add minimal README.md in each package explaining:
+     - How to add new code.
+     - That all new files go into `lib/src/` and are re-exported via the main `lib/<package_name>.dart` file.
+
+- [ ] **Step 4: Create `services/l10n` package (merged l10n + json hot reload)**
+  1. Move the following into `packages/services/l10n/lib/src/`:
+     - json_parser.dart.
+     - app_constants.dart.
+     - `lib/blocs/json_hot_reload/*.dart`.
+  2. Move JSON files into the package:
+     - configuration → `packages/services/l10n/assets/configuration/`.
+     - themes → `packages/services/l10n/assets/themes/`.
+     - translations → `packages/services/l10n/assets/translations/`.
+  3. In `packages/services/l10n/lib/l10n_service.dart` (or similar):
+     - Export only the public API you want consumers to see: e.g. `AppConstants`, a `L10nService` abstraction, `JsonHotReloadBloc` and its events/states.
+     - Keep internal utilities under `lib/src/` and re-export selectively.
+  4. Configure `packages/services/l10n/pubspec.yaml`:
+     - Add dependencies: `flutter`, `flutter_bloc`, `path` (if used), etc.
+     - Register JSON assets under `flutter: assets:` pointing to its `assets/` subfolders.
+  5. Update main app and any other code to import from `package:l10n_service/l10n_service.dart` instead of `sonalyze_frontend/...`.
+  6. Remove original constants and l10n folders once all references are updated.
+
+- [ ] **Step 5: Create `core/ui` shared UI package**
+  1. Move `lib/utilities/ui/common/*` into `packages/core/ui/lib/src/common/` and adjust imports to be local.
+  2. In `packages/core/ui/lib/core_ui.dart`:
+     - Export the shared widgets intended to be public.
+  3. Configure `packages/core/ui/pubspec.yaml`:
+     - Add `flutter` and any other UI-related dependencies.
+  4. In features and app:
+     - Replace old imports (`lib/utilities/ui/common/...`) with `package:core_ui/core_ui.dart`.
+  5. Remove old common folder after all imports are migrated.
+
+- [ ] **Step 6: Modularize feature code into feature packages**
+  1. For each feature (landing, measurement, simulation):
+     - Create a package in `packages/features/<feature_name>/`.
+     - Move BLoCs from `lib/blocs/<feature_name>/` into `lib/src/bloc/` of that package.
+     - Move the corresponding view from `lib/views/<feature_name>/<feature_name>.dart` into `lib/src/view/`.
+  2. In each feature package's main file (`lib/<feature_name>.dart`):
+     - Export the main screen widget and any public-facing BLoC types.
+     - Keep internal sub-widgets and utilities in `lib/src/` without re-export unless needed.
+  3. Configure each feature package's pubspec.yaml:
+     - Dependencies: `flutter`, `flutter_bloc`, `core_ui`, `l10n_service` (for text and themes).
+     - No direct dependencies on other features (to keep packages independent).
+  4. In the app's pubspec.yaml:
+     - Add `path` dependencies for all feature packages.
+  5. Update the app's route setup in main.dart to import and use the `LandingPageScreen`, `MeasurementPageScreen`, `SimulationPageScreen` from their feature packages.
+
+- [ ] **Step 7: Introduce `get_it` and define DI boundaries**
+  1. Add `get_it` to the app's pubspec.yaml (and only to packages that must resolve from it, not necessarily to all).
+  2. Create `lib/di/injector.dart` in the main app:
+     - Initialize a global `GetIt` instance (e.g. `final getIt = GetIt.instance;`).
+     - Register services from `l10n_service` like `AppConstants`, `JsonHotReloadBloc`, and any future domain services.
+  3. Decide usage style:
+     - Prefer passing dependencies down via constructors for testability, but allow features to read from `get_it` for services when necessary.
+  4. In feature packages:
+     - Expose constructor parameters for services (e.g. `LandingPageScreen({required L10nService l10n})`), or, as an alternative:
+     - Use `get_it` directly but hide it behind an abstraction if possible (e.g. `L10nProvider` using `getIt` internally).
+  5. Update `main.dart`:
+     - Before `runApp`, call the DI setup.
+     - Ensure `AppConstants.initialize()` is invoked via `l10n_service` (could be called as part of DI registration or explicitly before DI registration).
+
+- [ ] **Step 8: Prepare `helpers/common` package for stateless utilities**
+  1. Create `packages/helpers/common` with:
+     - `lib/common_helpers.dart` as the public entry file.
+     - `lib/src/` for future helper implementations.
+  2. Document constraints:
+     - No Flutter dependency (pure Dart).
+     - No `get_it` references inside helpers (remain stateless and pure).
+  3. Keep it initially empty or move any suitable reusable stateless functions into `lib/src/` and re-export them.
+
+- [ ] **Step 9: Clean up the main app package**
+  1. After migrating:
+     - Restrict lib in the app to:
+       - `main.dart` (entry),
+       - `di/` for dependency setup,
+       - Optional app-level widgets (e.g. `SonalyzeApp`).
+  2. Remove old `blocs/`, `views/`, `utilities/`, `constants/`, `l10n/` from the app once confirmed that all imports point to packages.
+  3. Update README_Projektstruktur.md to:
+     - Reflect the new feature-first architecture.
+     - Show how `packages/features`, `packages/services`, `packages/core`, and `packages/helpers` are structured.
+     - Explain the lib vs `lib/src/` convention for all packages.
+
+- [ ] **Step 10: Validate independence and Melos integration**
+  1. Run analysis per package:
+     - In each package directory: `flutter analyze` or `dart analyze` to confirm no invalid imports.
+  2. From workspace root, run Melos commands:
+     - `melos bootstrap` (ensure all path deps wired).
+     - `melos exec -- flutter analyze` and `melos exec -- flutter test` (if tests exist).
+  3. Check for:
+     - No remaining relative imports across package boundaries.
+     - Each package compiling and being usable independently.
+  4. Fix any remaining references to old `sonalyze_frontend/lib/...` paths by pointing them to the appropriate package APIs.
 
 2. **Introduce Melos workspace at root**
    1. Add `melos.yaml` with:
