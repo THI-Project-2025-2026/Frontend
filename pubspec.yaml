@@ -21,6 +21,8 @@ version: 1.0.0+1
 environment:
   sdk: ^3.9.2
 
+workspace: []
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -37,6 +39,7 @@ dependencies:
   flutter_bloc: ^9.1.1
 
 dev_dependencies:
+  melos: ^7.3.0
   flutter_test:
     sdk: flutter
 

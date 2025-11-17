@@ -166,12 +166,11 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
      | `features/simulation_page` | Simulation grid, blocs, and acoustic math glue. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
      | `helpers/common` | Future stateless helpers. | Dart SDK only |
 
-- [ ] **Step 2: Introduce Melos workspace at root**
-  1. Add `melos.yaml` with:
-     - `packages: ["packages/**"]`.
-     - Scripts for `bootstrap`, `analyze`, test, `format`.
-  2. Run `melos bootstrap` after initial scaffolding to ensure workspace wiring.
-  3. Update README_Projektstruktur.md to describe the workspace and `packages/` layout.
+- [x] **Step 2: Introduce Melos workspace at root**
+   1. Added `melos.yaml` with `packages: ["packages/**"]` plus scripts for `bootstrap`, `analyze`, `test`, and `format` (each guarding for missing folders so empty packages do not fail).
+   2. Confirmed the workspace wiring by running `melos bootstrap` (currently no sub-packages publish `pubspec.yaml`, so the command completes without linking dependencies).
+   3. Extended README_Projektstruktur.md with a dedicated Melos section covering the `packages/` layout, script usage, and the enforced `lib/` → `lib/src/` convention.
+   4. Added a placeholder `workspace: []` entry and pinned `melos: ^7.3.0` under `dev_dependencies` in the root `pubspec.yaml` so Melos recognizes the workspace version; the list will be populated once packages gain their own pubspecs.
 
 - [ ] **Step 3: Scaffold empty packages with lib/`src` convention**
   1. For each planned package:

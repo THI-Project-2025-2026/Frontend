@@ -10,8 +10,15 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 ├── README.md
 ├── README_Projektstruktur.md
 ├── pubspec.yaml
+├── melos.yaml
 ├── .github/
 │   └── copilot-instructions.md
+├── packages/
+│   ├── README.md
+│   ├── core/
+│   ├── features/
+│   ├── helpers/
+│   └── services/
 └── lib/
 		├── main.dart
 		├── blocs/
@@ -65,7 +72,26 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 - `README.md` — Allgemeine Projekt-Informationen, How-to, Entwicklerhinweise.
 - `README_Projektstruktur.md` — Dieses Dokument: Detaillierte Beschreibung der Ordnerstruktur.
 - `pubspec.yaml` — Abhängigkeiten, Assets-Registrierung, App-Metadaten (App-Name, Version, Fonts usw.).
+- `melos.yaml` — Melos-Workspace-Konfiguration (Paket-Globs, Skripte für `bootstrap`, `analyze`, `test`, `format`).
 - `.github/copilot-instructions.md` — Handlungsanweisungen für AI-Coding-Agents (Coding-Guidelines, Projekt-Kontext).
+
+## Melos-Workspace und `packages/`
+
+Das Projekt ist als Melos-Workspace organisiert, damit Features, Services und Core-Komponenten als unabhängige Pakete entwickelt werden können.
+
+- `melos.yaml` definiert `packages/**` als Workspace und stellt Skripte zur Verfügung:
+	- `melos run bootstrap` → führt `melos bootstrap` aus und installiert alle Paketabhängigkeiten.
+	- `melos run analyze` → ruft in jedem Paket `flutter analyze` auf (nur wenn eine `pubspec.yaml` vorhanden ist).
+	- `melos run test` → führt `flutter test` aus, sofern ein `test/`-Ordner existiert.
+	- `melos run format` → formatiert den `lib/`-Ordner der jeweiligen Pakete mit `dart format`.
+- `packages/`
+	- `README.md` — Überblick über die Paketfamilien und deren Abhängigkeitsregeln.
+	- `core/` — Gemeinsame Widgets/Designsystem (z. B. zukünftiges `core/ui`).
+	- `services/` — Infrastruktur wie L10n + JSON-Hot-Reload u. Ä.
+	- `features/` — Feature-spezifische Pakete (Landing, Measurement, Simulation).
+	- `helpers/` — Geplante stateless Utilities ohne Flutter-Abhängigkeit.
+
+> Alle neuen Pakete folgen dem `lib/` + `lib/src/`-Konventionsmuster: Öffentliche Schnittstellen werden über `lib/<paketname>.dart` exportiert, Implementierungsdetails leben in `lib/src/`.
 
 ## `lib/` (Quellcode)
 

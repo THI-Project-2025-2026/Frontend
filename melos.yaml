@@ -1,0 +1,17 @@
+name: sonalyze_frontend
+packages:
+  - packages/**
+
+scripts:
+  bootstrap:
+    description: Install dependencies across all packages.
+    run: melos bootstrap
+  analyze:
+    description: Run flutter analyze in every package.
+    run: melos exec -- "if [ -f pubspec.yaml ]; then flutter analyze; fi"
+  test:
+    description: Run flutter tests when a package has a test directory.
+    run: melos exec -- "if [ -d test ]; then flutter test; fi"
+  format:
+    description: Format Dart sources for packages that expose a lib folder.
+    run: melos exec -- "if [ -d lib ]; then dart format lib; fi"
