@@ -110,9 +110,6 @@ flutter:
 
 melos:
   scripts:
-    bootstrap:
-      description: Install dependencies across all packages.
-      run: melos bootstrap
     analyze:
       description: Custom workspace analyzer with colored output per package.
       run: dart run tool/custom_analyze.dart
