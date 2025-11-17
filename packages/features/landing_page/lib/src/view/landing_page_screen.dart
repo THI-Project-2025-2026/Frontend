@@ -4,27 +4,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
 import 'package:core_ui/core_ui.dart';
-import 'package:sonalyze_frontend/blocs/landing_page/landing_page_bloc.dart';
-import 'package:sonalyze_frontend/views/measurement_page/measurement_page.dart';
-import 'package:sonalyze_frontend/views/simulation_page/simulation_page.dart';
+
+import '../bloc/landing_page_bloc.dart';
 
 /// Landing page entry point wiring the BLoC to the widget tree.
 class LandingPageScreen extends StatelessWidget {
-  const LandingPageScreen({super.key});
+  const LandingPageScreen({
+    super.key,
+    this.onNavigateToMeasurement,
+    this.onNavigateToSimulation,
+  });
 
   static const String routeName = '/';
+  static const String defaultMeasurementRoute = '/measurement';
+  static const String defaultSimulationRoute = '/simulation';
+
+  final void Function(BuildContext context)? onNavigateToMeasurement;
+  final void Function(BuildContext context)? onNavigateToSimulation;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => LandingPageBloc(),
-      child: const _LandingPageView(),
+      child: _LandingPageView(
+        onNavigateToMeasurement: onNavigateToMeasurement,
+        onNavigateToSimulation: onNavigateToSimulation,
+      ),
     );
   }
 }
 
 class _LandingPageView extends StatelessWidget {
-  const _LandingPageView();
+  const _LandingPageView({
+    this.onNavigateToMeasurement,
+    this.onNavigateToSimulation,
+  });
+
+  final void Function(BuildContext context)? onNavigateToMeasurement;
+  final void Function(BuildContext context)? onNavigateToSimulation;
+
+  void _openMeasurement(BuildContext context) {
+    if (onNavigateToMeasurement != null) {
+      onNavigateToMeasurement!(context);
+      return;
+    }
+    Navigator.of(context).pushNamed(LandingPageScreen.defaultMeasurementRoute);
+  }
+
+  void _openSimulation(BuildContext context) {
+    if (onNavigateToSimulation != null) {
+      onNavigateToSimulation!(context);
+      return;
+    }
+    Navigator.of(context).pushNamed(LandingPageScreen.defaultSimulationRoute);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +111,12 @@ class _LandingPageView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _HeroSection(isWide: isWide, isMedium: isMedium),
+                        _HeroSection(
+                          isWide: isWide,
+                          isMedium: isMedium,
+                          onNavigateToMeasurement: _openMeasurement,
+                          onNavigateToSimulation: _openSimulation,
+                        ),
                         SizedBox(height: sectionSpacing),
                         _FeatureShowcase(isWide: isWide, isMedium: isMedium),
                         SizedBox(height: sectionSpacing),
@@ -105,10 +143,17 @@ class _LandingPageView extends StatelessWidget {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection({required this.isWide, required this.isMedium});
+  const _HeroSection({
+    required this.isWide,
+    required this.isMedium,
+    required this.onNavigateToMeasurement,
+    required this.onNavigateToSimulation,
+  });
 
   final bool isWide;
   final bool isMedium;
+  final void Function(BuildContext context) onNavigateToMeasurement;
+  final void Function(BuildContext context) onNavigateToSimulation;
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +184,7 @@ class _HeroSection extends StatelessWidget {
         runSpacing: 12,
         children: [
           SonalyzeButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(SimulationPageScreen.routeName);
-            },
+            onPressed: () => onNavigateToSimulation(context),
             backgroundColor: primaryButtonColor,
             foregroundColor: primaryButtonText,
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
@@ -154,9 +197,7 @@ class _HeroSection extends StatelessWidget {
             ),
           ),
           SonalyzeButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(MeasurementPageScreen.routeName);
-            },
+            onPressed: () => onNavigateToMeasurement(context),
             variant: SonalyzeButtonVariant.outlined,
             foregroundColor: secondaryButtonText,
             borderColor: secondaryBorderColor,

@@ -12,6 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
+  l10n_service:
+    path: ../../services/l10n
+  core_ui:
+    path: ../../core/ui
 
 dev_dependencies:
   flutter_test:

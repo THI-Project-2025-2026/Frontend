@@ -47,6 +47,12 @@ dependencies:
     path: packages/services/l10n
   core_ui:
     path: packages/core/ui
+  landing_page:
+    path: packages/features/landing_page
+  measurement_page:
+    path: packages/features/measurement_page
+  simulation_page:
+    path: packages/features/simulation_page
 
 dev_dependencies:
   melos: ^7.3.0

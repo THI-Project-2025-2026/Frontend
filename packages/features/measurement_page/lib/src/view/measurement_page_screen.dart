@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
 import 'package:core_ui/core_ui.dart';
-import 'package:sonalyze_frontend/blocs/measurement_page/measurement_page_bloc.dart';
+
+import '../bloc/measurement_page_bloc.dart';
 
 class MeasurementPageScreen extends StatelessWidget {
   const MeasurementPageScreen({super.key});

@@ -203,20 +203,12 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   4. Declared the `core_ui` path dependency in the main app’s `pubspec.yaml`, updated all feature views to import `package:core_ui/core_ui.dart`, and cleaned up the obsolete `lib/utilities/` folder.
   5. Refreshed internal docs (`README_Projektstruktur.md`, `.github/copilot-instructions.md`) to point contributors to the new shared UI package.
 
-- [ ] **Step 6: Modularize feature code into feature packages**
-  1. For each feature (landing, measurement, simulation):
-     - Create a package in `packages/features/<feature_name>/`.
-     - Move BLoCs from `lib/blocs/<feature_name>/` into `lib/src/bloc/` of that package.
-     - Move the corresponding view from `lib/views/<feature_name>/<feature_name>.dart` into `lib/src/view/`.
-  2. In each feature package's main file (`lib/<feature_name>.dart`):
-     - Export the main screen widget and any public-facing BLoC types.
-     - Keep internal sub-widgets and utilities in `lib/src/` without re-export unless needed.
-  3. Configure each feature package's pubspec.yaml:
-     - Dependencies: `flutter`, `flutter_bloc`, `core_ui`, `l10n_service` (for text and themes).
-     - No direct dependencies on other features (to keep packages independent).
-  4. In the app's pubspec.yaml:
-     - Add `path` dependencies for all feature packages.
-  5. Update the app's route setup in main.dart to import and use the `LandingPageScreen`, `MeasurementPageScreen`, `SimulationPageScreen` from their feature packages.
+- [x] **Step 6: Modularize feature code into feature packages**
+  1. Migrated landing, measurement, and simulation BLoCs from `lib/blocs/*` into their respective feature packages under `lib/src/bloc/` and moved each screen widget tree into `lib/src/view/`.
+  2. Updated the barrel files (`lib/<feature>.dart`) so consumers import the screen + bloc types directly from the package while the implementation stays under `lib/src/`.
+  3. Added `core_ui` + `l10n_service` as dependencies of every feature package and ensured no package relies on another feature.
+  4. Declared all feature packages as `path` dependencies in the main app and removed the obsolete `lib/blocs`/`lib/views` folders.
+  5. Switched `main.dart` routing to the feature packages (e.g. `package:landing_page/landing_page.dart`) so the app composes features without referencing their internal structure.
 
 - [ ] **Step 7: Introduce `get_it` and define DI boundaries**
   1. Add `get_it` to the app's pubspec.yaml (and only to packages that must resolve from it, not necessarily to all).
