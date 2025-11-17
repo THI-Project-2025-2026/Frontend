@@ -7,8 +7,8 @@ scripts:
     description: Install dependencies across all packages.
     run: melos bootstrap
   analyze:
-    description: Run flutter analyze in every package.
-    run: melos exec -- "if [ -f pubspec.yaml ]; then flutter analyze; fi"
+    description: Custom workspace analyzer with colored output per package.
+    run: dart run tool/custom_analyze.dart
   test:
     description: Run flutter tests when a package has a test directory.
     run: melos exec -- "if [ -d test ]; then flutter test; fi"
