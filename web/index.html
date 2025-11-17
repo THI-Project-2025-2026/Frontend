@@ -175,6 +175,8 @@
         }
       };
 
+      const l10nBasePath = 'assets/packages/l10n_service/assets';
+
       const fetchJson = (path) => fetch(path, { cache: 'no-cache' }).then((response) => {
         if (!response.ok) {
           throw new Error('Failed to load ' + path + ': ' + response.status);
@@ -183,7 +185,7 @@
       });
 
       const applyTheme = (themeKey) => {
-        return fetchJson('assets/lib/l10n/themes/' + themeKey + '.json')
+        return fetchJson(l10nBasePath + '/themes/' + themeKey + '.json')
           .then((themeData) => {
             applyLoaderPalette(themeData?.loader, themeKey);
           })
@@ -198,7 +200,7 @@
         setLoadingTitle('');
         setLoadingMessage('');
 
-        return fetchJson('assets/lib/l10n/translations/' + normalized + '.json')
+        return fetchJson(l10nBasePath + '/translations/' + normalized + '.json')
           .then((translations) => {
             const title = translations?.app?.loading_title;
             if (typeof title === 'string' && title.trim()) {
@@ -218,7 +220,7 @@
       };
 
       // Load configuration so the preload matches the selected theme and language.
-      fetchJson('assets/lib/l10n/configuration/default_configuration.json')
+      fetchJson(l10nBasePath + '/configuration/default_configuration.json')
         .then((config) => {
           const themeKey = String(config?.defaultTheme || 'dark').toLowerCase();
           const resolvedTheme = themeKey === 'light' ? 'light' : 'dark';

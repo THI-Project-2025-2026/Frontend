@@ -1,7 +1,7 @@
 
 ## Projektstruktur (Kurzbeschreibung)
 
-Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts. Aufgeführt werden die README-Dateien im Projekt-Root, die `pubspec.yaml`-Datei sowie die Verzeichnisse `lib/` und – sofern vorhanden – `assets/` (rekursiv) mit einer kurzen Erklärung, welche Artefakte dort abgelegt werden.
+Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. Der Fokus liegt auf den Root-Dateien, dem Melos-Workspace unter `packages/` sowie dem verbleibenden Code im App-Paket (`lib/`).
 
 ## Projekt - Verzeichnisbaum (relevant für dieses README)
 
@@ -9,119 +9,135 @@ Dieses Dokument beschreibt die wesentliche Projektstruktur des Flutter-Projekts.
 .
 ├── README.md
 ├── README_Projektstruktur.md
+├── README_REFACTORING_PLAN.md
 ├── pubspec.yaml
+├── melos.yaml
 ├── .github/
 │   └── copilot-instructions.md
+├── packages/
+│   ├── README.md
+│   ├── core/
+│   │   └── ui/
+│   │       ├── lib/
+│   │       │   ├── core_ui.dart
+│   │       │   └── src/common/
+│   │       │       ├── sonalyze_surface.dart
+│   │       │       ├── sonalyze_button.dart
+│   │       │       └── sonalyze_accordion_tile.dart
+│   │       └── README.md
+│   ├── services/
+│   │   └── l10n/
+│   │       ├── assets/
+│   │       │   ├── configuration/
+│   │       │   ├── themes/
+│   │       │   └── translations/
+│   │       └── lib/
+│   │           ├── l10n_service.dart
+│   │           └── src/
+│   │               ├── app_constants.dart
+│   │               ├── json_parser.dart
+│   │               └── json_hot_reload/
+│   ├── features/
+│   │   ├── landing_page/
+│   │   │   └── lib/
+│   │   │       ├── landing_page.dart
+│   │   │       └── src/
+│   │   │           ├── bloc/
+│   │   │           │   ├── landing_page_bloc.dart
+│   │   │           │   ├── landing_page_event.dart
+│   │   │           │   └── landing_page_state.dart
+│   │   │           └── view/landing_page_screen.dart
+│   │   ├── measurement_page/
+│   │   │   └── lib/
+│   │   │       ├── measurement_page.dart
+│   │   │       └── src/
+│   │   │           ├── bloc/
+│   │   │           │   ├── measurement_page_bloc.dart
+│   │   │           │   ├── measurement_page_event.dart
+│   │   │           │   └── measurement_page_state.dart
+│   │   │           └── view/measurement_page_screen.dart
+│   │   └── simulation_page/
+│   │       └── lib/
+│   │           ├── simulation_page.dart
+│   │           └── src/
+│   │               ├── bloc/
+│   │               │   ├── simulation_page_bloc.dart
+│   │               │   ├── simulation_page_event.dart
+│   │               │   └── simulation_page_state.dart
+│   │               └── view/simulation_page_screen.dart
+│   └── helpers/
+│       └── common/
+│           ├── lib/
+│           │   ├── common_helpers.dart
+│           │   └── src/
+│           │       └── number_formatting.dart
+│           └── README.md
 └── lib/
-		├── main.dart
-		├── blocs/
-		│   ├── json_hot_reload/
-		│   │   ├── json_hot_reload_bloc.dart
-		│   │   ├── json_hot_reload_event.dart
-		│   │   └── json_hot_reload_state.dart
-		│   ├── landing_page/
-		│   │   ├── landing_page_bloc.dart
-		│   │   ├── landing_page_event.dart
-		│   │   └── landing_page_state.dart
-		│   ├── measurement_page/
-		│   │   ├── measurement_page_bloc.dart
-		│   │   ├── measurement_page_event.dart
-		│   │   └── measurement_page_state.dart
-		│   └── simulation_page/
-		│       ├── simulation_page_bloc.dart
-		│       ├── simulation_page_event.dart
-		│       └── simulation_page_state.dart
-		├── constants/
-		│   └── app_constants.dart
-		├── l10n/
-		│   ├── configuration/
-		│   │   └── default_configuration.json
-		│   ├── json_parser.dart
-		│   ├── themes/
-		│   │   ├── dark.json
-		│   │   └── light.json
-		│   └── translations/
-		│       ├── de.json
-		│       └── us.json
-		├── utilities/
-		│   └── ui/
-		│       └── common/
-		│           ├── sonalyze_accordion_tile.dart
-		│           ├── sonalyze_button.dart
-		│           └── sonalyze_surface.dart
-		└── views/
-				├── landing_page/
-				│   └── landing_page.dart
-				├── measurement_page/
-				│   └── measurement_page.dart
-				└── simulation_page/
-						└── simulation_page.dart
+  ├── di/
+  │   └── injector.dart
+  └── main.dart
 ```
 
-> Hinweis: Ein dediziertes `assets/`-Verzeichnis ist derzeit nicht angelegt. Sobald statische Ressourcen hinzukommen, sollten sie dort strukturiert werden (siehe Abschnitt „`assets/` (statische Ressourcen)“).
+> Hinweis: Alle Feature-spezifischen Blöcke, Views und Assets befinden sich nun in eigenen Paketen unter `packages/`. Das App-Paket enthält nur noch den Einstiegspunkt und ggf. zukünftige App-spezifische Glue-Code-Dateien (`di/`, `router/` usw.).
 
 ## Root-Dateien
 
 - `README.md` — Allgemeine Projekt-Informationen, How-to, Entwicklerhinweise.
-- `README_Projektstruktur.md` — Dieses Dokument: Detaillierte Beschreibung der Ordnerstruktur.
-- `pubspec.yaml` — Abhängigkeiten, Assets-Registrierung, App-Metadaten (App-Name, Version, Fonts usw.).
-- `.github/copilot-instructions.md` — Handlungsanweisungen für AI-Coding-Agents (Coding-Guidelines, Projekt-Kontext).
+- `README_Projektstruktur.md` — Dieses Dokument.
+- `README_REFACTORING_PLAN.md` — Schrittweiser Migrationsplan (u. a. für Melos, Feature-Pakete und `get_it`).
+- `pubspec.yaml` — App-spezifische Abhängigkeiten (u. a. `l10n_service`, `core_ui`, alle Feature-Pakete) und Workspace-Angaben.
+- `melos.yaml` — Melos-Workspace-Konfiguration inkl. Skripten für Bootstrap, Analyse, Tests und Formatierung.
+- `import_rules.yaml` — Definiert für jedes Paket, welche anderen Workspace-Pakete importiert werden dürfen (Basis für `melos run lint:imports`).
+- `.github/copilot-instructions.md` — Prozess- und Coding-Guidelines für AI-Agents.
 
-## `lib/` (Quellcode)
+## Melos-Workspace und `packages/`
 
-In `lib/` befindet sich der gesamte Dart-/Flutter-Quellcode der App. Die aktuelle Verzeichnisstruktur ist oben als Baum dargestellt. Die wichtigsten Ordner im Detail:
+Der Workspace bündelt sämtliche Pakete unter `packages/**`. Wichtige Bestandteile:
+
+- **Skripte:**
+  - `melos run bootstrap` installiert Abhängigkeiten und verknüpft alle Path-Dependencies.
+  - `melos run analyze` führt `flutter analyze` in jedem Paket mit `pubspec.yaml` aus.
+  - `melos run lint:imports` prüft anhand von `import_rules.yaml`, ob sich alle Pakete an die erlaubten Cross-Package-Imports halten.
+  - `melos run test` startet Paket-Tests (sofern ein `test/`-Ordner vorhanden ist).
+  - `melos run format` formatiert pro Paket den jeweiligen `lib/`-Ordner.
+- **Paketfamilien:**
+  - `packages/core/ui` — Shared UI-Bausteine wie `SonalyzeSurface`, `SonalyzeButton`, Accordion-Tiles. Öffentliche API über `lib/core_ui.dart`.
+  - `packages/services/l10n` — Lokalisation + JSON-Konfigurationen (`AppConstants`, `JsonParser`, `JsonHotReloadBloc` samt Assets unter `assets/`).
+  - `packages/features/landing_page` — Landing-Page-Screen inkl. `LandingPageBloc`, Demo-Daten, kompletter View-Tree.
+  - `packages/features/measurement_page` — Measurement-Flow mit Lobby-, Gerätelisten-, Telemetrie- und Timeline-Widgets plus zugehörigem Bloc.
+  - `packages/features/simulation_page` — Simulation-Sandbox (Konfigurator, Grid, Kennzahlen) samt BLoC und akustischen Helfern.
+  - `packages/helpers/common` — Pure-Dart stateless Helper-Funktionen (aktuell z. B. `formatNumber`, `roundToDigits`).
+
+Alle Pakete verwenden das `lib/` + `lib/src/`-Konventionsmuster: Die öffentliche API wird ausschließlich über `lib/<paketname>.dart` exportiert, Implementierungen verbleiben in `lib/src/`.
+
+## `lib/` (App-spezifischer Code)
+
+Nach der Modularisierung enthält das App-Paket nur noch den Einstiegspunkt:
 
 - `main.dart`
-	- Einstiegspunkt der App. Stellt sicher, dass `AppConstants.initialize()` ausgeführt wird und registriert die Routen (`/`, `/simulation`, `/measurement`).
+  - Initialisiert `AppConstants` aus `l10n_service`.
+  - Baut das `MaterialApp`, erzeugt das Theme über die JSON-Design-Tokens.
+  - Registriert alle Feature-Routen und importiert die Screens direkt aus den Feature-Paketen (`package:landing_page/…`, `package:measurement_page/…`, `package:simulation_page/…`).
+  - Ist der einzige Ort, an dem zukünftig DI (`get_it`) oder globale Router-Logik zusammenlaufen.
 
-- `blocs/`
-	- Feature-spezifische BLoCs.
-	- `json_hot_reload/` — Beobachtet die JSON-Konfigurationsdateien und lädt sie bei Änderungen im Desktop-Modus nach.
-	- `landing_page/` — Steuert Demo-Inhalte der Landing Page (Feature-Rotation, FAQ, Kontaktformular-Simulation).
-	- `measurement_page/` — Simuliert Lobbys, Geräte und Telemetrie der Measurement Page.
-	- `simulation_page/` — Verarbeitet Raumparameter, Presets und Möbelplatzierungen für die Simulation.
+Weitere App-spezifische Dateien liegen ausschließlich im `lib/di/`-Ordner (derzeit `injector.dart`). Layout-Shells oder Router-Erweiterungen würden ebenfalls dort entstehen, ohne in Feature-Code einzugreifen.
 
-- `constants/`
-	- `app_constants.dart` — Kapselt den Zugriff auf Konfigurations-, Theme- und Übersetzungsdaten.
+## Assets und Übersetzungen
 
-- `l10n/`
-	- `json_parser.dart` — Hilfsklasse zum dynamischen Laden/Mergen der JSON-Dateien.
-	- `configuration/` — Standardkonfigurationen (`default_configuration.json`).
-	- `themes/` — Theme-Dateien (`dark.json`, `light.json`).
-	- `translations/` — Sprachressourcen (`de.json`, `us.json`).
-
-- `utilities/ui/common/`
-	- Wiederverwendbare UI-Bausteine (z. B. `SonalyzeButton`, `SonalyzeSurface`, `SonalyzeAccordionTile`) für ein konsistentes Erscheinungsbild.
-
-- `views/`
-	- Feature-spezifische Screens als Widgets.
-	- `landing_page/landing_page.dart` — Komplettes Landing-Page-Layout mit BLoC-Anbindung.
-	- `measurement_page/measurement_page.dart` — Screens & Komponenten für Messungs-Workflows.
-	- `simulation_page/simulation_page.dart` — UI für die akustische Simulation (Konfigurator, Grid, Charts).
-
-## `assets/` (statische Ressourcen)
-
-Ein physisches `assets/`-Verzeichnis ist aktuell nicht vorhanden. Sobald Assets benötigt werden, sollte folgende Struktur als Leitlinie dienen:
-
-- `icons/` — App-Icons, Launcher-Icons, SVG- oder PNG-Icons.
-- `images/` — Hintergrundbilder oder Illustrationen.
-- `fonts/` — Benutzerdefinierte Schriftarten (Registrierung in `pubspec.yaml` nicht vergessen).
-- `locales/` oder `i18n/` — Weitere Übersetzungsdateien (falls nicht über `lib/l10n/` abgewickelt).
-
-Gute Praktiken für `assets/`:
-
-- Assets in `pubspec.yaml` unter `flutter:` → `assets:` bzw. `fonts:` registrieren.
-- Ordner klar nach Zweck trennen und sprechende Dateinamen vergeben.
-- Bilddateien optimieren (Kompression, Auflösung) bevor sie eingecheckt werden.
+- Alle Konfigurations-, Theme- und Übersetzungsdateien liegen unter `packages/services/l10n/assets/` (`configuration/`, `themes/`, `translations/`).
+- Das Service-Paket registriert die Assets in seiner eigenen `pubspec.yaml` und stellt Zugriffsfunktionen (`AppConstants.config`, `AppConstants.translation`, `AppConstants.getThemeColor`) bereit.
+- Desktop-Hot-Reload für JSON-Dateien erfolgt über `JsonHotReloadBloc`, ebenfalls Teil des `l10n_service`-Pakets.
+- Sollten zusätzliche statische Assets benötigt werden (Bilder, Fonts usw.), können sie entweder im App-Paket oder in einem passenden Feature-/Core-Paket angelegt werden. In jedem Fall gehören sie in die jeweilige `pubspec.yaml` unter `flutter:` → `assets:` bzw. `fonts:`.
 
 ## Kurze Checkliste für Entwickler
 
-- Neue JSON-Konfigurationen oder Übersetzungen → in `lib/l10n/` ablegen und ggf. `JsonHotReloadBloc` berücksichtigen.
-- Neue State-Logik → passendes Feature unter `lib/blocs/` erweitern.
-- UI-Erweiterungen → in den jeweiligen `lib/views/<feature>/`-Ordnern oder als wiederverwendbare Komponenten unter `lib/utilities/ui/common/` ergänzen.
-- Assets hinzufügen → `assets/` anlegen/strukturieren und `pubspec.yaml` aktualisieren.
+- **Lokalisierung/Themes:** Änderungen an Konfiguration, Themes oder Übersetzungen → `packages/services/l10n/assets/` + ggf. `JsonHotReloadBloc` anstoßen.
+- **Shared UI:** Neue wiederverwendbare Widgets → `packages/core/ui/lib/src/…` implementieren und über `lib/core_ui.dart` exportieren.
+- **Feature-Code:** UI + BLoC-Logik ausschließlich im jeweiligen Feature-Paket ergänzen (`lib/src/view`, `lib/src/bloc`). Keine direkten Abhängigkeiten zwischen Features; stattdessen Services/Core verwenden oder Callbacks nach außen reichen.
+- **App-Glue:** Route-/DI-Anpassungen sowie globale Theme- oder State-Wiring geschehen in `lib/main.dart` (später ggf. `lib/di/`).
+- **Neue Pakete:** Beim Anlegen weiterer Features/Services unbedingt das `lib/` vs. `lib/src/`-Pattern sowie die Abhängigkeitsregeln aus `packages/README.md` beachten.
 
 ## Abschluss
 
-Dieses README bildet den aktuellen Stand der Projektstruktur ab. Bitte abgestimmte Änderungen hier dokumentieren, damit das Team sowie AI-Agents stets denselben Überblick besitzen.
+Dieses README dokumentiert den aktuellen Stand der Feature-First-/Melos-Struktur. Bitte bei weiteren Umstrukturierungen (neue Pakete, Assets, Routing, DI) die entsprechenden Abschnitte aktualisieren, damit das gesamte Team – inklusive AI-Agents – synchron bleibt.
 

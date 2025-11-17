@@ -7,7 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sonalyze_frontend/constants/app_constants.dart';
+import 'package:l10n_service/l10n_service.dart';
 import 'package:sonalyze_frontend/main.dart';
 
 void main() {

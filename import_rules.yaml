@@ -1,0 +1,53 @@
+# Defines which workspace packages are allowed to import other workspace packages.
+# Third-party packages from pub.dev and Flutter SDK imports are always permitted.
+groups:
+  services:
+    paths:
+      - packages/services
+  helpers:
+    paths:
+      - packages/helpers
+  features:
+    paths:
+      - packages/features
+  core:
+    paths:
+      - packages/core
+
+packages:
+  sonalyze_frontend:
+    path: .
+    allowed_packages:
+      - services
+      - features
+  core_ui:
+    path: packages/core/ui
+    allowed_packages:
+      - helpers
+      - l10n_service
+      - core
+  l10n_service:
+    path: packages/services/l10n
+    allowed_packages:
+      - helpers
+  landing_page:
+    path: packages/features/landing_page
+    allowed_packages:
+      - core
+      - services
+      - helpers
+  measurement_page:
+    path: packages/features/measurement_page
+    allowed_packages:
+      - core
+      - services
+      - helpers
+  simulation_page:
+    path: packages/features/simulation_page
+    allowed_packages:
+      - core
+      - services
+      - helpers
+  common_helpers:
+    path: packages/helpers/common
+    allowed_packages: []
