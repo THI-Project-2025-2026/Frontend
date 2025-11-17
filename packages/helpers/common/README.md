@@ -2,6 +2,10 @@
 
 Pure Dart helpers that remain stateless, deterministic, and Flutter-free.
 
+## Available helpers
+- `formatNumber` – converts numeric values to trimmed strings for UI labels.
+- `roundToDigits` – rounds a double to a configurable number of fraction digits without string parsing.
+
 ## Adding new code
 1. Implement functions/classes under `lib/src/` and keep them side-effect free.
 2. Re-export only the helpers you want consumers to use from `lib/common_helpers.dart`.
@@ -9,4 +13,4 @@ Pure Dart helpers that remain stateless, deterministic, and Flutter-free.
 4. Add unit tests under `test/` once helpers exist; rely on the `test` package rather than Flutter test harnesses.
 
 ## Notes
-- This package currently exports a placeholder; remove it when moving real helpers here.
+- Keep helpers dependency-free (Dart SDK only) to stay lightweight and testable.

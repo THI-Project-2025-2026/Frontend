@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:common_helpers/common_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -194,8 +195,10 @@ class SimulationAcousticMath {
               : freq >= 1000
               ? 0.1
               : 0.06;
-          final value = (baseline + freqWeight - volumeFactor).clamp(0.3, 0.95);
-          return double.parse(value.toStringAsFixed(3));
+          final value = (baseline + freqWeight - volumeFactor)
+              .clamp(0.3, 0.95)
+              .toDouble();
+          return roundToDigits(value, fractionDigits: 3);
         })
         .toList(growable: false);
   }
@@ -223,8 +226,10 @@ class SimulationAcousticMath {
               : freq >= 1000
               ? 0.12
               : 0.06;
-          final value = (base + freqWeight + enclosureFactor).clamp(0.35, 0.95);
-          return double.parse(value.toStringAsFixed(3));
+          final value = (base + freqWeight + enclosureFactor)
+              .clamp(0.35, 0.95)
+              .toDouble();
+          return roundToDigits(value, fractionDigits: 3);
         })
         .toList(growable: false);
   }

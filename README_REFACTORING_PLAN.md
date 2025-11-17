@@ -216,14 +216,10 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   3. Updated `main.dart` to import the injector and await `configureDependencies()` instead of calling `AppConstants.initialize()` directly, keeping feature packages unaware of the DI tool.
   4. The centralized locator now exposes l10n services (and future shared objects) for constructor injection, setting the foundation for upcoming steps without introducing `get_it` imports inside feature packages.
 
-- [ ] **Step 8: Prepare `helpers/common` package for stateless utilities**
-  1. Create `packages/helpers/common` with:
-     - `lib/common_helpers.dart` as the public entry file.
-     - `lib/src/` for future helper implementations.
-  2. Document constraints:
-     - No Flutter dependency (pure Dart).
-     - No `get_it` references inside helpers (remain stateless and pure).
-  3. Keep it initially empty or move any suitable reusable stateless functions into `lib/src/` and re-export them.
+- [x] **Step 8: Prepare `helpers/common` package for stateless utilities**
+  1. Finalized `packages/helpers/common` with the `lib/common_helpers.dart` barrel exporting implementations from `lib/src/`.
+  2. Documented the Flutter-free, DI-free constraints in the package README and listed the available helpers so contributors know how to extend it.
+  3. Added the first reusable helpers (`formatNumber`, `roundToDigits`) and updated the measurement and simulation features to consume them, establishing a real cross-package use case.
 
 - [ ] **Step 9: Clean up the main app package**
   1. After migrating:

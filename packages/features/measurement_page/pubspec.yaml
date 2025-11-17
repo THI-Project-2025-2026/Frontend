@@ -16,6 +16,8 @@ dependencies:
     path: ../../services/l10n
   core_ui:
     path: ../../core/ui
+  common_helpers:
+    path: ../../helpers/common
 
 dev_dependencies:
   flutter_test:

@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:common_helpers/common_helpers.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
-import 'package:core_ui/core_ui.dart';
 
 import '../bloc/measurement_page_bloc.dart';
 
@@ -940,17 +941,17 @@ class _TelemetryCard extends StatelessWidget {
     final metrics = [
       _TelemetryMetric(
         label: _tr('measurement_page.telemetry.uplink.label'),
-        value: state.uplinkRssi.toStringAsFixed(1),
+        value: formatNumber(state.uplinkRssi, fractionDigits: 1),
         unit: _tr('measurement_page.telemetry.uplink.unit'),
       ),
       _TelemetryMetric(
         label: _tr('measurement_page.telemetry.downlink.label'),
-        value: state.downlinkRssi.toStringAsFixed(1),
+        value: formatNumber(state.downlinkRssi, fractionDigits: 1),
         unit: _tr('measurement_page.telemetry.downlink.unit'),
       ),
       _TelemetryMetric(
         label: _tr('measurement_page.telemetry.jitter.label'),
-        value: state.networkJitterMs.toStringAsFixed(0),
+        value: formatNumber(state.networkJitterMs, fractionDigits: 0),
         unit: _tr('measurement_page.telemetry.jitter.unit'),
       ),
     ];

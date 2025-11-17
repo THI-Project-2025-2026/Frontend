@@ -1,7 +1,8 @@
+import 'package:common_helpers/common_helpers.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:l10n_service/l10n_service.dart';
-import 'package:core_ui/core_ui.dart';
 
 import '../bloc/simulation_page_bloc.dart';
 
@@ -435,7 +436,7 @@ class _DimensionSlider extends StatelessWidget {
               ),
             ),
             Text(
-              '${value.toStringAsFixed(1)} ${_tr('simulation_page.dimensions.unit')}',
+              '${formatNumber(value, fractionDigits: 1)} ${_tr('simulation_page.dimensions.unit')}',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: Theme.of(
                   context,
@@ -886,7 +887,7 @@ class _MetricChartCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${latestValue.toStringAsFixed(2)} ${_tr(series.unitKey)}',
+                '${formatNumber(latestValue, fractionDigits: 2)} ${_tr(series.unitKey)}',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Theme.of(
                     context,
