@@ -103,6 +103,11 @@ Map<String, _PackageRule> _loadRules(
     exit(1);
   }
 
+  final groupPackages = _resolveGroups(
+    groupsNode: rawConfig['groups'],
+    workspacePackages: workspacePackages,
+  );
+
   final packagesNode = rawConfig['packages'] as YamlMap;
   final rules = <String, _PackageRule>{};
 
@@ -131,11 +136,22 @@ Map<String, _PackageRule> _loadRules(
         if (pkg == null) {
           continue;
         }
-        allowedPackages.add(pkg.toString());
+        final entry = pkg.toString();
+        if (groupPackages.containsKey(entry)) {
+          allowedPackages.addAll(groupPackages[entry]!);
+          continue;
+        }
+        if (!workspacePackages.containsKey(entry)) {
+          stderr.writeln(
+            'Package "$name" references unknown allowed package or group "$entry".',
+          );
+          exit(1);
+        }
+        allowedPackages.add(entry);
       }
     } else if (allowedNode != null) {
       stderr.writeln(
-        'Package "$name" has an invalid "allowed_packages" entry. Expect a list of package names.',
+        'Package "$name" has an invalid "allowed_packages" entry. Expect a list of package names or group names.',
       );
       exit(1);
     }
@@ -165,6 +181,68 @@ Map<String, _PackageRule> _loadRules(
   }
 
   return rules;
+}
+
+Map<String, Set<String>> _resolveGroups({
+  required Object? groupsNode,
+  required Map<String, _WorkspacePackage> workspacePackages,
+}) {
+  final resolved = <String, Set<String>>{};
+  if (groupsNode == null) {
+    return resolved;
+  }
+  if (groupsNode is! YamlMap) {
+    stderr.writeln(
+      'The optional "groups" node in import_rules.yaml must be a map.',
+    );
+    exit(1);
+  }
+
+  final rootPath = Directory.current.path;
+
+  for (final entry in groupsNode.entries) {
+    final groupName = entry.key?.toString();
+    final groupValue = entry.value;
+    if (groupName == null || groupValue is! YamlMap) {
+      stderr.writeln(
+        'Each group entry must map to an object with a "paths" list.',
+      );
+      exit(1);
+    }
+
+    final pathsNode = groupValue['paths'];
+    if (pathsNode is! YamlList || pathsNode.isEmpty) {
+      stderr.writeln(
+        'Group "$groupName" must specify a non-empty "paths" list.',
+      );
+      exit(1);
+    }
+
+    final normalizedGroupPaths = <String>[];
+    for (final rawPath in pathsNode) {
+      if (rawPath == null) {
+        continue;
+      }
+      normalizedGroupPaths.add(
+        p.normalize(p.join(rootPath, rawPath.toString())),
+      );
+    }
+
+    final members = <String>{};
+    for (final workspacePackage in workspacePackages.values) {
+      final packagePath = p.normalize(p.join(rootPath, workspacePackage.path));
+      for (final groupPath in normalizedGroupPaths) {
+        if (packagePath == groupPath || p.isWithin(groupPath, packagePath)) {
+          members.add(workspacePackage.name);
+          break;
+        }
+      }
+    }
+
+    resolved[groupName] = members;
+  }
+
+  return resolved;
 }
 
 Map<String, _WorkspacePackage> _discoverWorkspacePackages() {
