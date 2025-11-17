@@ -172,16 +172,11 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
    3. Extended README_Projektstruktur.md with a dedicated Melos section covering the `packages/` layout, script usage, and the enforced `lib/` → `lib/src/` convention.
    4. Added a placeholder `workspace: []` entry and pinned `melos: ^7.3.0` under `dev_dependencies` in the root `pubspec.yaml` so Melos recognizes the workspace version; the list will be populated once packages gain their own pubspecs.
 
-- [ ] **Step 3: Scaffold empty packages with lib/`src` convention**
-  1. For each planned package:
-     - For UI and features: create Flutter packages (they depend on `flutter`).
-     - For services/helpers: create Dart or Flutter packages depending on whether they need Flutter.
-  2. In each package:
-     - Create `lib/<package_name>.dart` as the barrel/public interface.
-     - Create `lib/src/` and place internal files there (even if initially empty).
-  3. Add minimal README.md in each package explaining:
-     - How to add new code.
-     - That all new files go into `lib/src/` and are re-exported via the main `lib/<package_name>.dart` file.
+- [x] **Step 3: Scaffold empty packages with lib/`src` convention**
+  1. Created Flutter package scaffolding for `core/ui`, `services/l10n`, and the three feature packages plus a pure Dart `helpers/common` package—each with its own `pubspec.yaml`, `resolution: workspace`, and placeholder dependencies (`flutter`, `flutter_bloc`, etc.).
+  2. Added barrel files under `lib/` that export placeholder implementations from `lib/src/`, ensuring the lib vs `lib/src/` convention is enforced from day one.
+  3. Wrote package-specific README.md files documenting how to add code, what to export, and the allowed dependency boundaries.
+  4. Updated the root `pubspec.yaml` `workspace:` section and re-ran `melos bootstrap` so the workspace now recognizes all six packages.
 
 - [ ] **Step 4: Create `services/l10n` package (merged l10n + json hot reload)**
   1. Move the following into `packages/services/l10n/lib/src/`:

@@ -21,7 +21,13 @@ version: 1.0.0+1
 environment:
   sdk: ^3.9.2
 
-workspace: []
+workspace:
+  - packages/core/ui
+  - packages/services/l10n
+  - packages/features/landing_page
+  - packages/features/measurement_page
+  - packages/features/simulation_page
+  - packages/helpers/common
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
