@@ -30,12 +30,18 @@ class JsonParser {
   /// Imports and merges a JSON file into the existing JSON tree.
   ///
   /// This method is web-safe. On web, it loads JSON from bundled assets using
-  /// `rootBundle`. On mobile/desktop, it first attempts to load from assets and
-  /// falls back to reading from the local file system if the asset is missing.
+  /// `rootBundle`. On mobile/desktop, it first attempts to read from the local
+  /// file system so JSON edits are visible without a rebuild, then falls back to
+  /// bundled assets. When [assetPath] is omitted, [filePath] is reused for both.
   ///
   /// @param filePath:
   ///   - type: String
-  ///   - description: The asset or file path to the JSON file to import and merge.
+  ///   - description: The absolute or relative file-system path used for the
+  ///                  initial disk read.
+  /// @param assetPath:
+  ///   - type: String?
+  ///   - description: Optional Flutter asset path to use when disk reads fail
+  ///                  or when running on the web.
   /// @returns:
   ///   - type: Future<void>
   ///   - description: A future that completes when the JSON has been merged.
@@ -43,18 +49,19 @@ class JsonParser {
   ///   - type: Exception
   ///   - description: If the content cannot be read from assets or file system,
   ///                  or the content is not valid JSON.
-  Future<void> importJson(String filePath) async {
+  Future<void> importJson(String filePath, {String? assetPath}) async {
     // On non-web platforms, prefer reading directly from the file system so
     // edits are reflected immediately during development (hot reload/watch).
     // On web, use assets (no file system). On non-web, if file read fails,
     // fall back to assets to support packaged builds.
     String jsonString;
+    final bundlePath = assetPath ?? filePath;
     if (!kIsWeb) {
       try {
         jsonString = await File(filePath).readAsString();
       } catch (fsError) {
         try {
-          jsonString = await rootBundle.loadString(filePath);
+          jsonString = await rootBundle.loadString(bundlePath);
         } catch (assetError) {
           log(
             'JsonParser: Failed to read JSON from file and assets. '
@@ -66,10 +73,10 @@ class JsonParser {
       }
     } else {
       try {
-        jsonString = await rootBundle.loadString(filePath);
+        jsonString = await rootBundle.loadString(bundlePath);
       } catch (assetError) {
         log(
-          'JsonParser: Failed to load JSON asset "$filePath": $assetError',
+          'JsonParser: Failed to load JSON asset "$bundlePath": $assetError',
           name: 'JsonParser',
         );
         rethrow;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sonalyze_frontend/constants/app_constants.dart';
+import 'package:l10n_service/l10n_service.dart';
 import 'package:sonalyze_frontend/views/landing_page/landing_page.dart';
 import 'package:sonalyze_frontend/views/measurement_page/measurement_page.dart';
 import 'package:sonalyze_frontend/views/simulation_page/simulation_page.dart';

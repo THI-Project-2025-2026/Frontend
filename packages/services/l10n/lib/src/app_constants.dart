@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:sonalyze_frontend/l10n/json_parser.dart';
+import 'json_parser.dart';
+import 'l10n_asset_paths.dart';
 
 /// Application-wide constants
 ///
@@ -129,17 +130,18 @@ class AppConstants {
   ///   - type: Future<void>
   ///   - description: A future that completes when all files are loaded.
   static Future<void> initialize() async {
-    // Load default configuration
-    await config.importJson(
-      'lib/l10n/configuration/default_configuration.json',
+    final configPaths = L10nAssetPaths.defaultConfiguration();
+    await config.importJson(configPaths.file, assetPath: configPaths.asset);
+
+    final defaultTheme = (config('defaultTheme') as String?) ?? 'dark';
+    final themePaths = L10nAssetPaths.theme(defaultTheme);
+    await theme.importJson(themePaths.file, assetPath: themePaths.asset);
+
+    final defaultLanguage = (config('defaultLanguage') as String?) ?? 'us';
+    final translationPaths = L10nAssetPaths.translation(defaultLanguage);
+    await translation.importJson(
+      translationPaths.file,
+      assetPath: translationPaths.asset,
     );
-
-    // Load default theme
-    final defaultTheme = config('defaultTheme') as String;
-    await theme.importJson('lib/l10n/themes/$defaultTheme.json');
-
-    // Load default translation
-    final defaultLanguage = config('defaultLanguage') as String;
-    await translation.importJson('lib/l10n/translations/$defaultLanguage.json');
   }
 }

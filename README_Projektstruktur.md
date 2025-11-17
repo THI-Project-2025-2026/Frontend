@@ -132,7 +132,7 @@ Ein physisches `assets/`-Verzeichnis ist aktuell nicht vorhanden. Sobald Assets 
 - `icons/` — App-Icons, Launcher-Icons, SVG- oder PNG-Icons.
 - `images/` — Hintergrundbilder oder Illustrationen.
 - `fonts/` — Benutzerdefinierte Schriftarten (Registrierung in `pubspec.yaml` nicht vergessen).
-- `locales/` oder `i18n/` — Weitere Übersetzungsdateien (falls nicht über `lib/l10n/` abgewickelt).
+- `locales/` oder `i18n/` — Weitere Übersetzungsdateien (falls nicht über `packages/services/l10n/assets/` abgewickelt).
 
 Gute Praktiken für `assets/`:
 
@@ -142,7 +142,7 @@ Gute Praktiken für `assets/`:
 
 ## Kurze Checkliste für Entwickler
 
-- Neue JSON-Konfigurationen oder Übersetzungen → in `lib/l10n/` ablegen und ggf. `JsonHotReloadBloc` berücksichtigen.
+- Neue JSON-Konfigurationen oder Übersetzungen → in `packages/services/l10n/assets/` ablegen und ggf. `JsonHotReloadBloc` berücksichtigen.
 - Neue State-Logik → passendes Feature unter `lib/blocs/` erweitern.
 - UI-Erweiterungen → in den jeweiligen `lib/views/<feature>/`-Ordnern oder als wiederverwendbare Komponenten unter `lib/utilities/ui/common/` ergänzen.
 - Assets hinzufügen → `assets/` anlegen/strukturieren und `pubspec.yaml` aktualisieren.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:l10n_service/l10n_service.dart';
 import 'package:sonalyze_frontend/blocs/simulation_page/simulation_page_bloc.dart';
-import 'package:sonalyze_frontend/constants/app_constants.dart';
 import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_button.dart';
 import 'package:sonalyze_frontend/utilities/ui/common/sonalyze_surface.dart';
 

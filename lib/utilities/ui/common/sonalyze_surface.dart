@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sonalyze_frontend/constants/app_constants.dart';
+import 'package:l10n_service/l10n_service.dart';
 
 /// Reusable rounded surface used across Sonalyze feature pages.
 ///

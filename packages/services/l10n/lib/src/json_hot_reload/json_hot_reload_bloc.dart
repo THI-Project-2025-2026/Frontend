@@ -3,9 +3,10 @@ import 'dart:io';
 import 'dart:developer';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
-// ignore: depend_on_referenced_packages
+import 'package:path/path.dart' as p;
 import 'package:meta/meta.dart';
-import 'package:sonalyze_frontend/constants/app_constants.dart';
+import '../app_constants.dart';
+import '../l10n_asset_paths.dart';
 part 'json_hot_reload_event.dart';
 part 'json_hot_reload_state.dart';
 
@@ -220,7 +221,10 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
       final fileName = event.filePath.split('/').last.replaceAll('.json', '');
 
       // Reload the translation file
-      await AppConstants.translation.importJson(event.filePath);
+      await AppConstants.translation.importJson(
+        event.filePath,
+        assetPath: L10nAssetPaths.assetFromFilePath(event.filePath),
+      );
 
       emit(
         TranslationReloaded(languageCode: fileName, timestamp: DateTime.now()),
@@ -260,7 +264,10 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
       final fileName = event.filePath.split('/').last.replaceAll('.json', '');
 
       // Reload the theme file
-      await AppConstants.theme.importJson(event.filePath);
+      await AppConstants.theme.importJson(
+        event.filePath,
+        assetPath: L10nAssetPaths.assetFromFilePath(event.filePath),
+      );
 
       emit(ThemeReloaded(themeName: fileName, timestamp: DateTime.now()));
 
@@ -292,7 +299,10 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
   ) async {
     try {
       // Reload the configuration file
-      await AppConstants.config.importJson(event.filePath);
+      await AppConstants.config.importJson(
+        event.filePath,
+        assetPath: L10nAssetPaths.assetFromFilePath(event.filePath),
+      );
 
       emit(ConfigurationReloaded(timestamp: DateTime.now()));
 
@@ -358,8 +368,11 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
     Emitter<JsonHotReloadState> emit,
   ) async {
     try {
-      final filePath = 'lib/l10n/translations/${event.languageCode}.json';
-      await AppConstants.translation.importJson(filePath);
+      final translationPaths = L10nAssetPaths.translation(event.languageCode);
+      await AppConstants.translation.importJson(
+        translationPaths.file,
+        assetPath: translationPaths.asset,
+      );
 
       emit(
         TranslationReloaded(
@@ -398,8 +411,11 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
     Emitter<JsonHotReloadState> emit,
   ) async {
     try {
-      final filePath = 'lib/l10n/themes/${event.themeName}.json';
-      await AppConstants.theme.importJson(filePath);
+      final themePaths = L10nAssetPaths.theme(event.themeName);
+      await AppConstants.theme.importJson(
+        themePaths.file,
+        assetPath: themePaths.asset,
+      );
 
       emit(
         ThemeReloaded(themeName: event.themeName, timestamp: DateTime.now()),
@@ -422,16 +438,16 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
     _watchedFiles.clear();
 
     // Always watch configuration files
-    _watchedFiles.add('lib/l10n/configuration/default_configuration.json');
+    _watchedFiles.add(L10nAssetPaths.defaultConfiguration().file);
 
     // Only watch the active theme file
     if (_activeTheme != null) {
-      _watchedFiles.add('lib/l10n/themes/$_activeTheme.json');
+      _watchedFiles.add(L10nAssetPaths.theme(_activeTheme!).file);
     }
 
     // Only watch the active translation file
     if (_activeLanguage != null) {
-      _watchedFiles.add('lib/l10n/translations/$_activeLanguage.json');
+      _watchedFiles.add(L10nAssetPaths.translation(_activeLanguage!).file);
     }
 
     log('Updated watched files: $_watchedFiles', name: 'JsonHotReloadBloc');
@@ -489,17 +505,21 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
             _lastModified[filePath] = stat.modified;
 
             // Only dispatch events for files that are currently active
-            if (filePath.contains('/themes/')) {
-              final fileName = filePath.split('/').last.replaceAll('.json', '');
+            if (filePath.contains(L10nAssetPaths.themesDirectory)) {
+              final fileName = p.basenameWithoutExtension(filePath);
               if (fileName == _activeTheme) {
                 add(ThemeFileChanged(filePath));
               }
-            } else if (filePath.contains('/translations/')) {
-              final fileName = filePath.split('/').last.replaceAll('.json', '');
+            } else if (filePath.contains(
+              L10nAssetPaths.translationsDirectory,
+            )) {
+              final fileName = p.basenameWithoutExtension(filePath);
               if (fileName == _activeLanguage) {
                 add(TranslationFileChanged(filePath));
               }
-            } else if (filePath.contains('/configuration/')) {
+            } else if (filePath.contains(
+              L10nAssetPaths.configurationDirectory,
+            )) {
               add(ConfigurationFileChanged(filePath));
             }
           }

@@ -178,7 +178,7 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   3. Wrote package-specific README.md files documenting how to add code, what to export, and the allowed dependency boundaries.
   4. Updated the root `pubspec.yaml` `workspace:` section and re-ran `melos bootstrap` so the workspace now recognizes all six packages.
 
-- [ ] **Step 4: Create `services/l10n` package (merged l10n + json hot reload)**
+- [x] **Step 4: Create `services/l10n` package (merged l10n + json hot reload)**
   1. Move the following into `packages/services/l10n/lib/src/`:
      - json_parser.dart.
      - app_constants.dart.
