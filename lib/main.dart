@@ -3,10 +3,11 @@ import 'package:l10n_service/l10n_service.dart';
 import 'package:landing_page/landing_page.dart';
 import 'package:measurement_page/measurement_page.dart';
 import 'package:simulation_page/simulation_page.dart';
+import 'package:sonalyze_frontend/di/injector.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppConstants.initialize();
+  await configureDependencies();
   runApp(const SonalyzeApp());
 }
 

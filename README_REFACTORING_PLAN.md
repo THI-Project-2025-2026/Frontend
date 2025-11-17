@@ -210,19 +210,11 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   4. Declared all feature packages as `path` dependencies in the main app and removed the obsolete `lib/blocs`/`lib/views` folders.
   5. Switched `main.dart` routing to the feature packages (e.g. `package:landing_page/landing_page.dart`) so the app composes features without referencing their internal structure.
 
-- [ ] **Step 7: Introduce `get_it` and define DI boundaries**
-  1. Add `get_it` to the app's pubspec.yaml (and only to packages that must resolve from it, not necessarily to all).
-  2. Create `lib/di/injector.dart` in the main app:
-     - Initialize a global `GetIt` instance (e.g. `final getIt = GetIt.instance;`).
-     - Register services from `l10n_service` like `AppConstants`, `JsonHotReloadBloc`, and any future domain services.
-  3. Decide usage style:
-     - Prefer passing dependencies down via constructors for testability, but allow features to read from `get_it` for services when necessary.
-  4. In feature packages:
-     - Expose constructor parameters for services (e.g. `LandingPageScreen({required L10nService l10n})`), or, as an alternative:
-     - Use `get_it` directly but hide it behind an abstraction if possible (e.g. `L10nProvider` using `getIt` internally).
-  5. Update `main.dart`:
-     - Before `runApp`, call the DI setup.
-     - Ensure `AppConstants.initialize()` is invoked via `l10n_service` (could be called as part of DI registration or explicitly before DI registration).
+- [x] **Step 7: Introduce `get_it` and define DI boundaries**
+  1. Added `get_it` as an app-level dependency and created `lib/di/injector.dart` with a `configureDependencies()` helper that initializes `AppConstants` once and registers it inside the locator.
+  2. Registered a shared `JsonHotReloadBloc` singleton inside the injector and automatically dispatch `StartFileWatching` on non-web debug builds so desktop hot reload continues to work without feature-specific wiring.
+  3. Updated `main.dart` to import the injector and await `configureDependencies()` instead of calling `AppConstants.initialize()` directly, keeping feature packages unaware of the DI tool.
+  4. The centralized locator now exposes l10n services (and future shared objects) for constructor injection, setting the foundation for upcoming steps without introducing `get_it` imports inside feature packages.
 
 - [ ] **Step 8: Prepare `helpers/common` package for stateless utilities**
   1. Create `packages/helpers/common` with:

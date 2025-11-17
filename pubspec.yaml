@@ -53,6 +53,7 @@ dependencies:
     path: packages/features/measurement_page
   simulation_page:
     path: packages/features/simulation_page
+  get_it: ^7.7.0
 
 dev_dependencies:
   melos: ^7.3.0
