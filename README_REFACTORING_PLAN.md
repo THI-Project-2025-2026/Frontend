@@ -226,16 +226,11 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
    2. Confirmed no legacy `blocs/`, `views/`, `utilities/`, or constants folders remain in the app package after the feature migration.
    3. Refreshed `README_Projektstruktur.md` to document the lean `lib/` layout, highlight the DI folder, and update the helper package section with the new stateless utilities.
 
-- [ ] **Step 10: Validate independence and Melos integration**
-  1. Run analysis per package:
-     - In each package directory: `flutter analyze` or `dart analyze` to confirm no invalid imports.
-  2. From workspace root, run Melos commands:
-     - `melos bootstrap` (ensure all path deps wired).
-     - `melos exec -- flutter analyze` and `melos exec -- flutter test` (if tests exist).
-  3. Check for:
-     - No remaining relative imports across package boundaries.
-     - Each package compiling and being usable independently.
-  4. Fix any remaining references to old `sonalyze_frontend/lib/...` paths by pointing them to the appropriate package APIs.
+- [x] **Step 10: Validate independence and Melos integration**
+  1. Ran `melos exec -- "if [ -f pubspec.yaml ]; then flutter analyze; fi"` so every package passes analyzer checks independently.
+  2. Executed `melos bootstrap` to relink all workspace path dependencies and `melos exec -- "if [ -d test ]; then flutter test; fi"` (no tests ran, as expected) to verify workspace commands succeed end-to-end.
+  3. Confirmed there are no relative cross-package imports and all packages compile standalone after the DI/feature migrations.
+  4. Ready for future contributions to rely exclusively on package APIs instead of app internals.
 
 2. **Introduce Melos workspace at root**
    1. Add `melos.yaml` with:
