@@ -24,6 +24,7 @@ environment:
 workspace:
   - packages/core/ui
   - packages/services/l10n
+  - packages/services/recording
   - packages/features/landing_page
   - packages/features/measurement_page
   - packages/features/simulation_page
@@ -45,6 +46,8 @@ dependencies:
   flutter_bloc: ^9.1.1
   l10n_service:
     path: packages/services/l10n
+  recording_service:
+    path: packages/services/recording
   core_ui:
     path: packages/core/ui
   landing_page:

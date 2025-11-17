@@ -30,6 +30,9 @@ packages:
     path: packages/services/l10n
     allowed_packages:
       - helpers
+  recording_service:
+    path: packages/services/recording
+    allowed_packages: []
   landing_page:
     path: packages/features/landing_page
     allowed_packages:
