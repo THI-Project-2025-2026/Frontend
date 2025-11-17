@@ -87,6 +87,7 @@ Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. De
 - `README_REFACTORING_PLAN.md` — Schrittweiser Migrationsplan (u. a. für Melos, Feature-Pakete und `get_it`).
 - `pubspec.yaml` — App-spezifische Abhängigkeiten (u. a. `l10n_service`, `core_ui`, alle Feature-Pakete) und Workspace-Angaben.
 - `melos.yaml` — Melos-Workspace-Konfiguration inkl. Skripten für Bootstrap, Analyse, Tests und Formatierung.
+- `import_rules.yaml` — Definiert für jedes Paket, welche anderen Workspace-Pakete importiert werden dürfen (Basis für `melos run lint:imports`).
 - `.github/copilot-instructions.md` — Prozess- und Coding-Guidelines für AI-Agents.
 
 ## Melos-Workspace und `packages/`
@@ -96,6 +97,7 @@ Der Workspace bündelt sämtliche Pakete unter `packages/**`. Wichtige Bestandte
 - **Skripte:**
   - `melos run bootstrap` installiert Abhängigkeiten und verknüpft alle Path-Dependencies.
   - `melos run analyze` führt `flutter analyze` in jedem Paket mit `pubspec.yaml` aus.
+  - `melos run lint:imports` prüft anhand von `import_rules.yaml`, ob sich alle Pakete an die erlaubten Cross-Package-Imports halten.
   - `melos run test` startet Paket-Tests (sofern ein `test/`-Ordner vorhanden ist).
   - `melos run format` formatiert pro Paket den jeweiligen `lib/`-Ordner.
 - **Paketfamilien:**

@@ -9,6 +9,9 @@ scripts:
   analyze:
     description: Custom workspace analyzer with colored output per package.
     run: dart run tool/custom_analyze.dart
+  lint:imports:
+    description: Verify workspace import boundaries against import_rules.yaml.
+    run: dart run tool/lint_imports.dart
   test:
     description: Run flutter tests when a package has a test directory.
     run: melos exec -- "if [ -d test ]; then flutter test; fi"
