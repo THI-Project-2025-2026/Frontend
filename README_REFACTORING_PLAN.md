@@ -221,17 +221,10 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
   2. Documented the Flutter-free, DI-free constraints in the package README and listed the available helpers so contributors know how to extend it.
   3. Added the first reusable helpers (`formatNumber`, `roundToDigits`) and updated the measurement and simulation features to consume them, establishing a real cross-package use case.
 
-- [ ] **Step 9: Clean up the main app package**
-  1. After migrating:
-     - Restrict lib in the app to:
-       - `main.dart` (entry),
-       - `di/` for dependency setup,
-       - Optional app-level widgets (e.g. `SonalyzeApp`).
-  2. Remove old `blocs/`, `views/`, `utilities/`, `constants/`, `l10n/` from the app once confirmed that all imports point to packages.
-  3. Update README_Projektstruktur.md to:
-     - Reflect the new feature-first architecture.
-     - Show how `packages/features`, `packages/services`, `packages/core`, and `packages/helpers` are structured.
-     - Explain the lib vs `lib/src/` convention for all packages.
+- [x] **Step 9: Clean up the main app package**
+   1. Verified the root `lib/` now only contains `main.dart` plus `di/injector.dart`, matching the entry + DI boundary requirement.
+   2. Confirmed no legacy `blocs/`, `views/`, `utilities/`, or constants folders remain in the app package after the feature migration.
+   3. Refreshed `README_Projektstruktur.md` to document the lean `lib/` layout, highlight the DI folder, and update the helper package section with the new stateless utilities.
 
 - [ ] **Step 10: Validate independence and Melos integration**
   1. Run analysis per package:

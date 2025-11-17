@@ -68,10 +68,14 @@ Dieses Dokument beschreibt die aktuelle Projektstruktur des Flutter-Projekts. De
 │   └── helpers/
 │       └── common/
 │           ├── lib/
-│           │   └── common_helpers.dart
+│           │   ├── common_helpers.dart
+│           │   └── src/
+│           │       └── number_formatting.dart
 │           └── README.md
 └── lib/
-    └── main.dart
+  ├── di/
+  │   └── injector.dart
+  └── main.dart
 ```
 
 > Hinweis: Alle Feature-spezifischen Blöcke, Views und Assets befinden sich nun in eigenen Paketen unter `packages/`. Das App-Paket enthält nur noch den Einstiegspunkt und ggf. zukünftige App-spezifische Glue-Code-Dateien (`di/`, `router/` usw.).
@@ -100,7 +104,7 @@ Der Workspace bündelt sämtliche Pakete unter `packages/**`. Wichtige Bestandte
   - `packages/features/landing_page` — Landing-Page-Screen inkl. `LandingPageBloc`, Demo-Daten, kompletter View-Tree.
   - `packages/features/measurement_page` — Measurement-Flow mit Lobby-, Gerätelisten-, Telemetrie- und Timeline-Widgets plus zugehörigem Bloc.
   - `packages/features/simulation_page` — Simulation-Sandbox (Konfigurator, Grid, Kennzahlen) samt BLoC und akustischen Helfern.
-  - `packages/helpers/common` — Platzhalter-Paket für zukünftige stateless Helper-Funktionen (derzeit minimaler Stub).
+  - `packages/helpers/common` — Pure-Dart stateless Helper-Funktionen (aktuell z. B. `formatNumber`, `roundToDigits`).
 
 Alle Pakete verwenden das `lib/` + `lib/src/`-Konventionsmuster: Die öffentliche API wird ausschließlich über `lib/<paketname>.dart` exportiert, Implementierungen verbleiben in `lib/src/`.
 
@@ -114,7 +118,7 @@ Nach der Modularisierung enthält das App-Paket nur noch den Einstiegspunkt:
   - Registriert alle Feature-Routen und importiert die Screens direkt aus den Feature-Paketen (`package:landing_page/…`, `package:measurement_page/…`, `package:simulation_page/…`).
   - Ist der einzige Ort, an dem zukünftig DI (`get_it`) oder globale Router-Logik zusammenlaufen.
 
-Weitere App-spezifische Dateien (z. B. `di/injector.dart`, Layout-Shells, Platform-Konfiguration) werden hier ergänzt, sobald die nächsten Schritte des Refactorings umgesetzt sind.
+Weitere App-spezifische Dateien liegen ausschließlich im `lib/di/`-Ordner (derzeit `injector.dart`). Layout-Shells oder Router-Erweiterungen würden ebenfalls dort entstehen, ohne in Feature-Code einzugreifen.
 
 ## Assets und Übersetzungen
 
