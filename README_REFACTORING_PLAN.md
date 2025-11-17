@@ -147,18 +147,24 @@ Refactor the current layer-first Flutter app into a Melos workspace with indepen
 
 ### Migration Steps
 
-- [ ] **Step 1: Define target package layout and rules**
-  1. Create `packages/features/`, `packages/services/`, `packages/core/`, `packages/helpers/` folders.
-  2. Decide on packages:
-     - `packages/core/ui` (shared widgets: `SonalyzeSurface`, `SonalyzeButton`, etc.).
-     - `packages/services/l10n` (configuration, themes, translations, `AppConstants`, `JsonParser`, `JsonHotReloadBloc`).
-     - `packages/features/landing_page`.
-     - `packages/features/measurement_page`.
-     - `packages/features/simulation_page`.
-     - `packages/helpers/common` (future stateless helpers).
-  3. For each package, document:
-     - Its purpose and allowed dependencies.
-     - That it must expose only via `lib/<package_name>.dart` (public) and put internals in `lib/src/`.
+- [x] **Step 1: Define target package layout and rules**
+  1. Created the folder scaffolding under `packages/` with the required feature, service, core, and helper groups.
+  2. Locked in the initial package lineup:
+     - `packages/core/ui` for `SonalyzeSurface`, `SonalyzeButton`, accordions, etc.
+     - `packages/services/l10n` merging localization assets, `AppConstants`, `JsonParser`, and the JSON hot reload bloc.
+     - `packages/features/landing_page`, `packages/features/measurement_page`, and `packages/features/simulation_page` to keep screens+BLoCs cohesive.
+     - `packages/helpers/common` reserved for future stateless helpers.
+  3. Documented purpose, allowed dependencies, and the `lib/` vs `lib/src/` public API rules for every package in both this plan and `packages/README.md` so agents have a single source of truth before scaffolding.
+  4. Quick reference for planned packages:
+
+     | Package | Purpose | Allowed dependencies |
+     | --- | --- | --- |
+     | `core/ui` | Shared Sonalyze widgets exported via `lib/core_ui.dart`. | `flutter`, `meta` |
+     | `services/l10n` | Localization assets, `AppConstants`, JSON parser, JSON hot reload bloc. | `flutter`, `flutter_bloc`, `path`, file APIs |
+     | `features/landing_page` | Landing page screen + bloc + demo data. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
+     | `features/measurement_page` | Measurement lobby simulation experience. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
+     | `features/simulation_page` | Simulation grid, blocs, and acoustic math glue. | `flutter`, `flutter_bloc`, `core/ui`, `services/l10n` |
+     | `helpers/common` | Future stateless helpers. | Dart SDK only |
 
 - [ ] **Step 2: Introduce Melos workspace at root**
   1. Add `melos.yaml` with:
