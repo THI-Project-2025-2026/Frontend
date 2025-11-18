@@ -1,0 +1,4 @@
+[submodule "assets"]
+	path = assets
+	url = https://github.com/THI-Project-2025-2026/Frontend-RoomCreator
+	ignore = all

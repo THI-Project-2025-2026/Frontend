@@ -15,3 +15,8 @@ scripts:
   format:
     description: Format Dart sources for packages that expose a lib folder.
     run: melos exec -- "if [ -d lib ]; then dart format lib; fi"
+
+command:
+  bootstrap:
+    hooks:
+      post: git submodule update --init --recursive
