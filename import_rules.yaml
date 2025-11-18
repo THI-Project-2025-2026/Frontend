@@ -7,6 +7,9 @@ groups:
   helpers:
     paths:
       - packages/helpers
+  views:
+    paths:
+      - packages/views
   features:
     paths:
       - packages/features
@@ -19,6 +22,7 @@ packages:
     path: .
     allowed_packages:
       - services
+      - views
       - features
   core_ui:
     path: packages/core/ui
@@ -34,19 +38,28 @@ packages:
     path: packages/services/recording
     allowed_packages: []
   landing_page:
-    path: packages/features/landing_page
+    path: packages/views/landing_page
     allowed_packages:
       - core
       - services
       - helpers
+      - features
   measurement_page:
-    path: packages/features/measurement_page
+    path: packages/views/measurement_page
     allowed_packages:
       - core
       - services
       - helpers
+      - features
   simulation_page:
-    path: packages/features/simulation_page
+    path: packages/views/simulation_page
+    allowed_packages:
+      - core
+      - services
+      - helpers
+      - features
+  sonalyze_webview:
+    path: packages/features/sonalyze_webview
     allowed_packages:
       - core
       - services

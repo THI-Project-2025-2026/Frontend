@@ -25,9 +25,10 @@ workspace:
   - packages/core/ui
   - packages/services/l10n
   - packages/services/recording
-  - packages/features/landing_page
-  - packages/features/measurement_page
-  - packages/features/simulation_page
+  - packages/views/landing_page
+  - packages/views/measurement_page
+  - packages/views/simulation_page
+  - packages/features/sonalyze_webview
   - packages/helpers/common
 
 # Dependencies specify other packages that your package needs in order to work.
@@ -51,11 +52,11 @@ dependencies:
   core_ui:
     path: packages/core/ui
   landing_page:
-    path: packages/features/landing_page
+    path: packages/views/landing_page
   measurement_page:
-    path: packages/features/measurement_page
+    path: packages/views/measurement_page
   simulation_page:
-    path: packages/features/simulation_page
+    path: packages/views/simulation_page
   get_it: ^7.7.0
 
 dev_dependencies:

@@ -132,7 +132,8 @@ Der Workspace bündelt sämtliche Pakete unter `packages/**` und nutzt Melos-Skr
 
 - `packages/core/ui` – Shared UI-Bausteine wie `SonalyzeSurface`, `SonalyzeButton`, `SonalyzeAccordionTile`; öffentlicher Einstieg `lib/core_ui.dart`.
 - `packages/services/l10n` – L10n-/Theme-/Konfig-Service inklusive Assets und `JsonHotReloadBloc`.
-- `packages/features/landing_page`, `measurement_page`, `simulation_page` – Feature-Pakete mit Screen + Bloc unter `lib/src/{view,bloc}` und Barrel-Export.
+- `packages/views/landing_page`, `measurement_page`, `simulation_page` – Screen-Pakete mit Bloc unter `lib/src/{view,bloc}` und Barrel-Export; dürfen komplexe Widgets aus `packages/features/**` einbinden.
+- `packages/features/*` – Wiederverwendbare komplexe Widgets (z. B. WebView-Komponenten), die von Views genutzt, aber nicht umgekehrt importiert werden.
 - `packages/helpers/common` – Rein funktionale Helfer (`formatNumber`, `roundToDigits`…), keine Flutter-Abhängigkeit.
 
 Alle Pakete halten strikt das `lib/` + `lib/src/`-Muster ein: öffentliche API via Barrel, Implementierungsdetails verbleiben unter `lib/src/**` und dürfen von außen nicht importiert werden.
@@ -160,7 +161,8 @@ Weitere App-spezifische Dateien liegen ausschließlich im Ordner `lib/di/`. Aktu
 
 - **Lokalisierung/Themes:** Änderungen an JSON-Dateien immer unter `packages/services/l10n/assets/` durchführen und den bestehenden `JsonHotReloadBloc` nutzen (Events erweitern statt neue Watcher bauen).
 - **Shared UI:** Neue wiederverwendbare Widgets kommen nach `packages/core/ui/lib/src/...` und werden über `lib/core_ui.dart` exportiert; Designs lesen ihre Farben/Texte über `AppConstants` oder via Parameter.
-- **Feature-Code:** Screens + Bloc-Logik bleiben im jeweiligen Feature-Paket unter `lib/src/view` bzw. `lib/src/bloc`. Features importieren keine anderen Features, sondern bedienen sich bei `core_ui`, `l10n_service`, `common_helpers`.
+- **View-Code:** Screens + Bloc-Logik bleiben im jeweiligen View-Paket unter `lib/src/view` bzw. `lib/src/bloc`. Views importieren keine anderen Views, sondern bedienen sich bei `core_ui`, `l10n_service`, `common_helpers` sowie komplexen Widgets aus `packages/features/*`.
+- **Feature-Widgets:** Komplexe wiederverwendbare Widgets (z. B. ein WebView) liegen unter `packages/features/<name>/lib/src/**`, exportieren ihre API via Barrel und besitzen keine Abhängigkeit zu `packages/views/**`.
 - **App-Glue/DI:** Anpassungen an Routing, globalem Theme oder Dependency Injection erfolgen ausschließlich in `lib/main.dart` und `lib/di/injector.dart` (hier `get_it`-Registrierungen pflegen).
 - **Neue Pakete:** Immer Barrel + `lib/src`-Pattern einhalten, `pubspec.yaml` (root workspace + Paket) aktualisieren, `import_rules.yaml` ergänzen und danach `melos run bootstrap` + `melos run lint:imports` ausführen.
 
