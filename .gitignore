@@ -44,5 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# External asset submodule; keep contents out of main history.
-/assets/
+# External asset area. Keep submodule + placeholder only.
+/assets/*
+!/assets/.gitkeep
+!/assets/frontend_roomcreator

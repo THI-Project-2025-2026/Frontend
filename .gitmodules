@@ -1,4 +1,4 @@
-[submodule "assets"]
-	path = assets
+[submodule "assets/frontend_roomcreator"]
+	path = assets/frontend_roomcreator
 	url = https://github.com/THI-Project-2025-2026/Frontend-RoomCreator
 	ignore = all
