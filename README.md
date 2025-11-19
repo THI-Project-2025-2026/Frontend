@@ -27,6 +27,7 @@ melos run bootstrap
 - Application entry point lives in `lib/` (main app + DI glue).
 - View/feature/service/helper code resides in `packages/**`, each as its own publishable package.
 - Cross-package imports are governed by `import_rules.yaml`; the `lint:imports` task enforces it.
+- The RoomCreator web bundle (Angular build) is vendored under `assets/frontend_roomcreator`; `melos bootstrap` automatically refreshes it via `dart run tool/update_roomcreator_assets.dart`, which pulls only the compiled HTML/CSS/JS from the upstream repo. Run that Dart command manually if you need to refresh the assets outside of bootstrap.
 
 ## Melos Commands
 

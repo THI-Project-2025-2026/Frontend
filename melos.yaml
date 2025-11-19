@@ -19,4 +19,4 @@ scripts:
 command:
   bootstrap:
     hooks:
-      post: git submodule update --init --recursive
+      post: dart run tool/update_roomcreator_assets.dart

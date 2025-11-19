@@ -126,3 +126,7 @@ melos:
     format:
       description: Format Dart sources for packages that expose a lib folder.
       run: melos exec -- "if [ -d lib ]; then dart format lib; fi"
+  command:
+    bootstrap:
+      hooks:
+        post: dart run tool/update_roomcreator_assets.dart
