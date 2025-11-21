@@ -20,6 +20,8 @@ dependencies:
     path: ../../services/l10n
   common_helpers:
     path: ../../helpers/common
+  sonalyze_webview:
+    path: ../sonalyze_webview
 
 dev_dependencies:
   flutter_test:
