@@ -25,8 +25,9 @@ melos run bootstrap
 ## Workspace Overview
 
 - Application entry point lives in `lib/` (main app + DI glue).
-- Feature/UI/service/helper code resides in `packages/**`, each as its own publishable package.
+- View/feature/service/helper code resides in `packages/**`, each as its own publishable package.
 - Cross-package imports are governed by `import_rules.yaml`; the `lint:imports` task enforces it.
+- The RoomCreator web bundle (Angular build) is vendored under `assets/frontend_roomcreator`; `melos bootstrap` automatically refreshes it via `dart run tool/update_roomcreator_assets.dart`, which pulls only the compiled HTML/CSS/JS from the upstream repo. Run that Dart command manually if you need to refresh the assets outside of bootstrap.
 
 ## Melos Commands
 
@@ -41,5 +42,5 @@ melos run bootstrap
 ## Updating Import Rules
 
 - Every workspace package (app + `packages/**`) must have an entry in `import_rules.yaml` describing which other internal packages it may import.
-- Use the predefined group aliases `services`, `helpers`, `features`, and `core` inside `allowed_packages` when you want to allow an entire folder of packages (they expand automatically as new packages are added). Mix them with specific package names (e.g. `l10n_service`) when you need tighter control.
+- Use the predefined group aliases `services`, `helpers`, `views`, `features`, and `core` inside `allowed_packages` when you want to allow an entire folder of packages (they expand automatically as new packages are added). Mix them with specific package names (e.g. `l10n_service`) when you need tighter control.
 - When adding or moving packages, update both `pubspec.yaml` → `workspace:` and `import_rules.yaml`; `melos run lint:imports` fails if a package is missing or violates the allow-list.

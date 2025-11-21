@@ -13,14 +13,14 @@
     - `melos run format` formats each package’s `lib/`.
 
 - **Architecture Snapshot**
-  - Root `lib/` holds only the Flutter entry (`lib/main.dart`) plus DI glue (`lib/di/injector.dart`). Everything else lives in packages under `packages/{core,services,features,helpers}`.
+  - Root `lib/` holds only the Flutter entry (`lib/main.dart`) plus DI glue (`lib/di/injector.dart`). Everything else lives in packages under `packages/{core,services,views,features,helpers}`.
   - `packages/services/l10n` owns configuration/theme/translation JSON plus `AppConstants`, `JsonParser`, and `JsonHotReloadBloc`. All UI pulls colors/text through this package; never read JSON files from other packages.
-  - Each feature (e.g., `packages/features/measurement_page`) is a full Flutter package exposing a single barrel file (`lib/<feature>.dart`) that re-exports its screen and bloc. Implementation stays in `lib/src/**`.
+  - Each view (e.g., `packages/views/measurement_page`) is a full Flutter package exposing a single barrel file (`lib/<view>.dart`) that re-exports its screen and bloc. Implementation stays in `lib/src/**`.
   - Shared widgets live in `packages/core/ui` (e.g., `SonalyzeSurface`, `SonalyzeButton`); stateless helpers go to `packages/helpers/common` and must remain pure Dart.
 
 - **Dependency Boundaries**
-  - Respect `import_rules.yaml`: the app may depend on `services` + `features`; features may depend on `core`, `services`, `helpers`; `core_ui` can only use helpers+l10n; helpers stay dependency-free. Run `melos run lint:imports` after touching imports.
-  - Packages must follow the `lib/` vs `lib/src/` convention—only expose APIs via barrel files (e.g., `packages/features/landing_page/lib/landing_page.dart`). Never import another package’s `lib/src` path.
+  - Respect `import_rules.yaml`: the app may depend on `services`, `views`, and reusable `features`; views may depend on `core`, `services`, `helpers`, and complex widget features; complex widget features depend on `core`, `services`, `helpers`, but never on views. `core_ui` can only use helpers+l10n; helpers stay dependency-free. Run `melos run lint:imports` after touching imports.
+  - Packages must follow the `lib/` vs `lib/src/` convention—only expose APIs via barrel files (e.g., `packages/views/landing_page/lib/landing_page.dart`). Never import another package’s `lib/src` path.
   - When adding a package, update `pubspec.yaml` (workspace section) + `import_rules.yaml` and re-run `melos run bootstrap` to refresh path deps.
 
 - **Localization, Themes, and Hot Reload**
@@ -28,8 +28,8 @@
   - Debug desktop builds auto-start `JsonHotReloadBloc` from `configureDependencies()` (`lib/di/injector.dart`), which polls the JSON files every 500 ms. Do not create extra watchers—extend the existing bloc events (`json_hot_reload_event.dart`) if new asset types need reloads.
   - Web builds cannot watch files (`dart:io` unavailable); guard any watcher-related logic behind `kIsWeb` as done in the service package.
 
-- **Feature Patterns**
-  - Screens expose a static `routeName` and wrap their UI with a `BlocProvider` (see `packages/features/measurement_page/lib/src/view/measurement_page_screen.dart`). Keep BLoC/event/state files under `lib/src/bloc/` and rebuild widgets via `BlocBuilder`.
+- **View Patterns**
+  - Screens expose a static `routeName` and wrap their UI with a `BlocProvider` (see `packages/views/measurement_page/lib/src/view/measurement_page_screen.dart`). Keep BLoC/event/state files under `lib/src/bloc/` and rebuild widgets via `BlocBuilder`.
   - Pull copy + colors through `AppConstants` helpers instead of embedding strings—e.g., `_tr('measurement_page.devices.title')`, `_themeColor('measurement_page.accent')`.
   - Use shared surfaces/buttons from `core_ui` to match Sonalyze styling; pass theme colors from l10n instead of looking up `Theme.of(context)` directly when the design tokens drive the values.
   - Prefer pure helpers from `common_helpers` (e.g., `formatNumber`, `roundToDigits`) for repeatable formatting logic.
@@ -40,7 +40,8 @@
 
 - **Extending the Workspace**
   - New shared UI? Create components under `packages/core/ui/lib/src/...`, export via `lib/core_ui.dart`, and document usage in that package’s README.
-  - New feature? Scaffold under `packages/features/<name>/`, expose a barrel file, and update `import_rules.yaml`, `pubspec.yaml`, and `lib/main.dart` routing.
+  - New view (screen + bloc)? Scaffold under `packages/views/<name>/`, expose a barrel file, and update `import_rules.yaml`, `pubspec.yaml`, and `lib/main.dart` routing.
+  - New complex widget feature? Scaffold under `packages/features/<name>/`, export it via a barrel file, and ensure views depend on it through the public API only.
   - New helper? Keep it deterministic inside `packages/helpers/common/lib/src/`, add unit tests, and expose it via the barrel file.
   - Asset or theme updates live exclusively in `packages/services/l10n/assets/**`; rerun the app (or rely on hot reload) once the watcher picks them up.
 

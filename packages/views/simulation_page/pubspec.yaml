@@ -18,6 +18,8 @@ dependencies:
     path: ../../core/ui
   common_helpers:
     path: ../../helpers/common
+  sonalyze_webview:
+    path: ../../features/sonalyze_webview
 
 dev_dependencies:
   flutter_test:

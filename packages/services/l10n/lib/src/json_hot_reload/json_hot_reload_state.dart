@@ -53,10 +53,7 @@ class ThemeReloaded extends JsonHotReloadState {
   final String themeName;
   final DateTime timestamp;
 
-  const ThemeReloaded({
-    required this.themeName,
-    required this.timestamp,
-  });
+  const ThemeReloaded({required this.themeName, required this.timestamp});
 }
 
 /// State indicating that a configuration file has been reloaded.
@@ -67,9 +64,7 @@ class ThemeReloaded extends JsonHotReloadState {
 class ConfigurationReloaded extends JsonHotReloadState {
   final DateTime timestamp;
 
-  const ConfigurationReloaded({
-    required this.timestamp,
-  });
+  const ConfigurationReloaded({required this.timestamp});
 }
 
 /// State indicating that all JSON files have been reloaded.
@@ -80,9 +75,7 @@ class ConfigurationReloaded extends JsonHotReloadState {
 class AllJsonFilesReloaded extends JsonHotReloadState {
   final DateTime timestamp;
 
-  const AllJsonFilesReloaded({
-    required this.timestamp,
-  });
+  const AllJsonFilesReloaded({required this.timestamp});
 }
 
 /// State indicating an error occurred during file watching or reloading.
@@ -97,8 +90,5 @@ class JsonHotReloadError extends JsonHotReloadState {
   final String message;
   final DateTime timestamp;
 
-  const JsonHotReloadError({
-    required this.message,
-    required this.timestamp,
-  });
+  const JsonHotReloadError({required this.message, required this.timestamp});
 }
