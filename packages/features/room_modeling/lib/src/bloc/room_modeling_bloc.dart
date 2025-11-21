@@ -169,24 +169,29 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         state.tempWall != null &&
         state.dragStart != null) {
       Offset endPoint = event.position;
+      bool snappedToWall = false;
 
       // Snap end point to existing wall endpoints (excluding the start point of current wall if it's the same)
       for (final wall in state.walls) {
         if ((wall.start - endPoint).distance < snapDistance) {
           endPoint = wall.start;
+          snappedToWall = true;
           break;
         }
         if ((wall.end - endPoint).distance < snapDistance) {
           endPoint = wall.end;
+          snappedToWall = true;
           break;
         }
       }
 
-      // Orthogonal snapping (straight lines)
-      if ((endPoint.dx - state.dragStart!.dx).abs() < snapDistance) {
-        endPoint = Offset(state.dragStart!.dx, endPoint.dy);
-      } else if ((endPoint.dy - state.dragStart!.dy).abs() < snapDistance) {
-        endPoint = Offset(endPoint.dx, state.dragStart!.dy);
+      // Orthogonal snapping (straight lines) - only if not snapped to a wall
+      if (!snappedToWall) {
+        if ((endPoint.dx - state.dragStart!.dx).abs() < snapDistance) {
+          endPoint = Offset(state.dragStart!.dx, endPoint.dy);
+        } else if ((endPoint.dy - state.dragStart!.dy).abs() < snapDistance) {
+          endPoint = Offset(endPoint.dx, state.dragStart!.dy);
+        }
       }
 
       emit(
