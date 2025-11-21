@@ -42,6 +42,7 @@ class RoomPlanCanvas extends StatelessWidget {
                 dragCurrent: state.dragCurrent,
                 isRoomClosed: state.isRoomClosed,
                 furniture: state.furniture,
+                selectedWallId: state.selectedWallId,
               ),
               size: Size.infinite,
             ),
@@ -58,6 +59,7 @@ class RoomPainter extends CustomPainter {
   final Wall? tempWall;
   final Offset? dragCurrent;
   final bool isRoomClosed;
+  final String? selectedWallId;
 
   RoomPainter({
     required this.walls,
@@ -65,6 +67,7 @@ class RoomPainter extends CustomPainter {
     this.tempWall,
     this.dragCurrent,
     required this.isRoomClosed,
+    this.selectedWallId,
   });
 
   @override
@@ -72,6 +75,11 @@ class RoomPainter extends CustomPainter {
     final wallPaint = Paint()
       ..color = Colors.black
       ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke;
+
+    final selectedWallPaint = Paint()
+      ..color = Colors.blue
+      ..strokeWidth = 6.0
       ..style = PaintingStyle.stroke;
 
     final tempWallPaint = Paint()
@@ -85,9 +93,29 @@ class RoomPainter extends CustomPainter {
 
     // Draw existing walls
     for (final wall in walls) {
-      canvas.drawLine(wall.start, wall.end, wallPaint);
+      final isSelected = wall.id == selectedWallId;
+      canvas.drawLine(
+          wall.start, wall.end, isSelected ? selectedWallPaint : wallPaint);
       canvas.drawCircle(wall.start, 4.0, jointPaint);
       canvas.drawCircle(wall.end, 4.0, jointPaint);
+
+      if (isSelected) {
+        // Draw handles
+        final handlePaint = Paint()
+          ..color = Colors.blue
+          ..style = PaintingStyle.fill;
+
+        canvas.drawCircle(wall.start, 8.0, handlePaint);
+        canvas.drawCircle(wall.end, 8.0, handlePaint);
+
+        // Draw white center for handle
+        final handleCenterPaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
+
+        canvas.drawCircle(wall.start, 4.0, handleCenterPaint);
+        canvas.drawCircle(wall.end, 4.0, handleCenterPaint);
+      }
     }
 
     // Draw temp wall
@@ -177,6 +205,7 @@ class RoomPainter extends CustomPainter {
         oldDelegate.furniture != furniture ||
         oldDelegate.tempWall != tempWall ||
         oldDelegate.dragCurrent != dragCurrent ||
-        oldDelegate.isRoomClosed != isRoomClosed;
+        oldDelegate.isRoomClosed != isRoomClosed ||
+        oldDelegate.selectedWallId != selectedWallId;
   }
 }

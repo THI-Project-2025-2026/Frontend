@@ -13,6 +13,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
   RoomModelingBloc() : super(const RoomModelingState()) {
     on<ToolSelected>(_onToolSelected);
+    on<StepChanged>(_onStepChanged);
+    on<WallSelected>(_onWallSelected);
+    on<DeleteSelectedWall>(_onDeleteSelectedWall);
     on<CanvasPanStart>(_onCanvasPanStart);
     on<CanvasPanUpdate>(_onCanvasPanUpdate);
     on<CanvasPanEnd>(_onCanvasPanEnd);
@@ -21,14 +24,79 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onToolSelected(ToolSelected event, Emitter<RoomModelingState> emit) {
-    emit(state.copyWith(activeTool: event.tool));
+    emit(state.copyWith(activeTool: event.tool, clearSelection: true));
+  }
+
+  void _onStepChanged(StepChanged event, Emitter<RoomModelingState> emit) {
+    if (event.step == RoomModelingStep.furnishing && !state.isRoomClosed) {
+      return;
+    }
+
+    // Default tool when switching steps
+    RoomModelingTool newTool = RoomModelingTool.wall;
+    if (event.step == RoomModelingStep.furnishing) {
+      // Default tool for furnishing could be anything, let's say door or just none/select
+      // But we removed select. Let's default to door for now or keep previous if valid.
+      newTool = RoomModelingTool.door;
+    }
+
+    emit(state.copyWith(
+      currentStep: event.step,
+      activeTool: newTool,
+      clearSelection: true,
+    ));
+  }
+
+  void _onWallSelected(WallSelected event, Emitter<RoomModelingState> emit) {
+    emit(state.copyWith(selectedWallId: event.wallId));
+  }
+
+  void _onDeleteSelectedWall(
+    DeleteSelectedWall event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    if (state.selectedWallId == null) return;
+
+    final updatedWalls =
+        state.walls.where((w) => w.id != state.selectedWallId).toList();
+    final isClosed = _checkIfRoomIsClosed(updatedWalls);
+
+    emit(
+      state.copyWith(
+        walls: updatedWalls,
+        isRoomClosed: isClosed,
+        clearSelection: true,
+      ),
+    );
   }
 
   void _onCanvasPanStart(
     CanvasPanStart event,
     Emitter<RoomModelingState> emit,
   ) {
-    if (state.activeTool == RoomModelingTool.wall) {
+    if (state.currentStep == RoomModelingStep.structure) {
+      final position = event.position;
+
+      // 1. Check if we are grabbing a handle of the selected wall
+      if (state.selectedWallId != null) {
+        final selectedWall =
+            state.walls.firstWhere((w) => w.id == state.selectedWallId);
+        if ((selectedWall.start - position).distance < 20.0) {
+          emit(state.copyWith(
+            movingWallEndpoint: 0,
+            dragStart: position,
+          ));
+          return;
+        }
+        if ((selectedWall.end - position).distance < 20.0) {
+          emit(state.copyWith(
+            movingWallEndpoint: 1,
+            dragStart: position,
+          ));
+          return;
+        }
+      }
+
       if (state.isRoomClosed) return; // Cannot add walls if room is closed
 
       // Snap start point to existing wall endpoints
@@ -49,6 +117,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
           dragStart: startPoint,
           dragCurrent: startPoint,
           tempWall: Wall(id: 'temp', start: startPoint, end: startPoint),
+          clearSelection: true,
         ),
       );
     }
@@ -58,7 +127,47 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     CanvasPanUpdate event,
     Emitter<RoomModelingState> emit,
   ) {
-    if (state.activeTool == RoomModelingTool.wall && state.dragStart != null) {
+    if (state.movingWallEndpoint != null && state.selectedWallId != null) {
+      final position = event.position;
+      Offset newPos = position;
+
+      // Snap to other walls
+      for (final wall in state.walls) {
+        if (wall.id == state.selectedWallId) continue;
+        if ((wall.start - newPos).distance < snapDistance) {
+          newPos = wall.start;
+          break;
+        }
+        if ((wall.end - newPos).distance < snapDistance) {
+          newPos = wall.end;
+          break;
+        }
+      }
+
+      final updatedWalls = state.walls.map((w) {
+        if (w.id == state.selectedWallId) {
+          if (state.movingWallEndpoint == 0) {
+            return w.copyWith(start: newPos);
+          } else {
+            return w.copyWith(end: newPos);
+          }
+        }
+        return w;
+      }).toList();
+
+      final isClosed = _checkIfRoomIsClosed(updatedWalls);
+
+      emit(state.copyWith(
+        walls: updatedWalls,
+        isRoomClosed: isClosed,
+        dragCurrent: newPos,
+      ));
+      return;
+    }
+
+    if (state.currentStep == RoomModelingStep.structure &&
+        state.tempWall != null &&
+        state.dragStart != null) {
       Offset endPoint = event.position;
 
       // Snap end point to existing wall endpoints (excluding the start point of current wall if it's the same)
@@ -90,7 +199,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onCanvasPanEnd(CanvasPanEnd event, Emitter<RoomModelingState> emit) {
-    if (state.activeTool == RoomModelingTool.wall && state.tempWall != null) {
+    if (state.movingWallEndpoint != null) {
+      emit(state.copyWith(clearDrag: true));
+      return;
+    }
+
+    if (state.currentStep == RoomModelingStep.structure &&
+        state.tempWall != null) {
       final newWall = state.tempWall!.copyWith(id: _uuid.v4());
 
       // Don't add zero-length walls
@@ -113,11 +228,26 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onCanvasTap(CanvasTap event, Emitter<RoomModelingState> emit) {
-    if (!state.isRoomClosed) return;
-    if (state.activeTool == RoomModelingTool.wall ||
-        state.activeTool == RoomModelingTool.select) {
+    if (state.currentStep == RoomModelingStep.structure) {
+      // Hit test for walls
+      final position = event.position;
+      String? hitWallId;
+
+      // Simple hit test: distance to line segment
+      for (final wall in state.walls) {
+        final point = _projectPointOnSegment(position, wall.start, wall.end);
+        if ((point - position).distance < 10.0) {
+          hitWallId = wall.id;
+          break;
+        }
+      }
+
+      emit(state.copyWith(selectedWallId: hitWallId));
       return;
     }
+
+    if (!state.isRoomClosed) return;
+    // Furnishing step logic below
 
     final position = event.position;
     FurnitureType type;

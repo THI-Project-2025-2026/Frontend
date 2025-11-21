@@ -18,6 +18,28 @@ class ToolSelected extends RoomModelingEvent {
   List<Object?> get props => [tool];
 }
 
+class StepChanged extends RoomModelingEvent {
+  final RoomModelingStep step;
+
+  const StepChanged(this.step);
+
+  @override
+  List<Object?> get props => [step];
+}
+
+class WallSelected extends RoomModelingEvent {
+  final String? wallId;
+
+  const WallSelected(this.wallId);
+
+  @override
+  List<Object?> get props => [wallId];
+}
+
+class DeleteSelectedWall extends RoomModelingEvent {
+  const DeleteSelectedWall();
+}
+
 class CanvasPanStart extends RoomModelingEvent {
   final Offset position;
 

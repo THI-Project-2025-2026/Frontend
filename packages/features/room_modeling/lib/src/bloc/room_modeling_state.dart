@@ -11,14 +11,21 @@ enum RoomModelingTool {
   table,
   sofa,
   bed,
-  select, // For moving things around
+}
+
+enum RoomModelingStep {
+  structure,
+  furnishing,
 }
 
 class RoomModelingState extends Equatable {
   final List<Wall> walls;
   final List<Furniture> furniture;
   final RoomModelingTool activeTool;
+  final RoomModelingStep currentStep;
   final bool isRoomClosed;
+  final String? selectedWallId;
+  final int? movingWallEndpoint; // 0 for start, 1 for end
 
   // Dragging state
   final Offset? dragStart;
@@ -29,7 +36,10 @@ class RoomModelingState extends Equatable {
     this.walls = const [],
     this.furniture = const [],
     this.activeTool = RoomModelingTool.wall,
+    this.currentStep = RoomModelingStep.structure,
     this.isRoomClosed = false,
+    this.selectedWallId,
+    this.movingWallEndpoint,
     this.dragStart,
     this.dragCurrent,
     this.tempWall,
@@ -39,17 +49,26 @@ class RoomModelingState extends Equatable {
     List<Wall>? walls,
     List<Furniture>? furniture,
     RoomModelingTool? activeTool,
+    RoomModelingStep? currentStep,
     bool? isRoomClosed,
+    String? selectedWallId,
+    int? movingWallEndpoint,
     Offset? dragStart,
     Offset? dragCurrent,
     Wall? tempWall,
     bool clearDrag = false,
+    bool clearSelection = false,
   }) {
     return RoomModelingState(
       walls: walls ?? this.walls,
       furniture: furniture ?? this.furniture,
       activeTool: activeTool ?? this.activeTool,
+      currentStep: currentStep ?? this.currentStep,
       isRoomClosed: isRoomClosed ?? this.isRoomClosed,
+      selectedWallId:
+          clearSelection ? null : (selectedWallId ?? this.selectedWallId),
+      movingWallEndpoint:
+          clearDrag ? null : (movingWallEndpoint ?? this.movingWallEndpoint),
       dragStart: clearDrag ? null : (dragStart ?? this.dragStart),
       dragCurrent: clearDrag ? null : (dragCurrent ?? this.dragCurrent),
       tempWall: clearDrag ? null : (tempWall ?? this.tempWall),
@@ -58,12 +77,15 @@ class RoomModelingState extends Equatable {
 
   @override
   List<Object?> get props => [
-    walls,
-    furniture,
-    activeTool,
-    isRoomClosed,
-    dragStart,
-    dragCurrent,
-    tempWall,
-  ];
+        walls,
+        furniture,
+        activeTool,
+        currentStep,
+        isRoomClosed,
+        selectedWallId,
+        movingWallEndpoint,
+        dragStart,
+        dragCurrent,
+        tempWall,
+      ];
 }
