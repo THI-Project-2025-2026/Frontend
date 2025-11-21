@@ -271,6 +271,15 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case RoomModelingTool.bed:
         type = FurnitureType.bed;
         break;
+      case RoomModelingTool.bathtub:
+        type = FurnitureType.bathtub;
+        break;
+      case RoomModelingTool.toilet:
+        type = FurnitureType.toilet;
+        break;
+      case RoomModelingTool.sink:
+        type = FurnitureType.sink;
+        break;
       default:
         return;
     }

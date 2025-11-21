@@ -136,6 +136,33 @@ class ToolsPanel extends StatelessWidget {
                 isSelected: state.activeTool == RoomModelingTool.bed,
                 isEnabled: true,
               ),
+              const SizedBox(height: 16),
+              _buildSectionTitle(context, 'Bathroom & Kitchen'),
+              _buildToolButton(
+                context,
+                label: 'Bathtub',
+                icon: Icons.bathtub,
+                tool: RoomModelingTool.bathtub,
+                isSelected: state.activeTool == RoomModelingTool.bathtub,
+                isEnabled: true,
+              ),
+              _buildToolButton(
+                context,
+                label: 'Toilet',
+                icon: Icons
+                    .wc, // Or Icons.bathroom if available, but wc is standard
+                tool: RoomModelingTool.toilet,
+                isSelected: state.activeTool == RoomModelingTool.toilet,
+                isEnabled: true,
+              ),
+              _buildToolButton(
+                context,
+                label: 'Sink',
+                icon: Icons.wash,
+                tool: RoomModelingTool.sink,
+                isSelected: state.activeTool == RoomModelingTool.sink,
+                isEnabled: true,
+              ),
             ],
 
             const Spacer(),

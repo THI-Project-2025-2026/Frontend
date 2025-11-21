@@ -1,7 +1,17 @@
 import 'dart:ui';
 import 'package:equatable/equatable.dart';
 
-enum FurnitureType { door, window, chair, table, sofa, bed }
+enum FurnitureType {
+  door,
+  window,
+  chair,
+  table,
+  sofa,
+  bed,
+  bathtub,
+  toilet,
+  sink,
+}
 
 class Furniture extends Equatable {
   final String id;
