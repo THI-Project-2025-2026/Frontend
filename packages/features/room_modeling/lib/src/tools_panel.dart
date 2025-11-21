@@ -85,84 +85,7 @@ class ToolsPanel extends StatelessWidget {
                   ),
                 ),
             ] else ...[
-              _buildSectionTitle(context, 'Openings'),
-              _buildToolButton(
-                context,
-                label: 'Door',
-                icon: Icons.door_front_door,
-                tool: RoomModelingTool.door,
-                isSelected: state.activeTool == RoomModelingTool.door,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Window',
-                icon: Icons.window,
-                tool: RoomModelingTool.window,
-                isSelected: state.activeTool == RoomModelingTool.window,
-                isEnabled: true,
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle(context, 'Furniture'),
-              _buildToolButton(
-                context,
-                label: 'Chair',
-                icon: Icons.chair,
-                tool: RoomModelingTool.chair,
-                isSelected: state.activeTool == RoomModelingTool.chair,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Table',
-                icon: Icons.table_bar,
-                tool: RoomModelingTool.table,
-                isSelected: state.activeTool == RoomModelingTool.table,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Sofa',
-                icon: Icons.weekend, // weekend is often used for sofa
-                tool: RoomModelingTool.sofa,
-                isSelected: state.activeTool == RoomModelingTool.sofa,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Bed',
-                icon: Icons.bed,
-                tool: RoomModelingTool.bed,
-                isSelected: state.activeTool == RoomModelingTool.bed,
-                isEnabled: true,
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle(context, 'Bathroom & Kitchen'),
-              _buildToolButton(
-                context,
-                label: 'Bathtub',
-                icon: Icons.bathtub,
-                tool: RoomModelingTool.bathtub,
-                isSelected: state.activeTool == RoomModelingTool.bathtub,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Toilet',
-                icon: Icons
-                    .wc, // Or Icons.bathroom if available, but wc is standard
-                tool: RoomModelingTool.toilet,
-                isSelected: state.activeTool == RoomModelingTool.toilet,
-                isEnabled: true,
-              ),
-              _buildToolButton(
-                context,
-                label: 'Sink',
-                icon: Icons.wash,
-                tool: RoomModelingTool.sink,
-                isSelected: state.activeTool == RoomModelingTool.sink,
-                isEnabled: true,
-              ),
+              _buildFurnitureMenu(context, state),
             ],
 
             const Spacer(),
@@ -231,28 +154,135 @@ class ToolsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildToolButton(
-    BuildContext context, {
-    required String label,
-    required IconData icon,
-    required RoomModelingTool tool,
-    required bool isSelected,
-    required bool isEnabled,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: SonalyzeButton(
-        icon: Icon(icon, size: 18),
-        onPressed: isEnabled
-            ? () {
-                context.read<RoomModelingBloc>().add(ToolSelected(tool));
-              }
-            : null,
-        variant: isSelected
-            ? SonalyzeButtonVariant.filled
-            : SonalyzeButtonVariant.outlined,
-        child: Text(label),
+  Widget _buildFurnitureMenu(BuildContext context, RoomModelingState state) {
+    return PopupMenuButton<RoomModelingTool>(
+      initialValue: state.activeTool,
+      onSelected: (tool) {
+        context.read<RoomModelingBloc>().add(ToolSelected(tool));
+      },
+      itemBuilder: (context) => [
+        _buildMenuHeader('Openings'),
+        _buildMenuItem(
+            context, RoomModelingTool.door, 'Door', Icons.door_front_door),
+        _buildMenuItem(
+            context, RoomModelingTool.window, 'Window', Icons.window),
+        const PopupMenuDivider(),
+        _buildMenuHeader('Furniture'),
+        _buildMenuItem(context, RoomModelingTool.chair, 'Chair', Icons.chair),
+        _buildMenuItem(
+            context, RoomModelingTool.table, 'Table', Icons.table_bar),
+        _buildMenuItem(context, RoomModelingTool.sofa, 'Sofa', Icons.weekend),
+        _buildMenuItem(context, RoomModelingTool.bed, 'Bed', Icons.bed),
+        const PopupMenuDivider(),
+        _buildMenuHeader('Bathroom & Kitchen'),
+        _buildMenuItem(
+            context, RoomModelingTool.bathtub, 'Bathtub', Icons.bathtub),
+        _buildMenuItem(context, RoomModelingTool.toilet, 'Toilet', Icons.wc),
+        _buildMenuItem(context, RoomModelingTool.sink, 'Sink', Icons.wash),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(_getToolIcon(state.activeTool), size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _getToolLabel(state.activeTool),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
       ),
     );
+  }
+
+  PopupMenuItem<RoomModelingTool> _buildMenuHeader(String title) {
+    return PopupMenuItem<RoomModelingTool>(
+      enabled: false,
+      height: 32,
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<RoomModelingTool> _buildMenuItem(
+    BuildContext context,
+    RoomModelingTool tool,
+    String label,
+    IconData icon,
+  ) {
+    return PopupMenuItem<RoomModelingTool>(
+      value: tool,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
+          const SizedBox(width: 12),
+          Text(label),
+        ],
+      ),
+    );
+  }
+
+  String _getToolLabel(RoomModelingTool tool) {
+    switch (tool) {
+      case RoomModelingTool.door:
+        return 'Door';
+      case RoomModelingTool.window:
+        return 'Window';
+      case RoomModelingTool.chair:
+        return 'Chair';
+      case RoomModelingTool.table:
+        return 'Table';
+      case RoomModelingTool.sofa:
+        return 'Sofa';
+      case RoomModelingTool.bed:
+        return 'Bed';
+      case RoomModelingTool.bathtub:
+        return 'Bathtub';
+      case RoomModelingTool.toilet:
+        return 'Toilet';
+      case RoomModelingTool.sink:
+        return 'Sink';
+      default:
+        return 'Select Tool';
+    }
+  }
+
+  IconData _getToolIcon(RoomModelingTool tool) {
+    switch (tool) {
+      case RoomModelingTool.door:
+        return Icons.door_front_door;
+      case RoomModelingTool.window:
+        return Icons.window;
+      case RoomModelingTool.chair:
+        return Icons.chair;
+      case RoomModelingTool.table:
+        return Icons.table_bar;
+      case RoomModelingTool.sofa:
+        return Icons.weekend;
+      case RoomModelingTool.bed:
+        return Icons.bed;
+      case RoomModelingTool.bathtub:
+        return Icons.bathtub;
+      case RoomModelingTool.toilet:
+        return Icons.wc;
+      case RoomModelingTool.sink:
+        return Icons.wash;
+      default:
+        return Icons.build;
+    }
   }
 }
