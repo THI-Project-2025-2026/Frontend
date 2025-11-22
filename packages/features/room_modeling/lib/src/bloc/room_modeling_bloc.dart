@@ -59,12 +59,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
     final updatedWalls =
         state.walls.where((w) => w.id != state.selectedWallId).toList();
-    final isClosed = _checkIfRoomIsClosed(updatedWalls);
+    final (isClosed, polygon) = _checkIfRoomIsClosed(updatedWalls);
 
     emit(
       state.copyWith(
         walls: updatedWalls,
         isRoomClosed: isClosed,
+        roomPolygon: polygon,
         clearSelection: true,
       ),
     );
@@ -202,11 +203,57 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         }
       }).toList();
 
-      final isClosed = _checkIfRoomIsClosed(updatedWalls);
+      // Check for intersections and invalid walls
+      bool invalid = false;
+      for (final wall in updatedWalls) {
+        // Only check walls that moved
+        if (!state.movingWallEndpoints.containsKey(wall.id)) continue;
+
+        // Check length (prevent points)
+        if ((wall.start - wall.end).distance < 5.0) {
+          invalid = true;
+          break;
+        }
+
+        for (final other in updatedWalls) {
+          if (wall.id == other.id) continue;
+
+          // Ignore connected walls (sharing a vertex)
+          if ((wall.start - other.start).distance < 0.001 ||
+              (wall.start - other.end).distance < 0.001 ||
+              (wall.end - other.start).distance < 0.001 ||
+              (wall.end - other.end).distance < 0.001) {
+            continue;
+          }
+
+          if (_doSegmentsIntersect(
+              wall.start, wall.end, other.start, other.end)) {
+            invalid = true;
+            break;
+          }
+
+          // Check T-junctions (point on segment)
+          if (_isPointOnSegment(wall.start, other.start, other.end) ||
+              _isPointOnSegment(wall.end, other.start, other.end) ||
+              _isPointOnSegment(other.start, wall.start, wall.end) ||
+              _isPointOnSegment(other.end, wall.start, wall.end)) {
+            invalid = true;
+            break;
+          }
+        }
+        if (invalid) break;
+      }
+
+      if (invalid) {
+        return;
+      }
+
+      final (isClosed, polygon) = _checkIfRoomIsClosed(updatedWalls);
 
       emit(state.copyWith(
         walls: updatedWalls,
         isRoomClosed: isClosed,
+        roomPolygon: polygon,
         dragCurrent: newPos,
         snapGuides: snapGuides,
         clearSnapGuide: snapGuides.isEmpty,
@@ -246,6 +293,44 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         snapGuides = snapResult.$2;
       }
 
+      // Check for intersections for temp wall
+      bool invalid = false;
+      final tempStart = state.tempWall!.start;
+      final tempEnd = endPoint;
+
+      // Check length
+      if ((tempStart - tempEnd).distance < 5.0) invalid = true;
+
+      if (!invalid) {
+        for (final wall in state.walls) {
+          // Ignore if connected at start or end (snapped)
+          if ((tempStart - wall.start).distance < 0.001 ||
+              (tempStart - wall.end).distance < 0.001 ||
+              (tempEnd - wall.start).distance < 0.001 ||
+              (tempEnd - wall.end).distance < 0.001) {
+            continue;
+          }
+
+          if (_doSegmentsIntersect(tempStart, tempEnd, wall.start, wall.end)) {
+            invalid = true;
+            break;
+          }
+
+          // Check T-junctions
+          if (_isPointOnSegment(tempStart, wall.start, wall.end) ||
+              _isPointOnSegment(tempEnd, wall.start, wall.end) ||
+              _isPointOnSegment(wall.start, tempStart, tempEnd) ||
+              _isPointOnSegment(wall.end, tempStart, tempEnd)) {
+            invalid = true;
+            break;
+          }
+        }
+      }
+
+      if (invalid) {
+        return;
+      }
+
       emit(
         state.copyWith(
           dragCurrent: endPoint,
@@ -255,6 +340,32 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         ),
       );
     }
+  }
+
+  bool _isPointOnSegment(Offset p, Offset a, Offset b) {
+    const double epsilon = 0.5;
+    // Check bounding box
+    if (p.dx < min(a.dx, b.dx) - epsilon ||
+        p.dx > max(a.dx, b.dx) + epsilon ||
+        p.dy < min(a.dy, b.dy) - epsilon ||
+        p.dy > max(a.dy, b.dy) + epsilon) {
+      return false;
+    }
+    // Check cross product for collinearity
+    final cp = (b.dx - a.dx) * (p.dy - a.dy) - (b.dy - a.dy) * (p.dx - a.dx);
+    if (cp.abs() > epsilon) return false;
+    // Check if strictly inside (not endpoints)
+    if ((p - a).distance < epsilon || (p - b).distance < epsilon) return false;
+    return true;
+  }
+
+  bool _doSegmentsIntersect(Offset p1, Offset p2, Offset p3, Offset p4) {
+    double ccw(Offset a, Offset b, Offset c) {
+      return (b.dx - a.dx) * (c.dy - a.dy) - (b.dy - a.dy) * (c.dx - a.dx);
+    }
+
+    return ccw(p1, p3, p4) * ccw(p2, p3, p4) < 0 &&
+        ccw(p1, p2, p3) * ccw(p1, p2, p4) < 0;
   }
 
   (Offset, List<SnapGuideLine>) _calculateSnapPosition(
@@ -429,12 +540,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       }
 
       final updatedWalls = List<Wall>.from(state.walls)..add(newWall);
-      final isClosed = _checkIfRoomIsClosed(updatedWalls);
+      final (isClosed, polygon) = _checkIfRoomIsClosed(updatedWalls);
 
       emit(
         state.copyWith(
           walls: updatedWalls,
           isRoomClosed: isClosed,
+          roomPolygon: polygon,
           clearDrag: true,
         ),
       );
@@ -540,9 +652,31 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       attachedWallId: attachedWallId,
     );
 
+    // Check if furniture is inside the room (if not attached to a wall)
+    if (attachedWallId == null && state.roomPolygon != null) {
+      if (!_isPointInPolygon(finalPosition, state.roomPolygon!)) {
+        return;
+      }
+    }
+
     emit(
       state.copyWith(furniture: List.from(state.furniture)..add(newFurniture)),
     );
+  }
+
+  bool _isPointInPolygon(Offset point, List<Offset> polygon) {
+    int intersectCount = 0;
+    for (int i = 0; i < polygon.length; i++) {
+      final p1 = polygon[i];
+      final p2 = polygon[(i + 1) % polygon.length];
+
+      if ((p1.dy > point.dy) != (p2.dy > point.dy) &&
+          point.dx <
+              (p2.dx - p1.dx) * (point.dy - p1.dy) / (p2.dy - p1.dy) + p1.dx) {
+        intersectCount++;
+      }
+    }
+    return intersectCount % 2 == 1;
   }
 
   Offset _projectPointOnSegment(Offset p, Offset a, Offset b) {
@@ -558,12 +692,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     emit(const RoomModelingState());
   }
 
-  bool _checkIfRoomIsClosed(List<Wall> walls) {
-    if (walls.length < 3) return false;
+  (bool, List<Offset>?) _checkIfRoomIsClosed(List<Wall> walls) {
+    if (walls.length < 3) return (false, null);
 
     // Build adjacency list
     final Map<String, List<String>> adj = {};
     final points = <String>{};
+    final pointToOffset = <String, Offset>{};
 
     String pointKey(Offset p) =>
         '${p.dx.toStringAsFixed(1)},${p.dy.toStringAsFixed(1)}';
@@ -574,25 +709,22 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
       points.add(p1);
       points.add(p2);
+      pointToOffset[p1] = wall.start;
+      pointToOffset[p2] = wall.end;
 
       adj.putIfAbsent(p1, () => []).add(p2);
       adj.putIfAbsent(p2, () => []).add(p1);
     }
 
-    // A simple closed room means every vertex has degree >= 2 (usually exactly 2 for a simple polygon)
-    // And the graph is connected.
-    // For this simple version, let's just check if every node has degree even (Eulerian circuit condition somewhat)
-    // or specifically for a single room, degree 2.
-
-    // Let's check if every point has at least 2 connections.
+    // Check degree condition
     for (final point in points) {
       if ((adj[point]?.length ?? 0) < 2) {
-        return false;
+        return (false, null);
       }
     }
 
-    // Also check connectivity (BFS)
-    if (points.isEmpty) return false;
+    // Check connectivity (BFS)
+    if (points.isEmpty) return (false, null);
     final startNode = points.first;
     final visited = <String>{};
     final queue = [startNode];
@@ -608,6 +740,54 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       }
     }
 
-    return visited.length == points.length;
+    if (visited.length != points.length) return (false, null);
+
+    // Build ordered polygon
+    // Start from a point and traverse
+    final polygon = <Offset>[];
+    final polyVisited = <String>{};
+    String current = startNode;
+    String? previous;
+
+    // Simple traversal for a single loop
+    // Note: This assumes a simple polygon without self-intersections or multiple loops sharing vertices
+    // For a robust solution, we'd need a more complex graph traversal, but for this use case:
+
+    while (true) {
+      polygon.add(pointToOffset[current]!);
+      polyVisited.add(current);
+
+      final neighbors = adj[current]!;
+      String? next;
+
+      for (final n in neighbors) {
+        if (n != previous) {
+          // If we have multiple choices and one is visited (and it's the start), close the loop
+          if (n == startNode && polygon.length > 2) {
+            return (true, polygon);
+          }
+          if (!polyVisited.contains(n)) {
+            next = n;
+            break;
+          }
+        }
+      }
+
+      if (next == null) {
+        // Dead end or loop closed but not to start?
+        // If we are back at start (handled above), we are good.
+        // If we can't move, something is wrong or we are done.
+        // Check if last connects to start
+        if (neighbors.contains(startNode) &&
+            previous != startNode &&
+            polygon.length > 2) {
+          return (true, polygon);
+        }
+        return (false, null);
+      }
+
+      previous = current;
+      current = next;
+    }
   }
 }

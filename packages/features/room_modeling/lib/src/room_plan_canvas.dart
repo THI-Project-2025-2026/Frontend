@@ -44,6 +44,7 @@ class RoomPlanCanvas extends StatelessWidget {
                 furniture: state.furniture,
                 selectedWallId: state.selectedWallId,
                 snapGuides: state.snapGuides,
+                roomPolygon: state.roomPolygon,
               ),
               size: Size.infinite,
             ),
@@ -62,6 +63,7 @@ class RoomPainter extends CustomPainter {
   final bool isRoomClosed;
   final String? selectedWallId;
   final List<SnapGuideLine> snapGuides;
+  final List<Offset>? roomPolygon;
 
   RoomPainter({
     required this.walls,
@@ -71,10 +73,24 @@ class RoomPainter extends CustomPainter {
     required this.isRoomClosed,
     this.selectedWallId,
     this.snapGuides = const [],
+    this.roomPolygon,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Draw outside area if room is closed
+    if (isRoomClosed && roomPolygon != null && roomPolygon!.isNotEmpty) {
+      // Fill the entire canvas with "outside" color
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()..color = Colors.black.withValues(alpha: 0.4),
+      );
+
+      // Draw the room polygon with "inside" color (white)
+      final path = Path()..addPolygon(roomPolygon!, true);
+      canvas.drawPath(path, Paint()..color = Colors.white);
+    }
+
     final wallPaint = Paint()
       ..color = Colors.black
       ..strokeWidth = 6.0
@@ -513,6 +529,7 @@ class RoomPainter extends CustomPainter {
         oldDelegate.dragCurrent != dragCurrent ||
         oldDelegate.isRoomClosed != isRoomClosed ||
         oldDelegate.selectedWallId != selectedWallId ||
-        oldDelegate.snapGuides != snapGuides;
+        oldDelegate.snapGuides != snapGuides ||
+        oldDelegate.roomPolygon != roomPolygon;
   }
 }
