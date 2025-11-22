@@ -81,16 +81,32 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       if (state.selectedWallId != null) {
         final selectedWall =
             state.walls.firstWhere((w) => w.id == state.selectedWallId);
+
+        int? movingEndpoint;
+        Offset? vertexPos;
+
         if ((selectedWall.start - position).distance < 20.0) {
-          emit(state.copyWith(
-            movingWallEndpoint: 0,
-            dragStart: position,
-          ));
-          return;
+          movingEndpoint = 0;
+          vertexPos = selectedWall.start;
+        } else if ((selectedWall.end - position).distance < 20.0) {
+          movingEndpoint = 1;
+          vertexPos = selectedWall.end;
         }
-        if ((selectedWall.end - position).distance < 20.0) {
+
+        if (movingEndpoint != null && vertexPos != null) {
+          // Find all walls connected to this vertex and which endpoint is connected
+          final movingWallEndpoints = <String, int>{};
+          for (final wall in state.walls) {
+            if ((wall.start - vertexPos).distance < 0.001) {
+              movingWallEndpoints[wall.id] = 0;
+            } else if ((wall.end - vertexPos).distance < 0.001) {
+              movingWallEndpoints[wall.id] = 1;
+            }
+          }
+
           emit(state.copyWith(
-            movingWallEndpoint: 1,
+            movingWallEndpoint: movingEndpoint,
+            movingWallEndpoints: movingWallEndpoints,
             dragStart: position,
           ));
           return;
@@ -133,7 +149,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
       // Snap to other walls
       for (final wall in state.walls) {
-        if (wall.id == state.selectedWallId) continue;
+        // Don't snap to walls that are currently moving
+        if (state.movingWallEndpoints.containsKey(wall.id)) continue;
+
         if ((wall.start - newPos).distance < snapDistance) {
           newPos = wall.start;
           break;
@@ -145,14 +163,18 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       }
 
       final updatedWalls = state.walls.map((w) {
-        if (w.id == state.selectedWallId) {
-          if (state.movingWallEndpoint == 0) {
-            return w.copyWith(start: newPos);
-          } else {
-            return w.copyWith(end: newPos);
-          }
+        // Only update walls that were identified as moving at the start of the drag
+        if (!state.movingWallEndpoints.containsKey(w.id)) {
+          return w;
         }
-        return w;
+
+        final endpointIndex = state.movingWallEndpoints[w.id];
+
+        if (endpointIndex == 0) {
+          return w.copyWith(start: newPos);
+        } else {
+          return w.copyWith(end: newPos);
+        }
       }).toList();
 
       final isClosed = _checkIfRoomIsClosed(updatedWalls);

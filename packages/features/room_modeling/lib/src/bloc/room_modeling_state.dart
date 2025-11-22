@@ -29,6 +29,8 @@ class RoomModelingState extends Equatable {
   final bool isRoomClosed;
   final String? selectedWallId;
   final int? movingWallEndpoint; // 0 for start, 1 for end
+  final Map<String, int>
+      movingWallEndpoints; // Map of Wall ID to endpoint index (0 or 1)
 
   // Dragging state
   final Offset? dragStart;
@@ -43,6 +45,7 @@ class RoomModelingState extends Equatable {
     this.isRoomClosed = false,
     this.selectedWallId,
     this.movingWallEndpoint,
+    this.movingWallEndpoints = const {},
     this.dragStart,
     this.dragCurrent,
     this.tempWall,
@@ -56,6 +59,7 @@ class RoomModelingState extends Equatable {
     bool? isRoomClosed,
     String? selectedWallId,
     int? movingWallEndpoint,
+    Map<String, int>? movingWallEndpoints,
     Offset? dragStart,
     Offset? dragCurrent,
     Wall? tempWall,
@@ -72,6 +76,9 @@ class RoomModelingState extends Equatable {
           clearSelection ? null : (selectedWallId ?? this.selectedWallId),
       movingWallEndpoint:
           clearDrag ? null : (movingWallEndpoint ?? this.movingWallEndpoint),
+      movingWallEndpoints: clearDrag
+          ? const {}
+          : (movingWallEndpoints ?? this.movingWallEndpoints),
       dragStart: clearDrag ? null : (dragStart ?? this.dragStart),
       dragCurrent: clearDrag ? null : (dragCurrent ?? this.dragCurrent),
       tempWall: clearDrag ? null : (tempWall ?? this.tempWall),
@@ -87,6 +94,7 @@ class RoomModelingState extends Equatable {
         isRoomClosed,
         selectedWallId,
         movingWallEndpoint,
+        movingWallEndpoints,
         dragStart,
         dragCurrent,
         tempWall,
