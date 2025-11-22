@@ -21,6 +21,13 @@ enum RoomModelingStep {
   furnishing,
 }
 
+enum FurnitureInteraction {
+  none,
+  move,
+  resize,
+  rotate,
+}
+
 class RoomModelingState extends Equatable {
   final List<Wall> walls;
   final List<Furniture> furniture;
@@ -28,6 +35,9 @@ class RoomModelingState extends Equatable {
   final RoomModelingStep currentStep;
   final bool isRoomClosed;
   final String? selectedWallId;
+  final String? selectedFurnitureId;
+  final FurnitureInteraction furnitureInteraction;
+  final Furniture? initialFurnitureState; // State at start of interaction
   final int? movingWallEndpoint; // 0 for start, 1 for end
   final Map<String, int>
       movingWallEndpoints; // Map of Wall ID to endpoint index (0 or 1)
@@ -46,6 +56,9 @@ class RoomModelingState extends Equatable {
     this.currentStep = RoomModelingStep.structure,
     this.isRoomClosed = false,
     this.selectedWallId,
+    this.selectedFurnitureId,
+    this.furnitureInteraction = FurnitureInteraction.none,
+    this.initialFurnitureState,
     this.movingWallEndpoint,
     this.movingWallEndpoints = const {},
     this.dragStart,
@@ -62,6 +75,9 @@ class RoomModelingState extends Equatable {
     RoomModelingStep? currentStep,
     bool? isRoomClosed,
     String? selectedWallId,
+    String? selectedFurnitureId,
+    FurnitureInteraction? furnitureInteraction,
+    Furniture? initialFurnitureState,
     int? movingWallEndpoint,
     Map<String, int>? movingWallEndpoints,
     Offset? dragStart,
@@ -81,6 +97,15 @@ class RoomModelingState extends Equatable {
       isRoomClosed: isRoomClosed ?? this.isRoomClosed,
       selectedWallId:
           clearSelection ? null : (selectedWallId ?? this.selectedWallId),
+      selectedFurnitureId: clearSelection
+          ? null
+          : (selectedFurnitureId ?? this.selectedFurnitureId),
+      furnitureInteraction: clearDrag
+          ? FurnitureInteraction.none
+          : (furnitureInteraction ?? this.furnitureInteraction),
+      initialFurnitureState: clearDrag
+          ? null
+          : (initialFurnitureState ?? this.initialFurnitureState),
       movingWallEndpoint:
           clearDrag ? null : (movingWallEndpoint ?? this.movingWallEndpoint),
       movingWallEndpoints: clearDrag
@@ -104,6 +129,9 @@ class RoomModelingState extends Equatable {
         currentStep,
         isRoomClosed,
         selectedWallId,
+        selectedFurnitureId,
+        furnitureInteraction,
+        initialFurnitureState,
         movingWallEndpoint,
         movingWallEndpoints,
         dragStart,

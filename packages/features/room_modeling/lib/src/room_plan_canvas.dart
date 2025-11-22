@@ -43,6 +43,7 @@ class RoomPlanCanvas extends StatelessWidget {
                 isRoomClosed: state.isRoomClosed,
                 furniture: state.furniture,
                 selectedWallId: state.selectedWallId,
+                selectedFurnitureId: state.selectedFurnitureId,
                 snapGuides: state.snapGuides,
                 roomPolygon: state.roomPolygon,
               ),
@@ -62,6 +63,7 @@ class RoomPainter extends CustomPainter {
   final Offset? dragCurrent;
   final bool isRoomClosed;
   final String? selectedWallId;
+  final String? selectedFurnitureId;
   final List<SnapGuideLine> snapGuides;
   final List<Offset>? roomPolygon;
 
@@ -72,6 +74,7 @@ class RoomPainter extends CustomPainter {
     this.dragCurrent,
     required this.isRoomClosed,
     this.selectedWallId,
+    this.selectedFurnitureId,
     this.snapGuides = const [],
     this.roomPolygon,
   });
@@ -231,6 +234,17 @@ class RoomPainter extends CustomPainter {
     for (final item in furniture) {
       _drawFurniture(canvas, item);
     }
+
+    // Draw selection overlay on top
+    if (selectedFurnitureId != null) {
+      try {
+        final selectedItem =
+            furniture.firstWhere((f) => f.id == selectedFurnitureId);
+        _drawSelectionOverlay(canvas, selectedItem);
+      } catch (_) {
+        // Item might have been deleted
+      }
+    }
   }
 
   void _drawDimension(Canvas canvas, TextPainter textPainter, Wall wall) {
@@ -380,10 +394,67 @@ class RoomPainter extends CustomPainter {
     }
   }
 
+  void _drawSelectionOverlay(Canvas canvas, Furniture item) {
+    canvas.save();
+    canvas.translate(item.position.dx, item.position.dy);
+    canvas.rotate(item.rotation);
+
+    final width = item.size.width;
+    final height = item.size.height;
+    final halfWidth = width / 2;
+    final halfHeight = height / 2;
+
+    final selectionPaint = Paint()
+      ..color = Colors.blue.withValues(alpha: 0.1)
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: width + 10,
+      height: height + 10,
+    );
+    canvas.drawRect(rect, selectionPaint);
+    canvas.drawRect(rect, borderPaint);
+
+    // Draw resize handle (bottom right)
+    final handlePaint = Paint()..color = Colors.blue;
+    canvas.drawCircle(Offset(halfWidth, halfHeight), 6.0, handlePaint);
+    canvas.drawCircle(
+      Offset(halfWidth, halfHeight),
+      3.0,
+      Paint()..color = Colors.white,
+    );
+
+    // Draw rotate handle (top center)
+    final rotateHandlePos = Offset(0, -halfHeight - 30);
+    canvas.drawLine(
+      Offset(0, -halfHeight - 5),
+      rotateHandlePos,
+      Paint()
+        ..color = Colors.blue
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(rotateHandlePos, 6.0, handlePaint);
+    canvas.drawCircle(rotateHandlePos, 3.0, Paint()..color = Colors.white);
+
+    canvas.restore();
+  }
+
   void _drawFurniture(Canvas canvas, Furniture item) {
     canvas.save();
     canvas.translate(item.position.dx, item.position.dy);
     canvas.rotate(item.rotation);
+
+    final width = item.size.width;
+    final height = item.size.height;
+    final halfWidth = width / 2;
+    final halfHeight = height / 2;
 
     final strokePaint = Paint()
       ..color = Colors.black
@@ -397,120 +468,214 @@ class RoomPainter extends CustomPainter {
     switch (item.type) {
       case FurnitureType.door:
         // Door frame/clearing
-        // We assume door width is around 40-50 units.
-        // Draw arc
-        final rect = Rect.fromCircle(center: const Offset(-25, 0), radius: 50);
-        canvas.drawArc(rect, 0, -pi / 2, true, strokePaint);
-        // Draw door panel (already drawn by drawArc with useCenter=true, but let's be explicit if needed)
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw arc for swing
+        canvas.drawArc(
+          Rect.fromLTWH(-halfWidth, -width, width * 2, width * 2),
+          pi,
+          pi / 2,
+          true,
+          strokePaint,
+        );
         break;
 
       case FurnitureType.window:
-        // Clear wall
-        canvas.drawRect(const Rect.fromLTWH(-25, -6, 50, 12), fillPaint);
-        // Frame
-        canvas.drawRect(const Rect.fromLTWH(-25, -6, 50, 12), strokePaint);
-        // Glass/Sill
-        canvas.drawLine(const Offset(-25, 0), const Offset(25, 0), strokePaint);
-        // Inner lines
-        canvas.drawLine(const Offset(-25, -3), const Offset(25, -3),
-            strokePaint..strokeWidth = 0.5);
-        canvas.drawLine(const Offset(-25, 3), const Offset(25, 3),
-            strokePaint..strokeWidth = 0.5);
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        canvas.drawLine(
+          Offset(-halfWidth, 0),
+          Offset(halfWidth, 0),
+          strokePaint,
+        );
         break;
 
       case FurnitureType.chair:
-        // Seat
-        canvas.drawRect(const Rect.fromLTWH(-10, -10, 20, 20), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-10, -10, 20, 20), strokePaint);
+        // Seat (slightly rounded)
+        final seatRect = Rect.fromCenter(
+          center: Offset(0, height * 0.1), // Shift seat down slightly
+          width: width,
+          height: height * 0.8,
+        );
+        final seatRRect = RRect.fromRectAndRadius(
+          seatRect,
+          const Radius.circular(4.0),
+        );
+
+        canvas.drawRRect(seatRRect, fillPaint);
+        canvas.drawRRect(seatRRect, strokePaint);
+
+        // Backrest (curved)
+        final backrestRect = Rect.fromLTWH(
+          -halfWidth,
+          -halfHeight,
+          width,
+          height * 0.25,
+        );
+        final backrestRRect = RRect.fromRectAndCorners(
+          backrestRect,
+          topLeft: const Radius.circular(8.0),
+          topRight: const Radius.circular(8.0),
+          bottomLeft: const Radius.circular(4.0),
+          bottomRight: const Radius.circular(4.0),
+        );
+
+        canvas.drawRRect(backrestRRect, fillPaint);
+        canvas.drawRRect(backrestRRect, strokePaint);
+        break;
+
+      case FurnitureType.table:
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        break;
+
+      case FurnitureType.sofa:
+        // Body
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
         // Backrest
+        canvas.drawRect(
+          Rect.fromLTWH(
+            -halfWidth,
+            -halfHeight,
+            width,
+            height * 0.2,
+          ),
+          strokePaint,
+        );
+        // Armrests
+        canvas.drawRect(
+          Rect.fromLTWH(
+            -halfWidth,
+            -halfHeight,
+            width * 0.15,
+            height,
+          ),
+          strokePaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(
+            halfWidth - width * 0.15,
+            -halfHeight,
+            width * 0.15,
+            height,
+          ),
+          strokePaint,
+        );
+        break;
+
+      case FurnitureType.bed:
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Pillows
+        canvas.drawRect(
+          Rect.fromLTWH(
+            -halfWidth + width * 0.1,
+            -halfHeight + height * 0.05,
+            width * 0.35,
+            height * 0.2,
+          ),
+          strokePaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(
+            halfWidth - width * 0.45,
+            -halfHeight + height * 0.05,
+            width * 0.35,
+            height * 0.2,
+          ),
+          strokePaint,
+        );
+        break;
+
+      case FurnitureType.bathtub:
+        // Outer rim
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            const Rect.fromLTWH(-10, -15, 20, 5),
-            const Radius.circular(2),
+            Rect.fromCenter(center: Offset.zero, width: width, height: height),
+            Radius.circular(min(width, height) / 4),
           ),
           fillPaint,
         );
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            const Rect.fromLTWH(-10, -15, 20, 5),
-            const Radius.circular(2),
+            Rect.fromCenter(center: Offset.zero, width: width, height: height),
+            Radius.circular(min(width, height) / 4),
           ),
           strokePaint,
         );
-        break;
-
-      case FurnitureType.table:
-        // Table top
-        canvas.drawCircle(Offset.zero, 20, fillPaint);
-        canvas.drawCircle(Offset.zero, 20, strokePaint);
-        break;
-
-      case FurnitureType.sofa:
-        // Main body
-        canvas.drawRect(const Rect.fromLTWH(-30, -15, 60, 30), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-30, -15, 60, 30), strokePaint);
-        // Backrest
-        canvas.drawRect(const Rect.fromLTWH(-30, -20, 60, 5), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-30, -20, 60, 5), strokePaint);
-        // Armrests
-        canvas.drawRect(const Rect.fromLTWH(-35, -15, 5, 30), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-35, -15, 5, 30), strokePaint);
-        canvas.drawRect(const Rect.fromLTWH(30, -15, 5, 30), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(30, -15, 5, 30), strokePaint);
-        // Cushions separation
-        canvas.drawLine(const Offset(0, -15), const Offset(0, 15),
-            strokePaint..strokeWidth = 0.5);
-        break;
-
-      case FurnitureType.bed:
-        // Bed frame
-        canvas.drawRect(const Rect.fromLTWH(-25, -40, 50, 80), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-25, -40, 50, 80), strokePaint);
-        // Pillows
-        canvas.drawRect(const Rect.fromLTWH(-20, -35, 18, 12), strokePaint);
-        canvas.drawRect(const Rect.fromLTWH(2, -35, 18, 12), strokePaint);
-        // Duvet fold
-        canvas.drawLine(const Offset(-25, 0), const Offset(25, 0),
-            strokePaint..strokeWidth = 0.5);
-        // Fold diagonal
-        canvas.drawLine(const Offset(10, 0), const Offset(25, 15),
-            strokePaint..strokeWidth = 0.5);
-        break;
-
-      case FurnitureType.bathtub:
-        // Frame
-        canvas.drawRect(const Rect.fromLTWH(-35, -15, 70, 30), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-35, -15, 70, 30), strokePaint);
-        // Tub (rounded rect)
+        // Inner rim
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            const Rect.fromLTWH(-30, -10, 60, 20),
-            const Radius.circular(10),
+            Rect.fromCenter(
+                center: Offset.zero, width: width * 0.8, height: height * 0.8),
+            Radius.circular(min(width, height) / 5),
           ),
           strokePaint,
         );
         // Drain
-        canvas.drawCircle(const Offset(25, 0), 2.0, strokePaint);
+        canvas.drawCircle(
+            Offset(width * 0.35, 0), min(width, height) * 0.08, strokePaint);
         break;
 
       case FurnitureType.toilet:
         // Tank
-        canvas.drawRect(const Rect.fromLTWH(-10, -15, 20, 10), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-10, -15, 20, 10), strokePaint);
+        canvas.drawRect(
+          Rect.fromLTWH(
+            -halfWidth,
+            -halfHeight,
+            width,
+            height * 0.25,
+          ),
+          strokePaint,
+        );
         // Bowl
-        canvas.drawOval(const Rect.fromLTWH(-8, -5, 16, 20), fillPaint);
-        canvas.drawOval(const Rect.fromLTWH(-8, -5, 16, 20), strokePaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(0, height * 0.1),
+            width: width * 0.8,
+            height: height * 0.7,
+          ),
+          strokePaint,
+        );
         break;
 
       case FurnitureType.sink:
-        // Counter/Frame
-        canvas.drawRect(const Rect.fromLTWH(-15, -15, 30, 30), fillPaint);
-        canvas.drawRect(const Rect.fromLTWH(-15, -15, 30, 30), strokePaint);
-        // Basin
-        canvas.drawCircle(Offset.zero, 10, strokePaint);
-        // Tap
-        canvas.drawLine(
-            const Offset(0, -15), const Offset(0, -10), strokePaint);
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        canvas.drawCircle(Offset.zero, min(width, height) / 3, strokePaint);
         break;
     }
 
@@ -525,6 +690,7 @@ class RoomPainter extends CustomPainter {
         oldDelegate.dragCurrent != dragCurrent ||
         oldDelegate.isRoomClosed != isRoomClosed ||
         oldDelegate.selectedWallId != selectedWallId ||
+        oldDelegate.selectedFurnitureId != selectedFurnitureId ||
         oldDelegate.snapGuides != snapGuides ||
         oldDelegate.roomPolygon != roomPolygon;
   }

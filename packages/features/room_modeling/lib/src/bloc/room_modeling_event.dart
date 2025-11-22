@@ -40,6 +40,10 @@ class DeleteSelectedWall extends RoomModelingEvent {
   const DeleteSelectedWall();
 }
 
+class DeleteSelectedFurniture extends RoomModelingEvent {
+  const DeleteSelectedFurniture();
+}
+
 class CanvasPanStart extends RoomModelingEvent {
   final Offset position;
 

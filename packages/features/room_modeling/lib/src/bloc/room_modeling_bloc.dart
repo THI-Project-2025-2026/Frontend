@@ -16,6 +16,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<StepChanged>(_onStepChanged);
     on<WallSelected>(_onWallSelected);
     on<DeleteSelectedWall>(_onDeleteSelectedWall);
+    on<DeleteSelectedFurniture>(_onDeleteSelectedFurniture);
     on<CanvasPanStart>(_onCanvasPanStart);
     on<CanvasPanUpdate>(_onCanvasPanUpdate);
     on<CanvasPanEnd>(_onCanvasPanEnd);
@@ -71,10 +72,45 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     );
   }
 
+  void _onDeleteSelectedFurniture(
+    DeleteSelectedFurniture event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    if (state.selectedFurnitureId == null) return;
+
+    final updatedFurniture = state.furniture
+        .where((f) => f.id != state.selectedFurnitureId)
+        .toList();
+
+    emit(state.copyWith(furniture: updatedFurniture, clearSelection: true));
+  }
+
   void _onCanvasPanStart(
     CanvasPanStart event,
     Emitter<RoomModelingState> emit,
   ) {
+    if (state.currentStep == RoomModelingStep.furnishing) {
+      if (state.selectedFurnitureId != null) {
+        final furniture = state.furniture.firstWhere(
+          (f) => f.id == state.selectedFurnitureId,
+        );
+        final position = event.position;
+
+        final interaction = _getFurnitureInteraction(position, furniture);
+
+        if (interaction != FurnitureInteraction.none) {
+          emit(
+            state.copyWith(
+              furnitureInteraction: interaction,
+              initialFurnitureState: furniture,
+              dragStart: position,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
     if (state.currentStep == RoomModelingStep.structure) {
       final position = event.position;
 
@@ -144,6 +180,42 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     CanvasPanUpdate event,
     Emitter<RoomModelingState> emit,
   ) {
+    if (state.furnitureInteraction != FurnitureInteraction.none &&
+        state.selectedFurnitureId != null &&
+        state.initialFurnitureState != null &&
+        state.dragStart != null) {
+      final currentPos = event.position;
+      final initial = state.initialFurnitureState!;
+      final delta = currentPos - state.dragStart!;
+
+      Furniture updatedFurniture = initial;
+
+      if (state.furnitureInteraction == FurnitureInteraction.move) {
+        updatedFurniture = initial.copyWith(position: initial.position + delta);
+      } else if (state.furnitureInteraction == FurnitureInteraction.rotate) {
+        final center = initial.position;
+        final dx = currentPos.dx - center.dx;
+        final dy = currentPos.dy - center.dy;
+        final angle = atan2(dy, dx);
+        updatedFurniture = initial.copyWith(rotation: angle + pi / 2);
+      } else if (state.furnitureInteraction == FurnitureInteraction.resize) {
+        final localPos = _globalToLocal(currentPos, initial);
+        final newWidth = max(20.0, localPos.dx * 2);
+        final newHeight = max(20.0, localPos.dy * 2);
+
+        updatedFurniture = initial.copyWith(
+          size: Size(newWidth, newHeight),
+        );
+      }
+
+      final updatedFurnitureList = state.furniture
+          .map((f) => f.id == updatedFurniture.id ? updatedFurniture : f)
+          .toList();
+
+      emit(state.copyWith(furniture: updatedFurnitureList));
+      return;
+    }
+
     if (state.movingWallEndpoint != null && state.selectedWallId != null) {
       final position = event.position;
       Offset newPos = position;
@@ -524,6 +596,11 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onCanvasPanEnd(CanvasPanEnd event, Emitter<RoomModelingState> emit) {
+    if (state.furnitureInteraction != FurnitureInteraction.none) {
+      emit(state.copyWith(clearDrag: true));
+      return;
+    }
+
     if (state.movingWallEndpoint != null) {
       emit(state.copyWith(clearDrag: true));
       return;
@@ -576,6 +653,30 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     // Furnishing step logic below
 
     final position = event.position;
+
+    // Check if we tapped on existing furniture
+    for (final furniture in state.furniture.reversed) {
+      if (furniture.id == state.selectedFurnitureId) {
+        // For selected furniture, check body AND handles
+        if (_getFurnitureInteraction(position, furniture) !=
+            FurnitureInteraction.none) {
+          return; // Tapped on selected furniture/handles, keep selection
+        }
+      } else {
+        // For other furniture, only check body
+        if (_isPointInRotatedRect(position, furniture)) {
+          emit(state.copyWith(selectedFurnitureId: furniture.id));
+          return;
+        }
+      }
+    }
+
+    // If we have a selection and clicked empty space, deselect
+    if (state.selectedFurnitureId != null) {
+      emit(state.copyWith(clearSelection: true));
+      return;
+    }
+
     FurnitureType type;
 
     switch (state.activeTool) {
@@ -649,6 +750,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       type: type,
       position: finalPosition,
       rotation: rotation,
+      size: Furniture.defaultSize(type),
       attachedWallId: attachedWallId,
     );
 
@@ -789,5 +891,59 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       previous = current;
       current = next;
     }
+  }
+
+  FurnitureInteraction _getFurnitureInteraction(
+    Offset point,
+    Furniture furniture,
+  ) {
+    // Transform point to local coordinates
+    final localPoint = _globalToLocal(point, furniture);
+    final halfWidth = furniture.size.width / 2;
+    final halfHeight = furniture.size.height / 2;
+
+    // Check rotate handle (top center + 30px up)
+    // In local coords, this is (0, -halfHeight - 30)
+    // Allow some hit radius
+    if ((localPoint - Offset(0, -halfHeight - 30)).distance < 15.0) {
+      return FurnitureInteraction.rotate;
+    }
+
+    // Check resize handle (bottom right)
+    // In local coords, this is (halfWidth, halfHeight)
+    if ((localPoint - Offset(halfWidth, halfHeight)).distance < 15.0) {
+      return FurnitureInteraction.resize;
+    }
+
+    // Check body (move)
+    if (localPoint.dx >= -halfWidth &&
+        localPoint.dx <= halfWidth &&
+        localPoint.dy >= -halfHeight &&
+        localPoint.dy <= halfHeight) {
+      return FurnitureInteraction.move;
+    }
+
+    return FurnitureInteraction.none;
+  }
+
+  bool _isPointInRotatedRect(Offset point, Furniture furniture) {
+    final localPoint = _globalToLocal(point, furniture);
+    final halfWidth = furniture.size.width / 2;
+    final halfHeight = furniture.size.height / 2;
+
+    return localPoint.dx >= -halfWidth &&
+        localPoint.dx <= halfWidth &&
+        localPoint.dy >= -halfHeight &&
+        localPoint.dy <= halfHeight;
+  }
+
+  Offset _globalToLocal(Offset point, Furniture furniture) {
+    final translated = point - furniture.position;
+    final cosA = cos(-furniture.rotation);
+    final sinA = sin(-furniture.rotation);
+    return Offset(
+      translated.dx * cosA - translated.dy * sinA,
+      translated.dx * sinA + translated.dy * cosA,
+    );
   }
 }
