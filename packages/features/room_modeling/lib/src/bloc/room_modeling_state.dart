@@ -36,6 +36,7 @@ class RoomModelingState extends Equatable {
   final Offset? dragStart;
   final Offset? dragCurrent;
   final Wall? tempWall; // The wall currently being drawn
+  final List<SnapGuideLine> snapGuides;
 
   const RoomModelingState({
     this.walls = const [],
@@ -49,6 +50,7 @@ class RoomModelingState extends Equatable {
     this.dragStart,
     this.dragCurrent,
     this.tempWall,
+    this.snapGuides = const [],
   });
 
   RoomModelingState copyWith({
@@ -63,8 +65,10 @@ class RoomModelingState extends Equatable {
     Offset? dragStart,
     Offset? dragCurrent,
     Wall? tempWall,
+    List<SnapGuideLine>? snapGuides,
     bool clearDrag = false,
     bool clearSelection = false,
+    bool clearSnapGuide = false,
   }) {
     return RoomModelingState(
       walls: walls ?? this.walls,
@@ -82,6 +86,9 @@ class RoomModelingState extends Equatable {
       dragStart: clearDrag ? null : (dragStart ?? this.dragStart),
       dragCurrent: clearDrag ? null : (dragCurrent ?? this.dragCurrent),
       tempWall: clearDrag ? null : (tempWall ?? this.tempWall),
+      snapGuides: clearDrag || clearSnapGuide
+          ? const []
+          : (snapGuides ?? this.snapGuides),
     );
   }
 
@@ -98,5 +105,16 @@ class RoomModelingState extends Equatable {
         dragStart,
         dragCurrent,
         tempWall,
+        snapGuides,
       ];
+}
+
+class SnapGuideLine extends Equatable {
+  final Offset start;
+  final Offset end;
+
+  const SnapGuideLine(this.start, this.end);
+
+  @override
+  List<Object?> get props => [start, end];
 }

@@ -146,20 +146,45 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     if (state.movingWallEndpoint != null && state.selectedWallId != null) {
       final position = event.position;
       Offset newPos = position;
+      bool snappedToVertex = false;
+      List<SnapGuideLine> snapGuides = [];
 
-      // Snap to other walls
+      // Snap to other walls (Vertex Snapping)
       for (final wall in state.walls) {
         // Don't snap to walls that are currently moving
         if (state.movingWallEndpoints.containsKey(wall.id)) continue;
 
         if ((wall.start - newPos).distance < snapDistance) {
           newPos = wall.start;
+          snappedToVertex = true;
           break;
         }
         if ((wall.end - newPos).distance < snapDistance) {
           newPos = wall.end;
+          snappedToVertex = true;
           break;
         }
+      }
+
+      // Alignment Snapping (if not snapped to vertex)
+      if (!snappedToVertex) {
+        // Collect anchors from moving walls
+        final anchors = <Offset>[];
+        for (final entry in state.movingWallEndpoints.entries) {
+          final wall = state.walls.firstWhere((w) => w.id == entry.key);
+          // If endpoint 0 is moving, anchor is endpoint 1 (end)
+          // If endpoint 1 is moving, anchor is endpoint 0 (start)
+          anchors.add(entry.value == 0 ? wall.end : wall.start);
+        }
+
+        final snapResult = _calculateSnapPosition(
+          newPos,
+          anchors,
+          state.walls,
+          excludeWallIds: state.movingWallEndpoints.keys.toList(),
+        );
+        newPos = snapResult.$1;
+        snapGuides = snapResult.$2;
       }
 
       final updatedWalls = state.walls.map((w) {
@@ -183,6 +208,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         walls: updatedWalls,
         isRoomClosed: isClosed,
         dragCurrent: newPos,
+        snapGuides: snapGuides,
+        clearSnapGuide: snapGuides.isEmpty,
       ));
       return;
     }
@@ -192,6 +219,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         state.dragStart != null) {
       Offset endPoint = event.position;
       bool snappedToWall = false;
+      List<SnapGuideLine> snapGuides = [];
 
       // Snap end point to existing wall endpoints (excluding the start point of current wall if it's the same)
       for (final wall in state.walls) {
@@ -207,22 +235,181 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         }
       }
 
-      // Orthogonal snapping (straight lines) - only if not snapped to a wall
+      // Alignment Snapping (if not snapped to vertex)
       if (!snappedToWall) {
-        if ((endPoint.dx - state.dragStart!.dx).abs() < snapDistance) {
-          endPoint = Offset(state.dragStart!.dx, endPoint.dy);
-        } else if ((endPoint.dy - state.dragStart!.dy).abs() < snapDistance) {
-          endPoint = Offset(endPoint.dx, state.dragStart!.dy);
-        }
+        final snapResult = _calculateSnapPosition(
+          endPoint,
+          [state.dragStart!],
+          state.walls,
+        );
+        endPoint = snapResult.$1;
+        snapGuides = snapResult.$2;
       }
 
       emit(
         state.copyWith(
           dragCurrent: endPoint,
           tempWall: state.tempWall?.copyWith(end: endPoint),
+          snapGuides: snapGuides,
+          clearSnapGuide: snapGuides.isEmpty,
         ),
       );
     }
+  }
+
+  (Offset, List<SnapGuideLine>) _calculateSnapPosition(
+    Offset currentPos,
+    List<Offset> anchors,
+    List<Wall> allWalls, {
+    List<String> excludeWallIds = const [],
+  }) {
+    // 1. Identify Candidate Lines
+    final candidateLines =
+        <(Offset, Offset)>[]; // (Origin, DirectionNormalized)
+
+    // A. Lines from Anchors (Constraint Lines)
+    for (final anchor in anchors) {
+      // Horizontal
+      candidateLines.add((anchor, const Offset(1, 0)));
+      // Vertical
+      candidateLines.add((anchor, const Offset(0, 1)));
+    }
+
+    // B. Perpendicular Lines from All Walls (Global Guides)
+    for (final wall in allWalls) {
+      if (excludeWallIds.contains(wall.id)) continue;
+
+      final vec = wall.end - wall.start;
+      final len = vec.distance;
+      if (len > 0.001) {
+        final dir = vec / len;
+        final perp = Offset(-dir.dy, dir.dx);
+
+        // Add perpendicular lines at start and end
+        candidateLines.add((wall.start, perp));
+        candidateLines.add((wall.end, perp));
+      }
+    }
+
+    // 2. Find all lines close to currentPos
+    final closeLines = <(Offset, Offset, Offset)>[]; // (Origin, Dir, ProjPoint)
+
+    for (final line in candidateLines) {
+      final origin = line.$1;
+      final dir = line.$2;
+
+      // Project currentPos onto line
+      final v = currentPos - origin;
+      final projLen = v.dx * dir.dx + v.dy * dir.dy;
+      final projPoint = origin + dir * projLen;
+
+      final dist = (currentPos - projPoint).distance;
+      if (dist < snapDistance) {
+        closeLines.add((origin, dir, projPoint));
+      }
+    }
+
+    if (closeLines.isEmpty) {
+      return (currentPos, []);
+    }
+
+    // 3. Check for Intersection Snap (if >= 2 lines)
+    if (closeLines.length >= 2) {
+      // Find best intersection
+      Offset? bestIntersection;
+      double minIntDist = snapDistance;
+      List<SnapGuideLine> bestGuides = [];
+
+      for (int i = 0; i < closeLines.length; i++) {
+        for (int j = i + 1; j < closeLines.length; j++) {
+          final l1 = closeLines[i];
+          final l2 = closeLines[j];
+
+          // Check if parallel
+          final det = l1.$2.dx * l2.$2.dy - l1.$2.dy * l2.$2.dx;
+          if (det.abs() < 0.001) continue; // Parallel
+
+          // Find intersection
+          final dx = l2.$1.dx - l1.$1.dx;
+          final dy = l2.$1.dy - l1.$1.dy;
+
+          final t1 = (dx * l2.$2.dy - dy * l2.$2.dx) / det;
+          final intersection = l1.$1 + l1.$2 * t1;
+
+          final dist = (currentPos - intersection).distance;
+          if (dist < minIntDist) {
+            minIntDist = dist;
+            bestIntersection = intersection;
+
+            bestGuides = [
+              SnapGuideLine(l1.$1, intersection),
+              SnapGuideLine(l2.$1, intersection),
+            ];
+          }
+        }
+      }
+
+      if (bestIntersection != null) {
+        return (bestIntersection, bestGuides);
+      }
+    }
+
+    // 4. Fallback to Single Line Snap (closest)
+    double minLineDist = snapDistance;
+    (Offset, Offset, Offset)? bestLine;
+
+    for (final line in closeLines) {
+      final dist = (currentPos - line.$3).distance;
+      if (dist < minLineDist) {
+        minLineDist = dist;
+        bestLine = line;
+      }
+    }
+
+    if (bestLine == null) return (currentPos, []);
+
+    final lineOrigin = bestLine.$1;
+    final lineDir = bestLine.$2;
+    final lineProj = bestLine.$3;
+
+    // 5. Check for Point Projection on this line
+    Offset finalSnap = lineProj;
+    List<SnapGuideLine> guides = [SnapGuideLine(lineOrigin, finalSnap)];
+    double minPointDist = snapDistance;
+
+    // Collect all interesting points (endpoints of other walls)
+    final interestingPoints = <Offset>[];
+    for (final wall in allWalls) {
+      if (excludeWallIds.contains(wall.id)) continue;
+      interestingPoints.add(wall.start);
+      interestingPoints.add(wall.end);
+    }
+
+    for (final p in interestingPoints) {
+      // Project p onto bestLine
+      final v = p - lineOrigin;
+      final projLen = v.dx * lineDir.dx + v.dy * lineDir.dy;
+      final pProj = lineOrigin + lineDir * projLen;
+
+      // Check if the projected point is close to our current projection on the line
+      final dist = (lineProj - pProj).distance;
+      if (dist < minPointDist) {
+        minPointDist = dist;
+        finalSnap = pProj;
+
+        guides = [
+          SnapGuideLine(lineOrigin, finalSnap),
+          SnapGuideLine(p, finalSnap),
+        ];
+      }
+    }
+
+    // Update the end point of the first guide if we snapped to a point projection
+    if (guides.isNotEmpty) {
+      guides[0] = SnapGuideLine(guides[0].start, finalSnap);
+    }
+
+    return (finalSnap, guides);
   }
 
   void _onCanvasPanEnd(CanvasPanEnd event, Emitter<RoomModelingState> emit) {

@@ -43,6 +43,7 @@ class RoomPlanCanvas extends StatelessWidget {
                 isRoomClosed: state.isRoomClosed,
                 furniture: state.furniture,
                 selectedWallId: state.selectedWallId,
+                snapGuides: state.snapGuides,
               ),
               size: Size.infinite,
             ),
@@ -60,6 +61,7 @@ class RoomPainter extends CustomPainter {
   final Offset? dragCurrent;
   final bool isRoomClosed;
   final String? selectedWallId;
+  final List<SnapGuideLine> snapGuides;
 
   RoomPainter({
     required this.walls,
@@ -68,6 +70,7 @@ class RoomPainter extends CustomPainter {
     this.dragCurrent,
     required this.isRoomClosed,
     this.selectedWallId,
+    this.snapGuides = const [],
   });
 
   @override
@@ -133,6 +136,45 @@ class RoomPainter extends CustomPainter {
       for (int j = i + 1; j < walls.length; j++) {
         _drawAngle(canvas, textPainter, walls[i], walls[j]);
       }
+    }
+
+    // Draw snap guides
+    for (final guide in snapGuides) {
+      final guidePaint = Paint()
+        ..color = Colors.red.withValues(alpha: 0.5)
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(guide.start, guide.end, guidePaint);
+
+      // Draw distance for snap guide
+      final midPoint = (guide.start + guide.end) / 2;
+      final length = (guide.start - guide.end).distance;
+      final text = '${(length / 50).toStringAsFixed(2)} m';
+
+      textPainter.text = TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.red.withValues(alpha: 0.8),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+      textPainter.layout();
+
+      final textRect = Rect.fromCenter(
+        center: midPoint,
+        width: textPainter.width + 6,
+        height: textPainter.height + 4,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(textRect, const Radius.circular(4)),
+        Paint()..color = Colors.white.withValues(alpha: 0.8),
+      );
+      textPainter.paint(
+        canvas,
+        midPoint - Offset(textPainter.width / 2, textPainter.height / 2),
+      );
     }
 
     // Draw temp wall
@@ -470,6 +512,7 @@ class RoomPainter extends CustomPainter {
         oldDelegate.tempWall != tempWall ||
         oldDelegate.dragCurrent != dragCurrent ||
         oldDelegate.isRoomClosed != isRoomClosed ||
-        oldDelegate.selectedWallId != selectedWallId;
+        oldDelegate.selectedWallId != selectedWallId ||
+        oldDelegate.snapGuides != snapGuides;
   }
 }
