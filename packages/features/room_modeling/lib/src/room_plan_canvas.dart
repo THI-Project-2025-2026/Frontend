@@ -94,24 +94,20 @@ class RoomPainter extends CustomPainter {
     final wallPaint = Paint()
       ..color = Colors.black
       ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round
+      ..strokeCap = StrokeCap.square
       ..style = PaintingStyle.stroke;
 
     final selectedWallPaint = Paint()
       ..color = Colors.blue
       ..strokeWidth = 8.0
-      ..strokeCap = StrokeCap.round
+      ..strokeCap = StrokeCap.square
       ..style = PaintingStyle.stroke;
 
     final tempWallPaint = Paint()
       ..color = Colors.blue.withValues(alpha: 0.5)
       ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round
+      ..strokeCap = StrokeCap.square
       ..style = PaintingStyle.stroke;
-
-    final jointPaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
 
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
@@ -122,8 +118,8 @@ class RoomPainter extends CustomPainter {
       final isSelected = wall.id == selectedWallId;
       canvas.drawLine(
           wall.start, wall.end, isSelected ? selectedWallPaint : wallPaint);
-      canvas.drawCircle(wall.start, 3.0, jointPaint);
-      canvas.drawCircle(wall.end, 3.0, jointPaint);
+      // canvas.drawCircle(wall.start, 3.0, jointPaint);
+      // canvas.drawCircle(wall.end, 3.0, jointPaint);
 
       // Draw dimensions
       _drawDimension(canvas, textPainter, wall);
@@ -196,8 +192,8 @@ class RoomPainter extends CustomPainter {
     // Draw temp wall
     if (tempWall != null) {
       canvas.drawLine(tempWall!.start, tempWall!.end, tempWallPaint);
-      canvas.drawCircle(tempWall!.start, 4.0, jointPaint);
-      canvas.drawCircle(tempWall!.end, 4.0, jointPaint);
+      // canvas.drawCircle(tempWall!.start, 4.0, jointPaint);
+      // canvas.drawCircle(tempWall!.end, 4.0, jointPaint);
 
       // Draw dimension for temp wall
       _drawDimension(canvas, textPainter, tempWall!);

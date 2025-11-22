@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,9 @@ class SonalyzeWebView extends StatefulWidget {
     this.initialSettings,
     this.initialUserScripts = const <UserScript>[],
     this.javascriptHandlers = const <String, SonalyzeJavaScriptHandler>{},
+    this.injectedAssets = const <String, String>{},
+    this.initialJsonData,
+    this.jsonDataVariableName = 'sonalyzeData',
     this.backgroundColor = Colors.transparent,
     this.onWebViewCreated,
     this.onLoadStop,
@@ -42,6 +46,19 @@ class SonalyzeWebView extends StatefulWidget {
 
   /// Named JavaScript handlers exposed to the page that bridge to Dart.
   final Map<String, SonalyzeJavaScriptHandler> javascriptHandlers;
+
+  /// Virtual assets to serve via interception.
+  /// Keys are the file paths (e.g. "config.json") to match against the request URL.
+  /// Values are the content of the file.
+  final Map<String, String> injectedAssets;
+
+  /// Optional JSON data to inject into the window object before the page loads.
+  /// The data will be available as `window[jsonDataVariableName]`.
+  final String? initialJsonData;
+
+  /// The name of the global variable to store the JSON data in.
+  /// Defaults to 'sonalyzeData'.
+  final String jsonDataVariableName;
 
   /// Background color behind the page (transparent by default).
   final Color backgroundColor;
@@ -93,17 +110,42 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
           transparentBackground: _isTransparentBackground,
         );
 
+    final userScripts = widget.initialUserScripts.toList();
+    if (widget.initialJsonData != null) {
+      userScripts.add(
+        UserScript(
+          source:
+              'window.${widget.jsonDataVariableName} = ${widget.initialJsonData};',
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+        ),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(color: widget.backgroundColor),
       child: InAppWebView(
         initialSettings: settings,
-        initialUserScripts: UnmodifiableListView(widget.initialUserScripts),
+        initialUserScripts: UnmodifiableListView(userScripts),
         initialData: InAppWebViewInitialData(
           data: widget.htmlContent,
           baseUrl: _baseWebUri,
           encoding: 'utf-8',
           mimeType: 'text/html',
         ),
+        shouldInterceptRequest: widget.injectedAssets.isEmpty
+            ? null
+            : (controller, request) async {
+                final url = request.url.toString();
+                for (final entry in widget.injectedAssets.entries) {
+                  if (url.endsWith(entry.key)) {
+                    return WebResourceResponse(
+                      contentType: 'application/json',
+                      data: Uint8List.fromList(utf8.encode(entry.value)),
+                    );
+                  }
+                }
+                return null;
+              },
         onWebViewCreated: (controller) {
           _controller = controller;
           widget.javascriptHandlers.forEach((name, handler) {
