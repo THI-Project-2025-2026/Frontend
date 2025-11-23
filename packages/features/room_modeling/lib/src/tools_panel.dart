@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:core_ui/core_ui.dart';
 import 'bloc/room_modeling_bloc.dart';
 import 'bloc/room_modeling_event.dart';
 import 'bloc/room_modeling_state.dart';
+import 'models/furniture.dart';
 
 class ToolsPanel extends StatelessWidget {
   const ToolsPanel({super.key});
@@ -70,6 +73,8 @@ class ToolsPanel extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
+              const SizedBox(height: 12),
+              _RoomStructureOptions(roomHeight: state.roomHeightMeters),
               if (state.selectedWallId != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
@@ -86,6 +91,7 @@ class ToolsPanel extends StatelessWidget {
                 ),
             ] else ...[
               _buildFurnitureMenu(context, state),
+              ..._buildSelectedFurnitureEditor(context, state),
             ],
 
             const Spacer(),
@@ -152,6 +158,47 @@ class ToolsPanel extends StatelessWidget {
         ).textTheme.titleSmall?.copyWith(color: Theme.of(context).hintColor),
       ),
     );
+  }
+
+  List<Widget> _buildSelectedFurnitureEditor(
+    BuildContext context,
+    RoomModelingState state,
+  ) {
+    final selectedFurniture = _findSelectedFurniture(state);
+    if (selectedFurniture == null) {
+      return const <Widget>[];
+    }
+
+    return [
+      const SizedBox(height: 16),
+      _buildSectionTitle(context, 'Selected Furniture'),
+      _FurnitureEditor(furniture: selectedFurniture),
+      Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: SonalyzeButton(
+          onPressed: () {
+            context
+                .read<RoomModelingBloc>()
+                .add(const DeleteSelectedFurniture());
+          },
+          variant: SonalyzeButtonVariant.filled,
+          child: const Text('Delete Selected Item'),
+        ),
+      ),
+    ];
+  }
+
+  Furniture? _findSelectedFurniture(RoomModelingState state) {
+    final selectedId = state.selectedFurnitureId;
+    if (selectedId == null) {
+      return null;
+    }
+
+    try {
+      return state.furniture.firstWhere((f) => f.id == selectedId);
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildFurnitureMenu(BuildContext context, RoomModelingState state) {
@@ -284,5 +331,265 @@ class ToolsPanel extends StatelessWidget {
       default:
         return Icons.build;
     }
+  }
+}
+
+class _FurnitureEditor extends StatefulWidget {
+  final Furniture furniture;
+
+  const _FurnitureEditor({required this.furniture});
+
+  @override
+  State<_FurnitureEditor> createState() => _FurnitureEditorState();
+}
+
+class _FurnitureEditorState extends State<_FurnitureEditor> {
+  late final TextEditingController _widthController;
+  late final TextEditingController _heightController;
+  late final TextEditingController _rotationController;
+
+  bool get _isOpening => widget.furniture.isOpening;
+
+  @override
+  void initState() {
+    super.initState();
+    _widthController = TextEditingController();
+    _heightController = TextEditingController();
+    _rotationController = TextEditingController();
+    _syncControllers();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FurnitureEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.furniture != oldWidget.furniture ||
+        widget.furniture.size != oldWidget.furniture.size ||
+        widget.furniture.rotation != oldWidget.furniture.rotation) {
+      _syncControllers();
+    }
+  }
+
+  @override
+  void dispose() {
+    _widthController.dispose();
+    _heightController.dispose();
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  void _syncControllers() {
+    _widthController.text = _formatMeters(widget.furniture.size.width);
+    _heightController.text = _formatMeters(widget.furniture.size.height);
+    _rotationController.text = _formatDegrees(widget.furniture.rotation);
+  }
+
+  String _formatMeters(double value) {
+    final meters = value / RoomModelingBloc.pixelsPerMeter;
+    return meters.toStringAsFixed(2);
+  }
+
+  String _formatDegrees(double radians) {
+    final degrees = (radians * 180 / math.pi) % 360;
+    final normalized = degrees < 0 ? degrees + 360 : degrees;
+    return normalized.toStringAsFixed(1);
+  }
+
+  void _handleWidthChanged(String value) {
+    final meters = double.tryParse(value);
+    if (meters == null) return;
+
+    final widthPx = meters * RoomModelingBloc.pixelsPerMeter;
+    context.read<RoomModelingBloc>().add(
+          UpdateSelectedFurniture(
+            size: Size(widthPx, widget.furniture.size.height),
+          ),
+        );
+  }
+
+  void _handleHeightChanged(String value) {
+    if (_isOpening) return;
+    final meters = double.tryParse(value);
+    if (meters == null) return;
+
+    final heightPx = meters * RoomModelingBloc.pixelsPerMeter;
+    context.read<RoomModelingBloc>().add(
+          UpdateSelectedFurniture(
+            size: Size(widget.furniture.size.width, heightPx),
+          ),
+        );
+  }
+
+  void _handleRotationChanged(String value) {
+    final degrees = double.tryParse(value);
+    if (degrees == null) return;
+
+    final radians = degrees * math.pi / 180;
+    context
+        .read<RoomModelingBloc>()
+        .add(UpdateSelectedFurniture(rotation: radians));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatFurnitureLabel(widget.furniture.type),
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: 12),
+          _buildNumberField(
+            context,
+            label: 'Length',
+            controller: _widthController,
+            onChanged: _handleWidthChanged,
+            suffixText: 'm',
+            textInputAction:
+                _isOpening ? TextInputAction.done : TextInputAction.next,
+          ),
+          if (_isOpening) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Doors and windows keep a fixed thickness and rotation.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            _buildNumberField(
+              context,
+              label: 'Width',
+              controller: _heightController,
+              onChanged: _handleHeightChanged,
+              suffixText: 'm',
+            ),
+            const SizedBox(height: 12),
+            _buildNumberField(
+              context,
+              label: 'Rotation',
+              controller: _rotationController,
+              onChanged: _handleRotationChanged,
+              suffixText: '°',
+              textInputAction: TextInputAction.done,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNumberField(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+    String? suffixText,
+    bool enabled = true,
+    TextInputAction textInputAction = TextInputAction.next,
+  }) {
+    return TextFormField(
+      controller: controller,
+      textInputAction: textInputAction,
+      enabled: enabled,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffixText,
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  String _formatFurnitureLabel(FurnitureType type) {
+    final raw = type.name.replaceAll('_', ' ');
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+}
+
+class _RoomStructureOptions extends StatefulWidget {
+  final double roomHeight;
+
+  const _RoomStructureOptions({required this.roomHeight});
+
+  @override
+  State<_RoomStructureOptions> createState() => _RoomStructureOptionsState();
+}
+
+class _RoomStructureOptionsState extends State<_RoomStructureOptions> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _syncController();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RoomStructureOptions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((widget.roomHeight - oldWidget.roomHeight).abs() > 0.001) {
+      _syncController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _syncController() {
+    _controller.text = widget.roomHeight.toStringAsFixed(2);
+  }
+
+  void _handleHeightChanged(String value) {
+    final meters = double.tryParse(value);
+    if (meters == null) return;
+
+    context.read<RoomModelingBloc>().add(RoomHeightChanged(meters));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Room options',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Room height',
+              suffixText: 'm',
+              helperText:
+                  'Default ${RoomModelingState.defaultRoomHeightMeters.toStringAsFixed(2)} m',
+            ),
+            textInputAction: TextInputAction.done,
+            onChanged: _handleHeightChanged,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -14,42 +14,55 @@ class RoomPlanCanvas extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<RoomModelingBloc, RoomModelingState>(
       builder: (context, state) {
-        return GestureDetector(
-          onPanStart: (details) {
-            context.read<RoomModelingBloc>().add(
-                  CanvasPanStart(details.localPosition),
-                );
-          },
-          onPanUpdate: (details) {
-            context.read<RoomModelingBloc>().add(
-                  CanvasPanUpdate(details.localPosition),
-                );
-          },
-          onPanEnd: (details) {
-            context.read<RoomModelingBloc>().add(const CanvasPanEnd());
-          },
-          onTapUp: (details) {
-            context.read<RoomModelingBloc>().add(
-                  CanvasTap(details.localPosition),
-                );
-          },
-          child: Container(
-            color: Colors.white, // Canvas background
-            child: CustomPaint(
-              painter: RoomPainter(
-                walls: state.walls,
-                tempWall: state.tempWall,
-                dragCurrent: state.dragCurrent,
-                isRoomClosed: state.isRoomClosed,
-                furniture: state.furniture,
-                selectedWallId: state.selectedWallId,
-                selectedFurnitureId: state.selectedFurnitureId,
-                snapGuides: state.snapGuides,
-                roomPolygon: state.roomPolygon,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final mediaSize = MediaQuery.sizeOf(context);
+            final width = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : mediaSize.width;
+            final height = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : mediaSize.height;
+            final canvasSize = Size(width, height);
+
+            return GestureDetector(
+              onPanStart: (details) {
+                context.read<RoomModelingBloc>().add(
+                      CanvasPanStart(details.localPosition, canvasSize),
+                    );
+              },
+              onPanUpdate: (details) {
+                context.read<RoomModelingBloc>().add(
+                      CanvasPanUpdate(details.localPosition, canvasSize),
+                    );
+              },
+              onPanEnd: (details) {
+                context.read<RoomModelingBloc>().add(const CanvasPanEnd());
+              },
+              onTapUp: (details) {
+                context.read<RoomModelingBloc>().add(
+                      CanvasTap(details.localPosition, canvasSize),
+                    );
+              },
+              child: Container(
+                color: Colors.white, // Canvas background
+                child: CustomPaint(
+                  painter: RoomPainter(
+                    walls: state.walls,
+                    tempWall: state.tempWall,
+                    dragCurrent: state.dragCurrent,
+                    isRoomClosed: state.isRoomClosed,
+                    furniture: state.furniture,
+                    selectedWallId: state.selectedWallId,
+                    selectedFurnitureId: state.selectedFurnitureId,
+                    snapGuides: state.snapGuides,
+                    roomPolygon: state.roomPolygon,
+                  ),
+                  size: canvasSize,
+                ),
               ),
-              size: Size.infinite,
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -422,6 +435,8 @@ class RoomPainter extends CustomPainter {
     canvas.drawRect(rect, selectionPaint);
     canvas.drawRect(rect, borderPaint);
 
+    final isOpening = Furniture.isOpeningType(item.type);
+
     // Draw resize handle (bottom right)
     final handlePaint = Paint()..color = Colors.blue;
     canvas.drawCircle(Offset(halfWidth, halfHeight), 6.0, handlePaint);
@@ -431,17 +446,19 @@ class RoomPainter extends CustomPainter {
       Paint()..color = Colors.white,
     );
 
-    // Draw rotate handle (top center)
-    final rotateHandlePos = Offset(0, -halfHeight - 30);
-    canvas.drawLine(
-      Offset(0, -halfHeight - 5),
-      rotateHandlePos,
-      Paint()
-        ..color = Colors.blue
-        ..strokeWidth = 2,
-    );
-    canvas.drawCircle(rotateHandlePos, 6.0, handlePaint);
-    canvas.drawCircle(rotateHandlePos, 3.0, Paint()..color = Colors.white);
+    if (!isOpening) {
+      // Draw rotate handle (top center)
+      final rotateHandlePos = Offset(0, -halfHeight - 30);
+      canvas.drawLine(
+        Offset(0, -halfHeight - 5),
+        rotateHandlePos,
+        Paint()
+          ..color = Colors.blue
+          ..strokeWidth = 2,
+      );
+      canvas.drawCircle(rotateHandlePos, 6.0, handlePaint);
+      canvas.drawCircle(rotateHandlePos, 3.0, Paint()..color = Colors.white);
+    }
 
     canvas.restore();
   }

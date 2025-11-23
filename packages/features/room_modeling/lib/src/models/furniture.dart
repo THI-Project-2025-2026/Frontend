@@ -21,6 +21,10 @@ class Furniture extends Equatable {
   final Size size;
   final String? attachedWallId; // For doors/windows
 
+  static bool isOpeningType(FurnitureType type) {
+    return type == FurnitureType.door || type == FurnitureType.window;
+  }
+
   const Furniture({
     required this.id,
     required this.type,
@@ -47,6 +51,8 @@ class Furniture extends Equatable {
       attachedWallId: attachedWallId ?? this.attachedWallId,
     );
   }
+
+  bool get isOpening => Furniture.isOpeningType(type);
 
   @override
   List<Object?> get props =>

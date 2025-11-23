@@ -10,6 +10,7 @@ import 'room_modeling_state.dart';
 class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   final _uuid = const Uuid();
   static const double snapDistance = 20.0;
+  static const double pixelsPerMeter = 50.0;
 
   RoomModelingBloc() : super(const RoomModelingState()) {
     on<ToolSelected>(_onToolSelected);
@@ -17,6 +18,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<WallSelected>(_onWallSelected);
     on<DeleteSelectedWall>(_onDeleteSelectedWall);
     on<DeleteSelectedFurniture>(_onDeleteSelectedFurniture);
+    on<UpdateSelectedFurniture>(_onUpdateSelectedFurniture);
+    on<RoomHeightChanged>(_onRoomHeightChanged);
     on<CanvasPanStart>(_onCanvasPanStart);
     on<CanvasPanUpdate>(_onCanvasPanUpdate);
     on<CanvasPanEnd>(_onCanvasPanEnd);
@@ -83,6 +86,34 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         .toList();
 
     emit(state.copyWith(furniture: updatedFurniture, clearSelection: true));
+  }
+
+  void _onUpdateSelectedFurniture(
+    UpdateSelectedFurniture event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    final selectedId = state.selectedFurnitureId;
+    if (selectedId == null) return;
+
+    final index = state.furniture.indexWhere((f) => f.id == selectedId);
+    if (index == -1) return;
+
+    var target = state.furniture[index];
+
+    if (event.size != null) {
+      target = target.copyWith(
+        size: _constrainFurnitureSize(target, event.size!),
+      );
+    }
+
+    if (event.rotation != null && !target.isOpening) {
+      target = target.copyWith(rotation: _normalizeAngle(event.rotation!));
+    }
+
+    final updatedFurniture = [...state.furniture];
+    updatedFurniture[index] = target;
+
+    emit(state.copyWith(furniture: updatedFurniture));
   }
 
   void _onCanvasPanStart(
@@ -191,8 +222,20 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       Furniture updatedFurniture = initial;
 
       if (state.furnitureInteraction == FurnitureInteraction.move) {
-        updatedFurniture = initial.copyWith(position: initial.position + delta);
-      } else if (state.furnitureInteraction == FurnitureInteraction.rotate) {
+        final desiredPosition = initial.position + delta;
+        Offset constrained;
+        if (initial.isOpening && initial.attachedWallId != null) {
+          constrained = _projectOntoAttachedWall(initial, desiredPosition);
+        } else {
+          constrained = _clampFurnitureCenter(
+            initial,
+            desiredPosition,
+            event.canvasSize,
+          );
+        }
+        updatedFurniture = initial.copyWith(position: constrained);
+      } else if (state.furnitureInteraction == FurnitureInteraction.rotate &&
+          !initial.isOpening) {
         final center = initial.position;
         final dx = currentPos.dx - center.dx;
         final dy = currentPos.dy - center.dy;
@@ -200,12 +243,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         updatedFurniture = initial.copyWith(rotation: angle + pi / 2);
       } else if (state.furnitureInteraction == FurnitureInteraction.resize) {
         final localPos = _globalToLocal(currentPos, initial);
-        final newWidth = max(20.0, localPos.dx * 2);
-        final newHeight = max(20.0, localPos.dy * 2);
-
-        updatedFurniture = initial.copyWith(
-          size: Size(newWidth, newHeight),
-        );
+        final newSize = _computeResizedSize(initial, localPos);
+        updatedFurniture = initial.copyWith(size: newSize);
       }
 
       final updatedFurnitureList = state.furniture
@@ -322,8 +361,16 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
       final (isClosed, polygon) = _checkIfRoomIsClosed(updatedWalls);
 
+      final adjustedFurniture = _repositionAttachedOpenings(
+        state.furniture,
+        state.walls,
+        updatedWalls,
+        state.movingWallEndpoints.keys.toSet(),
+      );
+
       emit(state.copyWith(
         walls: updatedWalls,
+        furniture: adjustedFurniture,
         isRoomClosed: isClosed,
         roomPolygon: polygon,
         dragCurrent: newPos,
@@ -790,8 +837,224 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     return a + ab * t;
   }
 
+  void _onRoomHeightChanged(
+    RoomHeightChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    var sanitized = event.heightMeters;
+    if (!sanitized.isFinite) {
+      sanitized = RoomModelingState.defaultRoomHeightMeters;
+    }
+    sanitized = min(max(sanitized, 2.0), 5.0);
+    emit(state.copyWith(roomHeightMeters: sanitized));
+  }
+
   void _onClearRoom(ClearRoom event, Emitter<RoomModelingState> emit) {
     emit(const RoomModelingState());
+  }
+
+  List<Furniture> _repositionAttachedOpenings(
+    List<Furniture> furniture,
+    List<Wall> previousWalls,
+    List<Wall> updatedWalls,
+    Set<String> movedWallIds,
+  ) {
+    if (movedWallIds.isEmpty) {
+      return furniture;
+    }
+
+    final prevLookup = {for (final wall in previousWalls) wall.id: wall};
+    final newLookup = {for (final wall in updatedWalls) wall.id: wall};
+
+    bool changed = false;
+    final result = <Furniture>[];
+
+    for (final item in furniture) {
+      final wallId = item.attachedWallId;
+      if (!item.isOpening || wallId == null || !movedWallIds.contains(wallId)) {
+        result.add(item);
+        continue;
+      }
+
+      final prevWall = prevLookup[wallId];
+      final newWall = newLookup[wallId];
+      if (prevWall == null || newWall == null) {
+        result.add(item);
+        continue;
+      }
+
+      final relative = _relativePositionAlongWall(prevWall, item.position);
+      final newPosition = _positionAlongWallWithMargin(
+        newWall,
+        relative,
+        item.size.width / 2,
+      );
+      final newRotation = _wallAngle(newWall);
+
+      result.add(
+        item.copyWith(position: newPosition, rotation: newRotation),
+      );
+      changed = true;
+    }
+
+    return changed ? result : furniture;
+  }
+
+  double _relativePositionAlongWall(Wall wall, Offset point) {
+    final vector = wall.end - wall.start;
+    final lenSquared = vector.dx * vector.dx + vector.dy * vector.dy;
+    if (lenSquared < 0.0001) {
+      return 0.5;
+    }
+
+    final projection = ((point.dx - wall.start.dx) * vector.dx +
+            (point.dy - wall.start.dy) * vector.dy) /
+        lenSquared;
+    return projection.clamp(0.0, 1.0);
+  }
+
+  Offset _positionAlongWallWithMargin(
+    Wall wall,
+    double relative,
+    double halfLength,
+  ) {
+    final vector = wall.end - wall.start;
+    final length = vector.distance;
+    if (length < 0.001) {
+      return wall.start;
+    }
+
+    final direction = vector / length;
+    final margin = min(halfLength, length / 2);
+    final targetDistance = (relative.clamp(0.0, 1.0)) * length;
+    final clampedDistance = targetDistance.clamp(margin, length - margin);
+
+    return wall.start + direction * clampedDistance;
+  }
+
+  double _wallAngle(Wall wall) {
+    final dx = wall.end.dx - wall.start.dx;
+    final dy = wall.end.dy - wall.start.dy;
+    return atan2(dy, dx);
+  }
+
+  Size _computeResizedSize(Furniture furniture, Offset localPoint) {
+    final width = max(20.0, localPoint.dx.abs() * 2);
+    final height = max(20.0, localPoint.dy.abs() * 2);
+
+    if (_isLinearOpening(furniture.type)) {
+      return Size(width, furniture.size.height);
+    }
+
+    return Size(width, height);
+  }
+
+  Size _constrainFurnitureSize(Furniture furniture, Size desiredSize) {
+    final width = max(20.0, desiredSize.width);
+    final height = max(20.0, desiredSize.height);
+
+    if (_isLinearOpening(furniture.type)) {
+      return Size(width, furniture.size.height);
+    }
+
+    return Size(width, height);
+  }
+
+  bool _isLinearOpening(FurnitureType type) {
+    return Furniture.isOpeningType(type);
+  }
+
+  double _normalizeAngle(double angle) {
+    final fullCircle = 2 * pi;
+    var normalized = angle;
+    while (normalized < 0) {
+      normalized += fullCircle;
+    }
+    while (normalized >= fullCircle) {
+      normalized -= fullCircle;
+    }
+    return normalized;
+  }
+
+  Offset _clampFurnitureCenter(
+    Furniture furniture,
+    Offset desiredCenter,
+    Size canvasSize,
+  ) {
+    if (!canvasSize.width.isFinite || !canvasSize.height.isFinite) {
+      return desiredCenter;
+    }
+
+    final halfExtents = _rotatedHalfExtents(furniture);
+
+    double minX = halfExtents.width;
+    double maxX = canvasSize.width - halfExtents.width;
+    if (maxX < minX) {
+      minX = maxX = canvasSize.width / 2;
+    }
+
+    double minY = halfExtents.height;
+    double maxY = canvasSize.height - halfExtents.height;
+    if (maxY < minY) {
+      minY = maxY = canvasSize.height / 2;
+    }
+
+    return Offset(
+      desiredCenter.dx.clamp(minX, maxX),
+      desiredCenter.dy.clamp(minY, maxY),
+    );
+  }
+
+  Offset _projectOntoAttachedWall(
+    Furniture furniture,
+    Offset desiredCenter,
+  ) {
+    final wallId = furniture.attachedWallId;
+    if (wallId == null) {
+      return desiredCenter;
+    }
+
+    Wall? attached;
+    for (final wall in state.walls) {
+      if (wall.id == wallId) {
+        attached = wall;
+        break;
+      }
+    }
+
+    if (attached == null) {
+      return desiredCenter;
+    }
+
+    final wallVector = attached.end - attached.start;
+    final wallLength = wallVector.distance;
+    if (wallLength < 0.001) {
+      return attached.start;
+    }
+
+    final wallDir = wallVector / wallLength;
+    final startToDesired = desiredCenter - attached.start;
+    final projectedLength =
+        startToDesired.dx * wallDir.dx + startToDesired.dy * wallDir.dy;
+
+    final halfLength = furniture.size.width / 2;
+    final safeMargin = min(halfLength, wallLength / 2);
+    final clampedLength =
+        projectedLength.clamp(safeMargin, wallLength - safeMargin);
+
+    return attached.start + wallDir * clampedLength;
+  }
+
+  Size _rotatedHalfExtents(Furniture furniture) {
+    final width = furniture.size.width;
+    final height = furniture.size.height;
+    final cosA = cos(furniture.rotation).abs();
+    final sinA = sin(furniture.rotation).abs();
+
+    final halfWidth = (width * cosA + height * sinA) / 2;
+    final halfHeight = (width * sinA + height * cosA) / 2;
+
+    return Size(halfWidth, halfHeight);
   }
 
   (bool, List<Offset>?) _checkIfRoomIsClosed(List<Wall> walls) {
@@ -905,7 +1168,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     // Check rotate handle (top center + 30px up)
     // In local coords, this is (0, -halfHeight - 30)
     // Allow some hit radius
-    if ((localPoint - Offset(0, -halfHeight - 30)).distance < 15.0) {
+    if (!furniture.isOpening &&
+        (localPoint - Offset(0, -halfHeight - 30)).distance < 15.0) {
       return FurnitureInteraction.rotate;
     }
 

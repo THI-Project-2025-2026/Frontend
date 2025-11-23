@@ -46,20 +46,22 @@ class DeleteSelectedFurniture extends RoomModelingEvent {
 
 class CanvasPanStart extends RoomModelingEvent {
   final Offset position;
+  final Size canvasSize;
 
-  const CanvasPanStart(this.position);
+  const CanvasPanStart(this.position, this.canvasSize);
 
   @override
-  List<Object?> get props => [position];
+  List<Object?> get props => [position, canvasSize];
 }
 
 class CanvasPanUpdate extends RoomModelingEvent {
   final Offset position;
+  final Size canvasSize;
 
-  const CanvasPanUpdate(this.position);
+  const CanvasPanUpdate(this.position, this.canvasSize);
 
   @override
-  List<Object?> get props => [position];
+  List<Object?> get props => [position, canvasSize];
 }
 
 class CanvasPanEnd extends RoomModelingEvent {
@@ -68,11 +70,31 @@ class CanvasPanEnd extends RoomModelingEvent {
 
 class CanvasTap extends RoomModelingEvent {
   final Offset position;
+  final Size canvasSize;
 
-  const CanvasTap(this.position);
+  const CanvasTap(this.position, this.canvasSize);
 
   @override
-  List<Object?> get props => [position];
+  List<Object?> get props => [position, canvasSize];
+}
+
+class UpdateSelectedFurniture extends RoomModelingEvent {
+  final Size? size;
+  final double? rotation;
+
+  const UpdateSelectedFurniture({this.size, this.rotation});
+
+  @override
+  List<Object?> get props => [size, rotation];
+}
+
+class RoomHeightChanged extends RoomModelingEvent {
+  final double heightMeters;
+
+  const RoomHeightChanged(this.heightMeters);
+
+  @override
+  List<Object?> get props => [heightMeters];
 }
 
 class ClearRoom extends RoomModelingEvent {

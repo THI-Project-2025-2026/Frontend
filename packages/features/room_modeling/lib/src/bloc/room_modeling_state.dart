@@ -29,6 +29,8 @@ enum FurnitureInteraction {
 }
 
 class RoomModelingState extends Equatable {
+  static const double defaultRoomHeightMeters = 2.5;
+
   final List<Wall> walls;
   final List<Furniture> furniture;
   final RoomModelingTool activeTool;
@@ -48,6 +50,7 @@ class RoomModelingState extends Equatable {
   final Wall? tempWall; // The wall currently being drawn
   final List<SnapGuideLine> snapGuides;
   final List<Offset>? roomPolygon;
+  final double roomHeightMeters;
 
   const RoomModelingState({
     this.walls = const [],
@@ -66,6 +69,7 @@ class RoomModelingState extends Equatable {
     this.tempWall,
     this.snapGuides = const [],
     this.roomPolygon,
+    this.roomHeightMeters = defaultRoomHeightMeters,
   });
 
   RoomModelingState copyWith({
@@ -85,6 +89,7 @@ class RoomModelingState extends Equatable {
     Wall? tempWall,
     List<SnapGuideLine>? snapGuides,
     List<Offset>? roomPolygon,
+    double? roomHeightMeters,
     bool clearDrag = false,
     bool clearSelection = false,
     bool clearSnapGuide = false,
@@ -118,6 +123,7 @@ class RoomModelingState extends Equatable {
           ? const []
           : (snapGuides ?? this.snapGuides),
       roomPolygon: roomPolygon ?? this.roomPolygon,
+      roomHeightMeters: roomHeightMeters ?? this.roomHeightMeters,
     );
   }
 
@@ -139,6 +145,7 @@ class RoomModelingState extends Equatable {
         tempWall,
         snapGuides,
         roomPolygon,
+        roomHeightMeters,
       ];
 }
 
