@@ -43,7 +43,7 @@
         "contact_card_background": "#FFFFFF",
         "contact_input_background": "#F1F5F9",
         "contact_input_border": "#CBD5F5",
-        "contact_button_background": "#0F172A",
+        "contact_button_background": "#CBD5F5",
         "contact_button_text": "#FFFFFF",
         "faq_item_background": "#FFFFFF",
         "faq_item_border": "#CBD5F5",
