@@ -231,8 +231,11 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       final currentPos = event.position;
       final initial = state.initialFurnitureState!;
       final delta = currentPos - state.dragStart!;
+      final selectedFurniture = state.furniture.firstWhere(
+        (f) => f.id == state.selectedFurnitureId,
+      );
 
-      Furniture updatedFurniture = initial;
+      Furniture updatedFurniture = selectedFurniture;
 
       if (state.furnitureInteraction == FurnitureInteraction.move) {
         final desiredPosition = initial.position + delta;
@@ -241,12 +244,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
           constrained = _projectOntoAttachedWall(initial, desiredPosition);
         } else {
           constrained = _clampFurnitureCenter(
-            initial,
+            selectedFurniture,
             desiredPosition,
             event.canvasSize,
+            state.roomPolygon,
           );
         }
-        updatedFurniture = initial.copyWith(position: constrained);
+        updatedFurniture = selectedFurniture.copyWith(position: constrained);
       } else if (state.furnitureInteraction == FurnitureInteraction.rotate &&
           !initial.isOpening) {
         final center = initial.position;
@@ -381,9 +385,14 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         state.movingWallEndpoints.keys.toSet(),
       );
 
+      final constrainedFurniture = _clampFurnitureToPolygon(
+        adjustedFurniture,
+        polygon,
+      );
+
       emit(state.copyWith(
         walls: updatedWalls,
-        furniture: adjustedFurniture,
+        furniture: constrainedFurniture,
         isRoomClosed: isClosed,
         roomPolygon: polygon,
         dragCurrent: newPos,
@@ -919,6 +928,38 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     return changed ? result : furniture;
   }
 
+  List<Furniture> _clampFurnitureToPolygon(
+    List<Furniture> furniture,
+    List<Offset>? polygon,
+  ) {
+    if (polygon == null || polygon.length < 3) {
+      return furniture;
+    }
+
+    final interiorPoint = _polygonCentroid(polygon);
+    bool changed = false;
+
+    final result = furniture.map((item) {
+      if (item.isOpening && item.attachedWallId != null) {
+        return item;
+      }
+
+      if (_isPointInPolygon(item.position, polygon)) {
+        return item;
+      }
+
+      changed = true;
+      final pushedPosition = _pushPointInsidePolygon(
+        item.position,
+        polygon,
+        interiorPoint,
+      );
+      return item.copyWith(position: pushedPosition);
+    }).toList();
+
+    return changed ? result : furniture;
+  }
+
   double _relativePositionAlongWall(Wall wall, Offset point) {
     final vector = wall.end - wall.start;
     final lenSquared = vector.dx * vector.dx + vector.dy * vector.dy;
@@ -955,6 +996,70 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final dx = wall.end.dx - wall.start.dx;
     final dy = wall.end.dy - wall.start.dy;
     return atan2(dy, dx);
+  }
+
+  Offset _pushPointInsidePolygon(
+    Offset point,
+    List<Offset> polygon,
+    Offset interiorPoint,
+  ) {
+    if (_isPointInPolygon(point, polygon)) {
+      return point;
+    }
+
+    Offset inside = interiorPoint;
+    if (!_isPointInPolygon(inside, polygon)) {
+      inside = _polygonCentroid(polygon);
+    }
+
+    if (!_isPointInPolygon(inside, polygon)) {
+      return point;
+    }
+
+    Offset outside = point;
+    for (int i = 0; i < 30; i++) {
+      final mid = Offset(
+        (inside.dx + outside.dx) / 2,
+        (inside.dy + outside.dy) / 2,
+      );
+      if (_isPointInPolygon(mid, polygon)) {
+        inside = mid;
+      } else {
+        outside = mid;
+      }
+    }
+
+    return inside;
+  }
+
+  Offset _polygonCentroid(List<Offset> polygon) {
+    double signedArea = 0;
+    double cx = 0;
+    double cy = 0;
+
+    for (int i = 0; i < polygon.length; i++) {
+      final Offset current = polygon[i];
+      final Offset next = polygon[(i + 1) % polygon.length];
+      final double cross = current.dx * next.dy - next.dx * current.dy;
+      signedArea += cross;
+      cx += (current.dx + next.dx) * cross;
+      cy += (current.dy + next.dy) * cross;
+    }
+
+    signedArea *= 0.5;
+    if (signedArea.abs() < 1e-6) {
+      double sumX = 0;
+      double sumY = 0;
+      for (final point in polygon) {
+        sumX += point.dx;
+        sumY += point.dy;
+      }
+      return Offset(sumX / polygon.length, sumY / polygon.length);
+    }
+
+    cx /= (6 * signedArea);
+    cy /= (6 * signedArea);
+    return Offset(cx, cy);
   }
 
   double _clampWindowMetric(double value) {
@@ -1006,6 +1111,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     Furniture furniture,
     Offset desiredCenter,
     Size canvasSize,
+    List<Offset>? roomPolygon,
   ) {
     if (!canvasSize.width.isFinite || !canvasSize.height.isFinite) {
       return desiredCenter;
@@ -1025,10 +1131,40 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       minY = maxY = canvasSize.height / 2;
     }
 
-    return Offset(
+    final canvasClamped = Offset(
       desiredCenter.dx.clamp(minX, maxX),
       desiredCenter.dy.clamp(minY, maxY),
     );
+
+    if (roomPolygon == null || roomPolygon.length < 3) {
+      return canvasClamped;
+    }
+
+    if (_isPointInPolygon(canvasClamped, roomPolygon)) {
+      return canvasClamped;
+    }
+
+    final currentCenter = furniture.position;
+    if (!_isPointInPolygon(currentCenter, roomPolygon)) {
+      return canvasClamped;
+    }
+
+    Offset inside = currentCenter;
+    Offset outside = canvasClamped;
+
+    for (int i = 0; i < 25; i++) {
+      final mid = Offset(
+        (inside.dx + outside.dx) / 2,
+        (inside.dy + outside.dy) / 2,
+      );
+      if (_isPointInPolygon(mid, roomPolygon)) {
+        inside = mid;
+      } else {
+        outside = mid;
+      }
+    }
+
+    return inside;
   }
 
   Offset _projectOntoAttachedWall(
