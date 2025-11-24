@@ -64,6 +64,12 @@ packages:
       - core
       - services
       - helpers
+  room_modeling:
+    path: packages/features/room_modeling
+    allowed_packages:
+      - core
+      - services
+      - helpers
   common_helpers:
     path: packages/helpers/common
     allowed_packages: []

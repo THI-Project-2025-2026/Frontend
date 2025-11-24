@@ -103,5 +103,64 @@
             "d50_line": "#8B5CF6",
             "d50_line_fill": "#8B5CF633"
         }
+    },
+    "room_modeling": {
+        "stepper": {
+            "warning_text": "#F87171",
+            "background": "#111B2D",
+            "selected_background": "#2563EB",
+            "unselected_background": "#0B1220",
+            "selected_text": "#FFFFFF",
+            "text": "#E2E8F0",
+            "disabled_text": "#475569"
+        },
+        "section": {
+            "title": "#BFDBFE"
+        },
+        "menu": {
+            "border": "#1E293B",
+            "header_text": "#E2E8F0",
+            "icon": "#F8FAFC"
+        },
+        "card": {
+            "background": "#0F172A",
+            "border": "#1E293B"
+        },
+        "canvas": {
+            "background": "#111B2D",
+            "outside": "#0B1220",
+            "inside": "#111B2D",
+            "wall": "#E2E8F0",
+            "wall_selected": "#38BDF8",
+            "temp_wall": "#475569",
+            "selection_handle": "#38BDF8",
+            "selection_handle_center": "#0B1220",
+            "snap_line": "#38BDF8",
+            "snap_text": "#E2E8F0",
+            "snap_background": "#172554",
+            "drag_indicator": "#38BDF8",
+            "dimension_text": "#E2E8F0",
+            "dimension_background": "#1E293B",
+            "angle_arc": "#F97316",
+            "angle_text": "#FFE4C7",
+            "angle_background": "#7C2D12",
+            "selection_fill": "#38BDF826",
+            "selection_border": "#38BDF8",
+            "rotate_handle_line": "#38BDF8",
+            "rotate_handle_fill": "#38BDF8",
+            "rotate_handle_center": "#0B1220",
+            "furniture_stroke": "#E2E8F0",
+            "furniture_fill": "#0F172A"
+        },
+        "preview": {
+            "button_background": "#0F172A",
+            "button_foreground": "#E2E8F0",
+            "panel_background": "#0B1220",
+            "loading_background": "#000000",
+            "webview_background": "#000000"
+        }
+    },
+    "sonalyze_webview": {
+        "background": "#00000000"
     }
 }

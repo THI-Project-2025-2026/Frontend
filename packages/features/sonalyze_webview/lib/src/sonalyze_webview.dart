@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:l10n_service/l10n_service.dart';
 
 /// Signature for JavaScript handlers that can exchange messages with
 /// `flutter_inappwebview`.
@@ -23,7 +25,10 @@ class SonalyzeWebView extends StatefulWidget {
     this.initialSettings,
     this.initialUserScripts = const <UserScript>[],
     this.javascriptHandlers = const <String, SonalyzeJavaScriptHandler>{},
-    this.backgroundColor = Colors.transparent,
+    this.injectedAssets = const <String, String>{},
+    this.initialJsonData,
+    this.jsonDataVariableName = 'sonalyzeData',
+    this.backgroundColor,
     this.onWebViewCreated,
     this.onLoadStop,
   });
@@ -43,8 +48,21 @@ class SonalyzeWebView extends StatefulWidget {
   /// Named JavaScript handlers exposed to the page that bridge to Dart.
   final Map<String, SonalyzeJavaScriptHandler> javascriptHandlers;
 
+  /// Virtual assets to serve via interception.
+  /// Keys are the file paths (e.g. "config.json") to match against the request URL.
+  /// Values are the content of the file.
+  final Map<String, String> injectedAssets;
+
+  /// Optional JSON data to inject into the window object before the page loads.
+  /// The data will be available as `window[jsonDataVariableName]`.
+  final String? initialJsonData;
+
+  /// The name of the global variable to store the JSON data in.
+  /// Defaults to 'sonalyzeData'.
+  final String jsonDataVariableName;
+
   /// Background color behind the page (transparent by default).
-  final Color backgroundColor;
+  final Color? backgroundColor;
 
   /// Hook invoked when the web view is created.
   final ValueChanged<InAppWebViewController>? onWebViewCreated;
@@ -79,11 +97,10 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
   @override
   Widget build(BuildContext context) {
     if (_isLinuxDesktop()) {
-      throw UnsupportedError(
-        'SonalyzeWebView is not supported on Linux targets.',
-      );
+      throw UnsupportedError(_unsupportedMessage);
     }
 
+    final backgroundColor = widget.backgroundColor ?? _defaultBackgroundColor;
     final settings =
         widget.initialSettings ??
         InAppWebViewSettings(
@@ -93,17 +110,42 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
           transparentBackground: _isTransparentBackground,
         );
 
+    final userScripts = widget.initialUserScripts.toList();
+    if (widget.initialJsonData != null) {
+      userScripts.add(
+        UserScript(
+          source:
+              'window.${widget.jsonDataVariableName} = ${widget.initialJsonData};',
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+        ),
+      );
+    }
+
     return DecoratedBox(
-      decoration: BoxDecoration(color: widget.backgroundColor),
+      decoration: BoxDecoration(color: backgroundColor),
       child: InAppWebView(
         initialSettings: settings,
-        initialUserScripts: UnmodifiableListView(widget.initialUserScripts),
+        initialUserScripts: UnmodifiableListView(userScripts),
         initialData: InAppWebViewInitialData(
           data: widget.htmlContent,
           baseUrl: _baseWebUri,
           encoding: 'utf-8',
           mimeType: 'text/html',
         ),
+        shouldInterceptRequest: widget.injectedAssets.isEmpty
+            ? null
+            : (controller, request) async {
+                final url = request.url.toString();
+                for (final entry in widget.injectedAssets.entries) {
+                  if (url.endsWith(entry.key)) {
+                    return WebResourceResponse(
+                      contentType: 'application/json',
+                      data: Uint8List.fromList(utf8.encode(entry.value)),
+                    );
+                  }
+                }
+                return null;
+              },
         onWebViewCreated: (controller) {
           _controller = controller;
           widget.javascriptHandlers.forEach((name, handler) {
@@ -142,5 +184,22 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
     return WebUri(uri.toString());
   }
 
-  bool get _isTransparentBackground => widget.backgroundColor.a == 0;
+  bool get _isTransparentBackground {
+    final color = widget.backgroundColor ?? _defaultBackgroundColor;
+    return color.a == 0;
+  }
+
+  Color get _defaultBackgroundColor {
+    return AppConstants.getThemeColor('sonalyze_webview.background');
+  }
+
+  String get _unsupportedMessage {
+    final translation = AppConstants.translation(
+      'sonalyze_webview.unsupported',
+    );
+    if (translation is String && translation.isNotEmpty) {
+      return translation;
+    }
+    return 'SonalyzeWebView is not supported on Linux targets.';
+  }
 }

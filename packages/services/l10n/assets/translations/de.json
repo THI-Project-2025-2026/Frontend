@@ -255,5 +255,66 @@
                 "unit": "Verhältnis"
             }
         }
+    },
+    "room_modeling": {
+        "tools": {
+            "title": "Werkzeuge zur Raummodellierung",
+            "steps": {
+                "structure": "Struktur",
+                "furnishing": "Einrichtung"
+            },
+            "close_room_hint": "Schließe den Wandverlauf, um Einrichtungsobjekte freizuschalten.",
+            "construction_title": "Wandkonstruktion",
+            "construction_helper": "Tippe auf die Fläche, um Wände zu ziehen. Schließe den Verlauf, um den Grundriss zu fixieren.",
+            "delete_wall": "Ausgewählte Wand löschen",
+            "delete_item": "Ausgewähltes Objekt löschen",
+            "clear_room": "Raum zurücksetzen",
+            "selected_furniture": "Ausgewähltes Objekt",
+            "menu": {
+                "openings": "Öffnungen",
+                "furniture": "Möbel",
+                "bath_kitchen": "Bad & Küche",
+                "placeholder": "Objekt wählen",
+                "items": {
+                    "door": "Tür",
+                    "window": "Fenster",
+                    "chair": "Stuhl",
+                    "table": "Tisch",
+                    "sofa": "Sofa",
+                    "bed": "Bett",
+                    "bathtub": "Badewanne",
+                    "toilet": "Toilette",
+                    "sink": "Waschbecken"
+                }
+            }
+        },
+        "structure": {
+            "options_title": "Raumhöhe",
+            "room_height_label": "Deckenhöhe",
+            "room_height_helper": "Standard: {value} m"
+        },
+        "editor": {
+            "length": "Länge",
+            "width": "Breite",
+            "rotation": "Rotation",
+            "opening_hint": "Öffnungen bieten Breite sowie optional Brüstung und Öffnungshöhe.",
+            "sill_height": "Brüstungshöhe",
+            "window_height": "Öffnungshöhe"
+        },
+        "units": {
+            "meters_suffix": "m",
+            "degrees_suffix": "°"
+        },
+        "preview": {
+            "tooltip": "3D-Vorschau öffnen",
+            "dialog_title": "Interaktive Raumvorschau",
+            "dialog_subtitle": "Rendere die eingebettete Sandbox, um Layouts in Echtzeit zu prüfen.",
+            "unsupported": "Diese Vorschau ist unter Linux nicht verfügbar.",
+            "error": "Room-Creator-Bundle konnte nicht geladen werden.",
+            "empty": "Keine Webinhalte verfügbar."
+        }
+    },
+    "sonalyze_webview": {
+        "unsupported": "Sonalyze WebView wird auf Linux-Zielen nicht unterstützt."
     }
 }

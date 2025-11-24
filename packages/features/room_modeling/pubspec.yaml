@@ -1,0 +1,29 @@
+name: room_modeling
+description: A feature package for modeling rooms with walls and furniture.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.0.0
+  equatable: ^2.0.5
+  uuid: ^4.0.0
+  
+  core_ui:
+    path: ../../core/ui
+  l10n_service:
+    path: ../../services/l10n
+  common_helpers:
+    path: ../../helpers/common
+  sonalyze_webview:
+    path: ../sonalyze_webview
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  bloc_test: ^10.0.0

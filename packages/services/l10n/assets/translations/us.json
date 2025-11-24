@@ -255,5 +255,66 @@
                 "unit": "ratio"
             }
         }
+    },
+    "room_modeling": {
+        "tools": {
+            "title": "Room modeling tools",
+            "steps": {
+                "structure": "Structure",
+                "furnishing": "Furnishing"
+            },
+            "close_room_hint": "Close the wall loop to unlock furnishings.",
+            "construction_title": "Wall construction",
+            "construction_helper": "Tap the canvas to draw walls. Close the loop to finalize the footprint.",
+            "delete_wall": "Delete selected wall",
+            "delete_item": "Delete selected item",
+            "clear_room": "Clear room",
+            "selected_furniture": "Selected furniture",
+            "menu": {
+                "openings": "Openings",
+                "furniture": "Furniture",
+                "bath_kitchen": "Bath & kitchen",
+                "placeholder": "Select item",
+                "items": {
+                    "door": "Door",
+                    "window": "Window",
+                    "chair": "Chair",
+                    "table": "Table",
+                    "sofa": "Sofa",
+                    "bed": "Bed",
+                    "bathtub": "Bathtub",
+                    "toilet": "Toilet",
+                    "sink": "Sink"
+                }
+            }
+        },
+        "structure": {
+            "options_title": "Room height",
+            "room_height_label": "Ceiling height",
+            "room_height_helper": "Default: {value} m"
+        },
+        "editor": {
+            "length": "Length",
+            "width": "Width",
+            "rotation": "Rotation",
+            "opening_hint": "Openings expose width plus optional sill and opening height.",
+            "sill_height": "Sill height",
+            "window_height": "Opening height"
+        },
+        "units": {
+            "meters_suffix": "m",
+            "degrees_suffix": "°"
+        },
+        "preview": {
+            "tooltip": "Open 3D preview",
+            "dialog_title": "Interactive room preview",
+            "dialog_subtitle": "Render the embedded sandbox to inspect layouts in real time.",
+            "unsupported": "This preview is unavailable on Linux builds.",
+            "error": "Unable to load the Room Creator bundle.",
+            "empty": "No web content available."
+        }
+    },
+    "sonalyze_webview": {
+        "unsupported": "Sonalyze WebView is not supported on Linux targets."
     }
 }

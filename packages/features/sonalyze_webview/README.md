@@ -9,8 +9,16 @@ shared defaults (e.g., transparent backgrounds, inline media playback).
 - Render fully inlined HTML documents (including scripts/styles) via `InAppWebViewInitialData`.
 - Provide an optional base URL so relative asset paths resolve correctly.
 - Register named JavaScript handlers that call back into Dart.
+- Inject JSON data into the web context via global variables or virtual file interception.
 - Customize settings/user scripts and react to `onWebViewCreated`/`onLoadStop` hooks.
 - Throws an `UnsupportedError` on Linux as the upstream plugin does not ship a Linux implementation.
+
+### Data Injection
+
+You can pass data to the web application in two ways:
+
+1.  **Global Variable**: Use `initialJsonData` to inject a JSON string into a global variable (default: `window.sonalyzeData`) before the page loads.
+2.  **Virtual Assets**: Use `injectedAssets` to serve virtual files (like `config.json`) that the web app can fetch via HTTP requests. This uses `shouldInterceptRequest` to return the provided content.
 
 ### Usage
 
@@ -18,14 +26,23 @@ shared defaults (e.g., transparent backgrounds, inline media playback).
 import 'package:sonalyze_webview/sonalyze_webview.dart';
 
 SonalyzeWebView(
-	htmlContent: '<html><body><h1>Hello</h1></body></html>',
-	baseUrl: Uri.parse('https://localhost/assets/'),
-	javascriptHandlers: {
-		'logMessage': (controller, args) {
-			debugPrint('JS sent: $args');
-		},
-	},
-	onLoadStop: (controller, url) => debugPrint('Loaded: $url'),
+  htmlContent: '<html><body><h1>Hello</h1></body></html>',
+  baseUrl: Uri.parse('https://localhost/assets/'),
+  
+  // Inject data into window.sonalyzeData
+  initialJsonData: '{"theme": "dark"}',
+  
+  // Serve virtual files
+  injectedAssets: {
+    'config.json': '{"apiUrl": "https://api.example.com"}',
+  },
+
+  javascriptHandlers: {
+    'logMessage': (controller, args) {
+      debugPrint('JS sent: $args');
+    },
+  },
+  onLoadStop: (controller, url) => debugPrint('Loaded: $url'),
 );
 ```
 

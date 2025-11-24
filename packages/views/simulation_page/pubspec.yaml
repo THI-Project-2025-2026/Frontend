@@ -20,6 +20,8 @@ dependencies:
     path: ../../helpers/common
   sonalyze_webview:
     path: ../../features/sonalyze_webview
+  room_modeling:
+    path: ../../features/room_modeling
 
 dev_dependencies:
   flutter_test:

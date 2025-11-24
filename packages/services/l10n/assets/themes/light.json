@@ -43,7 +43,7 @@
         "contact_card_background": "#FFFFFF",
         "contact_input_background": "#F1F5F9",
         "contact_input_border": "#CBD5F5",
-        "contact_button_background": "#0F172A",
+        "contact_button_background": "#CBD5F5",
         "contact_button_text": "#FFFFFF",
         "faq_item_background": "#FFFFFF",
         "faq_item_border": "#CBD5F5",
@@ -103,5 +103,64 @@
             "d50_line": "#A855F7",
             "d50_line_fill": "#A855F733"
         }
+    },
+    "room_modeling": {
+        "stepper": {
+            "warning_text": "#DC2626",
+            "background": "#E2E8F0",
+            "selected_background": "#2563EB",
+            "unselected_background": "#CBD5F5",
+            "selected_text": "#FFFFFF",
+            "text": "#1E293B",
+            "disabled_text": "#94A3B8"
+        },
+        "section": {
+            "title": "#1E293B"
+        },
+        "menu": {
+            "border": "#CBD5F5",
+            "header_text": "#475569",
+            "icon": "#1E293B"
+        },
+        "card": {
+            "background": "#FFFFFF",
+            "border": "#E2E8F0"
+        },
+        "canvas": {
+            "background": "#F8FAFC",
+            "outside": "#E2E8F0",
+            "inside": "#FFFFFF",
+            "wall": "#1E293B",
+            "wall_selected": "#2563EB",
+            "temp_wall": "#94A3B8",
+            "selection_handle": "#2563EB",
+            "selection_handle_center": "#FFFFFF",
+            "snap_line": "#93C5FD",
+            "snap_text": "#1E293B",
+            "snap_background": "#DBEAFE",
+            "drag_indicator": "#38BDF8",
+            "dimension_text": "#0F172A",
+            "dimension_background": "#E2E8F0",
+            "angle_arc": "#F97316",
+            "angle_text": "#7C2D12",
+            "angle_background": "#FFEDD5",
+            "selection_fill": "#2563EB1A",
+            "selection_border": "#2563EB",
+            "rotate_handle_line": "#2563EB",
+            "rotate_handle_fill": "#E0F2FE",
+            "rotate_handle_center": "#2563EB",
+            "furniture_stroke": "#1E293B",
+            "furniture_fill": "#FFFFFF"
+        },
+        "preview": {
+            "button_background": "#FFFFFF",
+            "button_foreground": "#0F172A",
+            "panel_background": "#FFFFFF",
+            "loading_background": "#0F172A",
+            "webview_background": "#000000"
+        }
+    },
+    "sonalyze_webview": {
+        "background": "#00000000"
     }
 }
