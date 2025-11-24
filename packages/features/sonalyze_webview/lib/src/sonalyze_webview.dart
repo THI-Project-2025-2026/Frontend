@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:l10n_service/l10n_service.dart';
 
 /// Signature for JavaScript handlers that can exchange messages with
 /// `flutter_inappwebview`.
@@ -27,7 +28,7 @@ class SonalyzeWebView extends StatefulWidget {
     this.injectedAssets = const <String, String>{},
     this.initialJsonData,
     this.jsonDataVariableName = 'sonalyzeData',
-    this.backgroundColor = Colors.transparent,
+    this.backgroundColor,
     this.onWebViewCreated,
     this.onLoadStop,
   });
@@ -61,7 +62,7 @@ class SonalyzeWebView extends StatefulWidget {
   final String jsonDataVariableName;
 
   /// Background color behind the page (transparent by default).
-  final Color backgroundColor;
+  final Color? backgroundColor;
 
   /// Hook invoked when the web view is created.
   final ValueChanged<InAppWebViewController>? onWebViewCreated;
@@ -96,11 +97,10 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
   @override
   Widget build(BuildContext context) {
     if (_isLinuxDesktop()) {
-      throw UnsupportedError(
-        'SonalyzeWebView is not supported on Linux targets.',
-      );
+      throw UnsupportedError(_unsupportedMessage);
     }
 
+    final backgroundColor = widget.backgroundColor ?? _defaultBackgroundColor;
     final settings =
         widget.initialSettings ??
         InAppWebViewSettings(
@@ -122,7 +122,7 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
     }
 
     return DecoratedBox(
-      decoration: BoxDecoration(color: widget.backgroundColor),
+      decoration: BoxDecoration(color: backgroundColor),
       child: InAppWebView(
         initialSettings: settings,
         initialUserScripts: UnmodifiableListView(userScripts),
@@ -184,5 +184,22 @@ class _SonalyzeWebViewState extends State<SonalyzeWebView> {
     return WebUri(uri.toString());
   }
 
-  bool get _isTransparentBackground => widget.backgroundColor.a == 0;
+  bool get _isTransparentBackground {
+    final color = widget.backgroundColor ?? _defaultBackgroundColor;
+    return color.a == 0;
+  }
+
+  Color get _defaultBackgroundColor {
+    return AppConstants.getThemeColor('sonalyze_webview.background');
+  }
+
+  String get _unsupportedMessage {
+    final translation = AppConstants.translation(
+      'sonalyze_webview.unsupported',
+    );
+    if (translation is String && translation.isNotEmpty) {
+      return translation;
+    }
+    return 'SonalyzeWebView is not supported on Linux targets.';
+  }
 }

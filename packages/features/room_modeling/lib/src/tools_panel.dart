@@ -7,6 +7,7 @@ import 'bloc/room_modeling_bloc.dart';
 import 'bloc/room_modeling_event.dart';
 import 'bloc/room_modeling_state.dart';
 import 'models/furniture.dart';
+import 'room_modeling_l10n.dart';
 
 class ToolsPanel extends StatelessWidget {
   const ToolsPanel({super.key});
@@ -15,16 +16,27 @@ class ToolsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<RoomModelingBloc, RoomModelingState>(
       builder: (context, state) {
+        final structureLabel = RoomModelingL10n.text('tools.steps.structure');
+        final furnishingLabel = RoomModelingL10n.text('tools.steps.furnishing');
+        final showStructureGuidance = !state.isRoomClosed &&
+            state.currentStep == RoomModelingStep.structure;
+        final warningColor = RoomModelingColors.color('stepper.warning_text');
+        final stepperBackground =
+            RoomModelingColors.color('stepper.background');
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Tools', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              RoomModelingL10n.text('tools.title'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
 
             // Step Switcher
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: stepperBackground,
                 borderRadius: BorderRadius.circular(8),
               ),
               padding: const EdgeInsets.all(4),
@@ -33,7 +45,7 @@ class ToolsPanel extends StatelessWidget {
                   Expanded(
                     child: _buildStepButton(
                       context,
-                      label: '1. Structure',
+                      label: structureLabel,
                       step: RoomModelingStep.structure,
                       currentStep: state.currentStep,
                       isEnabled: true,
@@ -42,7 +54,7 @@ class ToolsPanel extends StatelessWidget {
                   Expanded(
                     child: _buildStepButton(
                       context,
-                      label: '2. Furnishing',
+                      label: furnishingLabel,
                       step: RoomModelingStep.furnishing,
                       currentStep: state.currentStep,
                       isEnabled: state.isRoomClosed,
@@ -51,25 +63,27 @@ class ToolsPanel extends StatelessWidget {
                 ],
               ),
             ),
-            if (!state.isRoomClosed &&
-                state.currentStep == RoomModelingStep.structure)
+            if (showStructureGuidance)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  'Close the room to proceed to furnishing.',
+                  RoomModelingL10n.text('tools.close_room_hint'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
+                        color: warningColor,
                       ),
                 ),
               ),
             const SizedBox(height: 16),
 
             if (state.currentStep == RoomModelingStep.structure) ...[
-              _buildSectionTitle(context, 'Construction'),
+              _buildSectionTitle(
+                context,
+                RoomModelingL10n.text('tools.construction_title'),
+              ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
-                  'Draw walls by dragging on the canvas.\nTap a wall to select it.\nDrag endpoints to resize.',
+                  RoomModelingL10n.text('tools.construction_helper'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -86,7 +100,9 @@ class ToolsPanel extends StatelessWidget {
                     },
                     variant: SonalyzeButtonVariant.filled,
                     // color: Theme.of(context).colorScheme.error, // If supported
-                    child: const Text('Delete Selected Wall'),
+                    child: Text(
+                      RoomModelingL10n.text('tools.delete_wall'),
+                    ),
                   ),
                 ),
             ] else ...[
@@ -100,7 +116,7 @@ class ToolsPanel extends StatelessWidget {
                 context.read<RoomModelingBloc>().add(const ClearRoom());
               },
               variant: SonalyzeButtonVariant.text,
-              child: const Text('Clear Room'),
+              child: Text(RoomModelingL10n.text('tools.clear_room')),
             ),
           ],
         );
@@ -116,6 +132,14 @@ class ToolsPanel extends StatelessWidget {
     required bool isEnabled,
   }) {
     final isSelected = step == currentStep;
+    final selectedBackground =
+        RoomModelingColors.color('stepper.selected_background');
+    final unselectedBackground =
+        RoomModelingColors.color('stepper.unselected_background');
+    final selectedText = RoomModelingColors.color('stepper.selected_text');
+    final defaultText = RoomModelingColors.color('stepper.text');
+    final disabledText = RoomModelingColors.color('stepper.disabled_text');
+
     return InkWell(
       onTap: isEnabled
           ? () {
@@ -126,7 +150,7 @@ class ToolsPanel extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+          color: isSelected ? selectedBackground : unselectedBackground,
           borderRadius: BorderRadius.circular(6),
         ),
         alignment: Alignment.center,
@@ -134,13 +158,8 @@ class ToolsPanel extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : (isEnabled
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.38)),
+                    ? selectedText
+                    : (isEnabled ? defaultText : disabledText),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
         ),
@@ -153,9 +172,9 @@ class ToolsPanel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(color: Theme.of(context).hintColor),
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: RoomModelingColors.color('section.title'),
+            ),
       ),
     );
   }
@@ -171,7 +190,10 @@ class ToolsPanel extends StatelessWidget {
 
     return [
       const SizedBox(height: 16),
-      _buildSectionTitle(context, 'Selected Furniture'),
+      _buildSectionTitle(
+        context,
+        RoomModelingL10n.text('tools.selected_furniture'),
+      ),
       _FurnitureEditor(furniture: selectedFurniture),
       Padding(
         padding: const EdgeInsets.only(top: 8.0),
@@ -182,7 +204,7 @@ class ToolsPanel extends StatelessWidget {
                 .add(const DeleteSelectedFurniture());
           },
           variant: SonalyzeButtonVariant.filled,
-          child: const Text('Delete Selected Item'),
+          child: Text(RoomModelingL10n.text('tools.delete_item')),
         ),
       ),
     ];
@@ -202,35 +224,80 @@ class ToolsPanel extends StatelessWidget {
   }
 
   Widget _buildFurnitureMenu(BuildContext context, RoomModelingState state) {
+    final openingsLabel = RoomModelingL10n.text('tools.menu.openings');
+    final furnitureLabel = RoomModelingL10n.text('tools.menu.furniture');
+    final bathKitchenLabel = RoomModelingL10n.text('tools.menu.bath_kitchen');
+
     return PopupMenuButton<RoomModelingTool>(
       initialValue: state.activeTool,
       onSelected: (tool) {
         context.read<RoomModelingBloc>().add(ToolSelected(tool));
       },
       itemBuilder: (context) => [
-        _buildMenuHeader('Openings'),
+        _buildMenuHeader(openingsLabel),
         _buildMenuItem(
-            context, RoomModelingTool.door, 'Door', Icons.door_front_door),
+          context,
+          RoomModelingTool.door,
+          RoomModelingL10n.text('tools.menu.items.door'),
+          Icons.door_front_door,
+        ),
         _buildMenuItem(
-            context, RoomModelingTool.window, 'Window', Icons.window),
+          context,
+          RoomModelingTool.window,
+          RoomModelingL10n.text('tools.menu.items.window'),
+          Icons.window,
+        ),
         const PopupMenuDivider(),
-        _buildMenuHeader('Furniture'),
-        _buildMenuItem(context, RoomModelingTool.chair, 'Chair', Icons.chair),
+        _buildMenuHeader(furnitureLabel),
         _buildMenuItem(
-            context, RoomModelingTool.table, 'Table', Icons.table_bar),
-        _buildMenuItem(context, RoomModelingTool.sofa, 'Sofa', Icons.weekend),
-        _buildMenuItem(context, RoomModelingTool.bed, 'Bed', Icons.bed),
+          context,
+          RoomModelingTool.chair,
+          RoomModelingL10n.text('tools.menu.items.chair'),
+          Icons.chair,
+        ),
+        _buildMenuItem(
+          context,
+          RoomModelingTool.table,
+          RoomModelingL10n.text('tools.menu.items.table'),
+          Icons.table_bar,
+        ),
+        _buildMenuItem(
+          context,
+          RoomModelingTool.sofa,
+          RoomModelingL10n.text('tools.menu.items.sofa'),
+          Icons.weekend,
+        ),
+        _buildMenuItem(
+          context,
+          RoomModelingTool.bed,
+          RoomModelingL10n.text('tools.menu.items.bed'),
+          Icons.bed,
+        ),
         const PopupMenuDivider(),
-        _buildMenuHeader('Bathroom & Kitchen'),
+        _buildMenuHeader(bathKitchenLabel),
         _buildMenuItem(
-            context, RoomModelingTool.bathtub, 'Bathtub', Icons.bathtub),
-        _buildMenuItem(context, RoomModelingTool.toilet, 'Toilet', Icons.wc),
-        _buildMenuItem(context, RoomModelingTool.sink, 'Sink', Icons.wash),
+          context,
+          RoomModelingTool.bathtub,
+          RoomModelingL10n.text('tools.menu.items.bathtub'),
+          Icons.bathtub,
+        ),
+        _buildMenuItem(
+          context,
+          RoomModelingTool.toilet,
+          RoomModelingL10n.text('tools.menu.items.toilet'),
+          Icons.wc,
+        ),
+        _buildMenuItem(
+          context,
+          RoomModelingTool.sink,
+          RoomModelingL10n.text('tools.menu.items.sink'),
+          Icons.wash,
+        ),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          border: Border.all(color: RoomModelingColors.color('menu.border')),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -256,10 +323,10 @@ class ToolsPanel extends StatelessWidget {
       height: 32,
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Colors.grey,
+          color: RoomModelingColors.color('menu.header_text'),
         ),
       ),
     );
@@ -275,7 +342,11 @@ class ToolsPanel extends StatelessWidget {
       value: tool,
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
+          Icon(
+            icon,
+            size: 20,
+            color: RoomModelingColors.color('menu.icon'),
+          ),
           const SizedBox(width: 12),
           Text(label),
         ],
@@ -284,28 +355,12 @@ class ToolsPanel extends StatelessWidget {
   }
 
   String _getToolLabel(RoomModelingTool tool) {
-    switch (tool) {
-      case RoomModelingTool.door:
-        return 'Door';
-      case RoomModelingTool.window:
-        return 'Window';
-      case RoomModelingTool.chair:
-        return 'Chair';
-      case RoomModelingTool.table:
-        return 'Table';
-      case RoomModelingTool.sofa:
-        return 'Sofa';
-      case RoomModelingTool.bed:
-        return 'Bed';
-      case RoomModelingTool.bathtub:
-        return 'Bathtub';
-      case RoomModelingTool.toilet:
-        return 'Toilet';
-      case RoomModelingTool.sink:
-        return 'Sink';
-      default:
-        return 'Select Tool';
+    final key = 'tools.menu.items.${tool.name}';
+    final label = RoomModelingL10n.text(key);
+    if (label == key) {
+      return RoomModelingL10n.text('tools.menu.placeholder');
     }
+    return label;
   }
 
   IconData _getToolIcon(RoomModelingTool tool) {
@@ -467,53 +522,57 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cardBackground = RoomModelingColors.color('card.background');
+    final cardBorder = RoomModelingColors.color('card.border');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: cardBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        border: Border.all(color: cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _formatFurnitureLabel(widget.furniture.type),
+            RoomModelingL10n.text(
+              'tools.menu.items.${widget.furniture.type.name}',
+            ),
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: 12),
           _buildNumberField(
             context,
-            label: 'Length',
+            label: RoomModelingL10n.text('editor.length'),
             controller: _widthController,
             onChanged: _handleWidthChanged,
-            suffixText: 'm',
+            suffixText: RoomModelingL10n.metersSuffix(),
             textInputAction:
                 _isOpening ? TextInputAction.done : TextInputAction.next,
           ),
           if (_isOpening) ...[
             const SizedBox(height: 8),
             Text(
-              'Doors and windows keep a fixed thickness and rotation.',
+              RoomModelingL10n.text('editor.opening_hint'),
               style: theme.textTheme.bodySmall,
             ),
             if (_isWindow) ...[
               const SizedBox(height: 12),
               _buildNumberField(
                 context,
-                label: 'Sill height',
+                label: RoomModelingL10n.text('editor.sill_height'),
                 controller: _sillHeightController,
                 onChanged: _handleSillHeightChanged,
-                suffixText: 'm',
+                suffixText: RoomModelingL10n.metersSuffix(),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
               _buildNumberField(
                 context,
-                label: 'Window height',
+                label: RoomModelingL10n.text('editor.window_height'),
                 controller: _windowHeightController,
                 onChanged: _handleWindowHeightChanged,
-                suffixText: 'm',
+                suffixText: RoomModelingL10n.metersSuffix(),
                 textInputAction: TextInputAction.done,
               ),
             ],
@@ -521,18 +580,18 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
             const SizedBox(height: 12),
             _buildNumberField(
               context,
-              label: 'Width',
+              label: RoomModelingL10n.text('editor.width'),
               controller: _heightController,
               onChanged: _handleHeightChanged,
-              suffixText: 'm',
+              suffixText: RoomModelingL10n.metersSuffix(),
             ),
             const SizedBox(height: 12),
             _buildNumberField(
               context,
-              label: 'Rotation',
+              label: RoomModelingL10n.text('editor.rotation'),
               controller: _rotationController,
               onChanged: _handleRotationChanged,
-              suffixText: '°',
+              suffixText: RoomModelingL10n.degreesSuffix(),
               textInputAction: TextInputAction.done,
             ),
           ],
@@ -561,11 +620,6 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
       ),
       onChanged: onChanged,
     );
-  }
-
-  String _formatFurnitureLabel(FurnitureType type) {
-    final raw = type.name.replaceAll('_', ' ');
-    return raw[0].toUpperCase() + raw.substring(1);
   }
 }
 
@@ -615,30 +669,36 @@ class _RoomStructureOptionsState extends State<_RoomStructureOptions> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final cardBackground = RoomModelingColors.color('card.background');
+    final cardBorder = RoomModelingColors.color('card.border');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: cardBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        border: Border.all(color: cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Room options',
-            style: theme.textTheme.titleSmall,
+            RoomModelingL10n.text('structure.options_title'),
+            style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: 'Room height',
-              suffixText: 'm',
-              helperText:
-                  'Default ${RoomModelingState.defaultRoomHeightMeters.toStringAsFixed(2)} m',
+              labelText: RoomModelingL10n.text('structure.room_height_label'),
+              suffixText: RoomModelingL10n.metersSuffix(),
+              helperText: RoomModelingL10n.format(
+                'structure.room_height_helper',
+                {
+                  'value': RoomModelingState.defaultRoomHeightMeters
+                      .toStringAsFixed(2),
+                },
+              ),
             ),
             textInputAction: TextInputAction.done,
             onChanged: _handleHeightChanged,

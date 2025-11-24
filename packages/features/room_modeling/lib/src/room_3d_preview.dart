@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:l10n_service/l10n_service.dart';
 import 'package:sonalyze_webview/sonalyze_webview.dart';
 import 'package:core_ui/core_ui.dart';
+import 'room_modeling_l10n.dart';
 
 class Room3DPreview extends StatefulWidget {
   const Room3DPreview({super.key});
@@ -20,23 +20,20 @@ class _Room3DPreviewState extends State<Room3DPreview> {
 
   @override
   Widget build(BuildContext context) {
-    final panelColor =
-        AppConstants.getThemeColor('simulation_page.panel_background');
-    final title = _translationOrFallback(
-      'simulation_page.room_creator.title',
-      'Interactive Room Creator',
-    );
-    final description = _translationOrFallback(
-      'simulation_page.room_creator.subtitle',
+    final panelColor = RoomModelingColors.color('preview.panel_background');
+    final title = _text('preview.dialog_title', 'Interactive Room Creator');
+    final description = _text(
+      'preview.dialog_subtitle',
       'Experiment with a fully interactive layout preview.',
     );
+    final loadingColor = RoomModelingColors.color('preview.loading_background');
 
     if (_isLinuxDesktop) {
       return _RoomCreatorNotice(
         title: title,
         description: description,
-        message: _translationOrFallback(
-          'simulation_page.room_creator.unsupported',
+        message: _text(
+          'preview.unsupported',
           'This preview is unavailable on Linux builds.',
         ),
         panelColor: panelColor,
@@ -89,14 +86,14 @@ class _Room3DPreviewState extends State<Room3DPreview> {
                 future: _htmlFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return const _RoomCreatorLoading();
+                    return _RoomCreatorLoading(color: loadingColor);
                   }
                   if (snapshot.hasError) {
                     return _RoomCreatorNotice(
                       title: title,
                       description: description,
-                      message: _translationOrFallback(
-                        'simulation_page.room_creator.error',
+                      message: _text(
+                        'preview.error',
                         'Unable to load the Room Creator bundle.',
                       ),
                       panelColor: panelColor,
@@ -108,8 +105,8 @@ class _Room3DPreviewState extends State<Room3DPreview> {
                     return _RoomCreatorNotice(
                       title: title,
                       description: description,
-                      message: _translationOrFallback(
-                        'simulation_page.room_creator.empty',
+                      message: _text(
+                        'preview.empty',
                         'No web content available.',
                       ),
                       panelColor: panelColor,
@@ -118,7 +115,8 @@ class _Room3DPreviewState extends State<Room3DPreview> {
                   }
                   return SonalyzeWebView(
                     htmlContent: html,
-                    backgroundColor: Colors.black,
+                    backgroundColor:
+                        RoomModelingColors.color('preview.webview_background'),
                   );
                 },
               ),
@@ -204,10 +202,10 @@ class _Room3DPreviewState extends State<Room3DPreview> {
     );
   }
 
-  String _translationOrFallback(String key, String fallback) {
-    final translation = AppConstants.translation(key);
-    if (translation is String && translation.isNotEmpty) {
-      return translation;
+  String _text(String key, String fallback) {
+    final translated = RoomModelingL10n.text(key);
+    if (translated != key) {
+      return translated;
     }
     return fallback;
   }
@@ -269,12 +267,14 @@ class _RoomCreatorNotice extends StatelessWidget {
 }
 
 class _RoomCreatorLoading extends StatelessWidget {
-  const _RoomCreatorLoading();
+  const _RoomCreatorLoading({required this.color});
+
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: Colors.black,
+      color: color,
       child: const Center(child: CircularProgressIndicator()),
     );
   }

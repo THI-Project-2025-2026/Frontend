@@ -5,6 +5,7 @@ import 'bloc/room_modeling_bloc.dart';
 import 'tools_panel.dart';
 import 'room_plan_canvas.dart';
 import 'room_3d_preview.dart';
+import 'room_modeling_l10n.dart';
 
 class RoomModelingWidget extends StatelessWidget {
   const RoomModelingWidget({super.key});
@@ -39,9 +40,13 @@ class RoomModelingView extends StatelessWidget {
                   right: 16,
                   child: FloatingActionButton(
                     mini: true,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    tooltip: '3D Preview',
+                    backgroundColor: RoomModelingColors.color(
+                      'preview.button_background',
+                    ),
+                    foregroundColor: RoomModelingColors.color(
+                      'preview.button_foreground',
+                    ),
+                    tooltip: RoomModelingL10n.text('preview.tooltip'),
                     onPressed: () {
                       showDialog(
                         context: context,
