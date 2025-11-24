@@ -14,12 +14,17 @@ enum FurnitureType {
 }
 
 class Furniture extends Equatable {
+  static const double defaultWindowSillHeightMeters = 0.9;
+  static const double defaultWindowHeightMeters = 1.2;
+
   final String id;
   final FurnitureType type;
   final Offset position;
   final double rotation;
   final Size size;
   final String? attachedWallId; // For doors/windows
+  final double? sillHeightMeters;
+  final double? openingHeightMeters;
 
   static bool isOpeningType(FurnitureType type) {
     return type == FurnitureType.door || type == FurnitureType.window;
@@ -32,6 +37,8 @@ class Furniture extends Equatable {
     required this.size,
     this.rotation = 0.0,
     this.attachedWallId,
+    this.sillHeightMeters,
+    this.openingHeightMeters,
   });
 
   Furniture copyWith({
@@ -41,6 +48,8 @@ class Furniture extends Equatable {
     double? rotation,
     Size? size,
     String? attachedWallId,
+    double? sillHeightMeters,
+    double? openingHeightMeters,
   }) {
     return Furniture(
       id: id ?? this.id,
@@ -49,14 +58,24 @@ class Furniture extends Equatable {
       rotation: rotation ?? this.rotation,
       size: size ?? this.size,
       attachedWallId: attachedWallId ?? this.attachedWallId,
+      sillHeightMeters: sillHeightMeters ?? this.sillHeightMeters,
+      openingHeightMeters: openingHeightMeters ?? this.openingHeightMeters,
     );
   }
 
   bool get isOpening => Furniture.isOpeningType(type);
 
   @override
-  List<Object?> get props =>
-      [id, type, position, rotation, size, attachedWallId];
+  List<Object?> get props => [
+        id,
+        type,
+        position,
+        rotation,
+        size,
+        attachedWallId,
+        sillHeightMeters,
+        openingHeightMeters,
+      ];
 
   static Size defaultSize(FurnitureType type) {
     // Scale: 50 units = 1 meter

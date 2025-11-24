@@ -347,8 +347,11 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
   late final TextEditingController _widthController;
   late final TextEditingController _heightController;
   late final TextEditingController _rotationController;
+  late final TextEditingController _sillHeightController;
+  late final TextEditingController _windowHeightController;
 
   bool get _isOpening => widget.furniture.isOpening;
+  bool get _isWindow => widget.furniture.type == FurnitureType.window;
 
   @override
   void initState() {
@@ -356,6 +359,8 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
     _widthController = TextEditingController();
     _heightController = TextEditingController();
     _rotationController = TextEditingController();
+    _sillHeightController = TextEditingController();
+    _windowHeightController = TextEditingController();
     _syncControllers();
   }
 
@@ -364,7 +369,11 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
     super.didUpdateWidget(oldWidget);
     if (widget.furniture != oldWidget.furniture ||
         widget.furniture.size != oldWidget.furniture.size ||
-        widget.furniture.rotation != oldWidget.furniture.rotation) {
+        widget.furniture.rotation != oldWidget.furniture.rotation ||
+        widget.furniture.sillHeightMeters !=
+            oldWidget.furniture.sillHeightMeters ||
+        widget.furniture.openingHeightMeters !=
+            oldWidget.furniture.openingHeightMeters) {
       _syncControllers();
     }
   }
@@ -374,6 +383,8 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
     _widthController.dispose();
     _heightController.dispose();
     _rotationController.dispose();
+    _sillHeightController.dispose();
+    _windowHeightController.dispose();
     super.dispose();
   }
 
@@ -381,6 +392,12 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
     _widthController.text = _formatMeters(widget.furniture.size.width);
     _heightController.text = _formatMeters(widget.furniture.size.height);
     _rotationController.text = _formatDegrees(widget.furniture.rotation);
+    final sill = widget.furniture.sillHeightMeters ??
+        Furniture.defaultWindowSillHeightMeters;
+    final winHeight = widget.furniture.openingHeightMeters ??
+        Furniture.defaultWindowHeightMeters;
+    _sillHeightController.text = sill.toStringAsFixed(2);
+    _windowHeightController.text = winHeight.toStringAsFixed(2);
   }
 
   String _formatMeters(double value) {
@@ -429,6 +446,24 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
         .add(UpdateSelectedFurniture(rotation: radians));
   }
 
+  void _handleSillHeightChanged(String value) {
+    final meters = double.tryParse(value);
+    if (meters == null) return;
+
+    context
+        .read<RoomModelingBloc>()
+        .add(UpdateSelectedFurniture(sillHeightMeters: meters));
+  }
+
+  void _handleWindowHeightChanged(String value) {
+    final meters = double.tryParse(value);
+    if (meters == null) return;
+
+    context
+        .read<RoomModelingBloc>()
+        .add(UpdateSelectedFurniture(openingHeightMeters: meters));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -462,6 +497,26 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
               'Doors and windows keep a fixed thickness and rotation.',
               style: theme.textTheme.bodySmall,
             ),
+            if (_isWindow) ...[
+              const SizedBox(height: 12),
+              _buildNumberField(
+                context,
+                label: 'Sill height',
+                controller: _sillHeightController,
+                onChanged: _handleSillHeightChanged,
+                suffixText: 'm',
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+              _buildNumberField(
+                context,
+                label: 'Window height',
+                controller: _windowHeightController,
+                onChanged: _handleWindowHeightChanged,
+                suffixText: 'm',
+                textInputAction: TextInputAction.done,
+              ),
+            ],
           ] else ...[
             const SizedBox(height: 12),
             _buildNumberField(

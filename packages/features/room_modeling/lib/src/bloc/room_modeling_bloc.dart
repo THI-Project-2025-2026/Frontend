@@ -110,6 +110,19 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       target = target.copyWith(rotation: _normalizeAngle(event.rotation!));
     }
 
+    if (event.sillHeightMeters != null && target.type == FurnitureType.window) {
+      target = target.copyWith(
+        sillHeightMeters: _clampWindowMetric(event.sillHeightMeters!),
+      );
+    }
+
+    if (event.openingHeightMeters != null &&
+        target.type == FurnitureType.window) {
+      target = target.copyWith(
+        openingHeightMeters: _clampWindowMetric(event.openingHeightMeters!),
+      );
+    }
+
     final updatedFurniture = [...state.furniture];
     updatedFurniture[index] = target;
 
@@ -799,6 +812,12 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       rotation: rotation,
       size: Furniture.defaultSize(type),
       attachedWallId: attachedWallId,
+      sillHeightMeters: type == FurnitureType.window
+          ? Furniture.defaultWindowSillHeightMeters
+          : null,
+      openingHeightMeters: type == FurnitureType.window
+          ? Furniture.defaultWindowHeightMeters
+          : null,
     );
 
     // Check if furniture is inside the room (if not attached to a wall)
@@ -936,6 +955,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final dx = wall.end.dx - wall.start.dx;
     final dy = wall.end.dy - wall.start.dy;
     return atan2(dy, dx);
+  }
+
+  double _clampWindowMetric(double value) {
+    if (!value.isFinite) {
+      return Furniture.defaultWindowHeightMeters;
+    }
+    return value.clamp(0.05, 5.0);
   }
 
   Size _computeResizedSize(Furniture furniture, Offset localPoint) {

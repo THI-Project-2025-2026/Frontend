@@ -81,11 +81,19 @@ class CanvasTap extends RoomModelingEvent {
 class UpdateSelectedFurniture extends RoomModelingEvent {
   final Size? size;
   final double? rotation;
+  final double? sillHeightMeters;
+  final double? openingHeightMeters;
 
-  const UpdateSelectedFurniture({this.size, this.rotation});
+  const UpdateSelectedFurniture({
+    this.size,
+    this.rotation,
+    this.sillHeightMeters,
+    this.openingHeightMeters,
+  });
 
   @override
-  List<Object?> get props => [size, rotation];
+  List<Object?> get props =>
+      [size, rotation, sillHeightMeters, openingHeightMeters];
 }
 
 class RoomHeightChanged extends RoomModelingEvent {
