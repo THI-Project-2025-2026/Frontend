@@ -127,7 +127,7 @@
             "border": "#1E293B"
         },
         "canvas": {
-            "background": "#020617",
+            "background": "#111B2D",
             "outside": "#0B1220",
             "inside": "#111B2D",
             "wall": "#E2E8F0",
@@ -147,7 +147,7 @@
             "selection_fill": "#38BDF826",
             "selection_border": "#38BDF8",
             "rotate_handle_line": "#38BDF8",
-            "rotate_handle_fill": "#13263F",
+            "rotate_handle_fill": "#38BDF8",
             "rotate_handle_center": "#0B1220",
             "furniture_stroke": "#E2E8F0",
             "furniture_fill": "#0F172A"
