@@ -6,11 +6,15 @@ import '../models/wall.dart';
 import '../models/furniture.dart';
 import 'room_modeling_event.dart';
 import 'room_modeling_state.dart';
+import '../storage/room_plan_exporter.dart';
+import '../storage/room_plan_storage.dart';
 
 class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   final _uuid = const Uuid();
   static const double snapDistance = 20.0;
   static const double pixelsPerMeter = 50.0;
+  final _exporter = RoomPlanExporter();
+  final _storage = RoomPlanStorage();
 
   RoomModelingBloc() : super(const RoomModelingState()) {
     on<ToolSelected>(_onToolSelected);
@@ -25,6 +29,17 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<CanvasPanEnd>(_onCanvasPanEnd);
     on<CanvasTap>(_onCanvasTap);
     on<ClearRoom>(_onClearRoom);
+  }
+
+  @override
+  void onChange(Change<RoomModelingState> change) {
+    super.onChange(change);
+    try {
+      final json = _exporter.export(change.nextState);
+      _storage.save(json);
+    } catch (_) {
+      // Ignore export/save errors to keep UI responsive
+    }
   }
 
   void _onToolSelected(ToolSelected event, Emitter<RoomModelingState> emit) {
