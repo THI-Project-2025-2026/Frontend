@@ -81,13 +81,16 @@ class RoomModelingView extends StatelessWidget {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (context) => Dialog(
-                          backgroundColor: Colors.transparent,
-                          insetPadding: const EdgeInsets.all(24),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                                maxWidth: 1200, maxHeight: 800),
-                            child: const Room3DPreview(),
+                        builder: (dialogContext) => BlocProvider.value(
+                          value: context.read<RoomModelingBloc>(),
+                          child: Dialog(
+                            backgroundColor: Colors.transparent,
+                            insetPadding: const EdgeInsets.all(24),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                  maxWidth: 1200, maxHeight: 800),
+                              child: const Room3DPreview(),
+                            ),
                           ),
                         ),
                       );

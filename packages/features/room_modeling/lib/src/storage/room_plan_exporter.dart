@@ -33,11 +33,23 @@ class RoomPlanExporter {
       final lengthM = (wall.end - wall.start).distance / pixelsPerMeter;
       wallLengthsM[wall.id] = lengthM;
 
+      // Calculate wall center and rotation for three.js compatibility
+      // X-Z plane mapping: Flutter dy (downward in canvas) maps to three.js Z (forward/backward)
+      // Negate rotation to account for coordinate system handedness
+      final centerX = (startM.dx + endM.dx) / 2;
+      final centerZ = (startM.dy + endM.dy) / 2;
+      final deltaX = endM.dx - startM.dx;
+      final deltaZ = endM.dy - startM.dy;
+      final rotationY = -atan2(deltaZ, deltaX);
+
       final wallJson = <String, dynamic>{
         'start': {'x': startM.dx, 'y': 0.0, 'z': startM.dy},
         'end': {'x': endM.dx, 'y': 0.0, 'z': endM.dy},
+        'position': {'x': centerX, 'y': 0.0, 'z': centerZ},
+        'rotation': {'x': 0.0, 'y': rotationY, 'z': 0.0},
         'height': state.roomHeightMeters,
         'thickness': defaultWallThicknessM,
+        'length': lengthM,
         'color': wallColor,
       };
       wallsJson.add(wallJson);
@@ -61,7 +73,8 @@ class RoomPlanExporter {
       // Relative position along the attached wall mapped to local X (meters)
       final wall = state.walls.firstWhere(
         (w) => w.id == wallId,
-        orElse: () => const Wall(id: '_', start: Offset.zero, end: Offset(1, 0)),
+        orElse: () =>
+            const Wall(id: '_', start: Offset.zero, end: Offset(1, 0)),
       );
       final t = _relativePositionAlongWall(wall, f.position);
       final lengthM = wallLengthsM[wallId] ?? 0.0;
@@ -144,7 +157,7 @@ class RoomPlanExporter {
       'id': f.id,
       'type': typeString,
       'position': {'x': posM.dx, 'y': 0.0, 'z': posM.dy},
-      'rotation': {'x': 0.0, 'y': f.rotation, 'z': 0.0},
+      'rotation': {'x': 0.0, 'y': f.rotation * pi / 180, 'z': 0.0},
       'dimensions': {'width': widthM, 'height': heightM, 'depth': depthM},
       'color': color,
     };
@@ -296,7 +309,8 @@ class RoomPlanExporter {
     return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
-  Offset _bboxCenter(Rect r) => Offset((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+  Offset _bboxCenter(Rect r) =>
+      Offset((r.left + r.right) / 2, (r.top + r.bottom) / 2);
 
   Offset _polygonCentroid(List<Offset> polygon) {
     double signedArea = 0;
