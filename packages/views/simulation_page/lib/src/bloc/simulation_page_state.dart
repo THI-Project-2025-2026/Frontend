@@ -4,6 +4,19 @@ part of 'simulation_page_bloc.dart';
 /// into the simulation grid.
 enum SimulationFurnitureKind { absorber, diffuser, seating, stage }
 
+/// Metadata for the simulation step timeline.
+class SimulationStepDescriptor {
+  const SimulationStepDescriptor({
+    required this.index,
+    required this.titleKey,
+    required this.descriptionKey,
+  });
+
+  final int index;
+  final String titleKey;
+  final String descriptionKey;
+}
+
 /// Describes metadata for palette entries.
 class SimulationFurnitureDescriptor {
   const SimulationFurnitureDescriptor({
@@ -97,10 +110,13 @@ class SimulationPageState {
     required List<SimulationRoomPreset> presets,
     required this.selectedPresetIndex,
     required List<SimulationFurnitureDescriptor> palette,
+    required List<SimulationStepDescriptor> steps,
+    required this.activeStepIndex,
   }) : furniture = List.unmodifiable(furniture),
        metrics = List.unmodifiable(metrics),
        presets = List.unmodifiable(presets),
-       palette = List.unmodifiable(palette);
+       palette = List.unmodifiable(palette),
+       steps = List.unmodifiable(steps);
 
   static const int gridSize = 8;
 
@@ -113,6 +129,16 @@ class SimulationPageState {
   final List<SimulationRoomPreset> presets;
   final int selectedPresetIndex;
   final List<SimulationFurnitureDescriptor> palette;
+  final List<SimulationStepDescriptor> steps;
+  final int activeStepIndex;
+
+  SimulationStepDescriptor? get activeStep {
+    if (steps.isEmpty) {
+      return null;
+    }
+    final index = activeStepIndex.clamp(0, steps.length - 1);
+    return steps[index];
+  }
 
   SimulationFurnitureItem? furnitureAt(int x, int y) {
     for (final item in furniture) {
@@ -133,6 +159,8 @@ class SimulationPageState {
     List<SimulationRoomPreset>? presets,
     int? selectedPresetIndex,
     List<SimulationFurnitureDescriptor>? palette,
+    List<SimulationStepDescriptor>? steps,
+    int? activeStepIndex,
   }) {
     return SimulationPageState(
       width: width ?? this.width,
@@ -145,6 +173,8 @@ class SimulationPageState {
       presets: presets ?? this.presets,
       selectedPresetIndex: selectedPresetIndex ?? this.selectedPresetIndex,
       palette: palette ?? this.palette,
+      steps: steps ?? this.steps,
+      activeStepIndex: activeStepIndex ?? this.activeStepIndex,
     );
   }
 
@@ -249,6 +279,29 @@ class SimulationPageState {
       ),
     ];
 
+    const steps = <SimulationStepDescriptor>[
+      SimulationStepDescriptor(
+        index: 0,
+        titleKey: 'simulation_page.timeline.steps.0.title',
+        descriptionKey: 'simulation_page.timeline.steps.0.description',
+      ),
+      SimulationStepDescriptor(
+        index: 1,
+        titleKey: 'simulation_page.timeline.steps.1.title',
+        descriptionKey: 'simulation_page.timeline.steps.1.description',
+      ),
+      SimulationStepDescriptor(
+        index: 2,
+        titleKey: 'simulation_page.timeline.steps.2.title',
+        descriptionKey: 'simulation_page.timeline.steps.2.description',
+      ),
+      SimulationStepDescriptor(
+        index: 3,
+        titleKey: 'simulation_page.timeline.steps.3.title',
+        descriptionKey: 'simulation_page.timeline.steps.3.description',
+      ),
+    ];
+
     final state = SimulationPageState(
       width: presets.first.width,
       length: presets.first.length,
@@ -259,6 +312,8 @@ class SimulationPageState {
       presets: presets,
       selectedPresetIndex: 0,
       palette: palette,
+      steps: steps,
+      activeStepIndex: 0,
     );
 
     return state.recalculate();

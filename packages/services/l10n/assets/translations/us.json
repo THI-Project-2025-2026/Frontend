@@ -259,6 +259,33 @@
                 "label": "D50",
                 "unit": "ratio"
             }
+        },
+        "results": {
+            "title": "Simulation results"
+        },
+        "timeline": {
+            "title": "Simulation timeline",
+            "advance": "Next step",
+            "back": "Previous step",
+            "close_room_hint": "Close the wall loop to proceed to the next step.",
+            "steps": {
+                "0": {
+                    "title": "Construct wall structure",
+                    "description": "Draw and define the room's wall layout and boundaries."
+                },
+                "1": {
+                    "title": "Furnish the room",
+                    "description": "Place furniture, openings, and acoustic treatments in the space."
+                },
+                "2": {
+                    "title": "Start simulation",
+                    "description": "Run the acoustic simulation with the current room configuration."
+                },
+                "3": {
+                    "title": "Review simulation results",
+                    "description": "Analyze the predicted acoustic metrics and response curves."
+                }
+            }
         }
     },
     "room_modeling": {

@@ -14,8 +14,11 @@ class SimulationPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => SimulationPageBloc(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => SimulationPageBloc()),
+        BlocProvider(create: (_) => RoomModelingBloc()),
+      ],
       child: const _SimulationPageView(),
     );
   }
@@ -30,60 +33,98 @@ class _SimulationPageView extends StatelessWidget {
       'simulation_page.background_gradient',
     );
 
-    return Scaffold(
-      backgroundColor: _themeColor('app.background'),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: backgroundGradient.length >= 2
-              ? LinearGradient(
-                  colors: backgroundGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: backgroundGradient.isEmpty
-              ? _themeColor('app.background')
-              : null,
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 1280;
-              final isMedium = constraints.maxWidth >= 980;
-              final contentPadding = EdgeInsets.symmetric(
-                horizontal: isWide
-                    ? 96
-                    : isMedium
-                    ? 64
-                    : 24,
-                vertical: isWide ? 48 : 32,
-              );
+    return BlocListener<SimulationPageBloc, SimulationPageState>(
+      listenWhen: (previous, current) =>
+          previous.activeStepIndex != current.activeStepIndex,
+      listener: (context, state) {
+        // Sync room modeling step with simulation step
+        final roomBloc = context.read<RoomModelingBloc>();
+        if (state.activeStepIndex == 0) {
+          // Step 1: Construct wall structure
+          roomBloc.add(const StepChanged(RoomModelingStep.structure));
+        } else if (state.activeStepIndex >= 1) {
+          // Step 2+: Furnishing
+          roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _themeColor('app.background'),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: backgroundGradient.length >= 2
+                ? LinearGradient(
+                    colors: backgroundGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: backgroundGradient.isEmpty
+                ? _themeColor('app.background')
+                : null,
+          ),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 1280;
+                final isMedium = constraints.maxWidth >= 980;
+                final contentPadding = EdgeInsets.symmetric(
+                  horizontal: isWide
+                      ? 96
+                      : isMedium
+                      ? 64
+                      : 24,
+                  vertical: isWide ? 48 : 32,
+                );
 
-              return ScrollbarTheme(
-                data: ScrollbarThemeData(
-                  thumbColor: WidgetStateProperty.all<Color>(
-                    _themeColor(
-                      'simulation_page.scrollbar_thumb',
-                    ).withValues(alpha: 0.75),
+                return ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbColor: WidgetStateProperty.all<Color>(
+                      _themeColor(
+                        'simulation_page.scrollbar_thumb',
+                      ).withValues(alpha: 0.75),
+                    ),
+                    thickness: const WidgetStatePropertyAll<double>(6),
+                    radius: const Radius.circular(999),
                   ),
-                  thickness: const WidgetStatePropertyAll<double>(6),
-                  radius: const Radius.circular(999),
-                ),
-                child: SingleChildScrollView(
-                  padding: contentPadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const _SimulationHeader(),
-                      SizedBox(height: isWide ? 40 : 32),
-                      const SizedBox(height: 600, child: RoomModelingWidget()),
-                      SizedBox(height: isWide ? 48 : 36),
-                      const _SimulationMetricSection(),
-                    ],
+                  child: SingleChildScrollView(
+                    padding: contentPadding,
+                    child: BlocBuilder<SimulationPageBloc, SimulationPageState>(
+                      buildWhen: (previous, current) =>
+                          previous.activeStepIndex != current.activeStepIndex,
+                      builder: (context, simulationState) {
+                        // Hide tools panel in steps 3+ (simulation and results)
+                        final hideToolsPanel =
+                            simulationState.activeStepIndex >= 2;
+                        // Only show metrics in step 4 (results)
+                        final showMetrics =
+                            simulationState.activeStepIndex == 3;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const _SimulationHeader(),
+                            SizedBox(height: isWide ? 40 : 32),
+                            SizedBox(
+                              height: 600,
+                              child: RoomModelingWidget(
+                                bloc: context.read<RoomModelingBloc>(),
+                                hideToolsPanel: hideToolsPanel,
+                              ),
+                            ),
+                            SizedBox(height: isWide ? 32 : 24),
+                            const _SimulationTimelineCard(),
+                            if (showMetrics) ...[
+                              SizedBox(height: isWide ? 48 : 36),
+                              const _SimulationMetricSection(),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -159,7 +200,7 @@ class _SimulationMetricSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _tr('simulation_page.metrics.title'),
+                _tr('simulation_page.results.title'),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
@@ -335,6 +376,203 @@ class _MetricChartPainter extends CustomPainter {
         oldDelegate.axisColor != axisColor ||
         oldDelegate.lineColor != lineColor ||
         oldDelegate.fillColor != fillColor;
+  }
+}
+
+class _SimulationTimelineCard extends StatelessWidget {
+  const _SimulationTimelineCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final panelColor = _themeColor('simulation_page.metrics_background');
+    final activeColor = _themeColor('simulation_page.timeline_active');
+    final inactiveColor = _themeColor('simulation_page.timeline_inactive');
+    final onPrimary = _themeColor('app.on_primary');
+    final warningColor = _themeColor('simulation_page.timeline_inactive');
+
+    return BlocBuilder<SimulationPageBloc, SimulationPageState>(
+      builder: (context, simulationState) {
+        return BlocBuilder<RoomModelingBloc, RoomModelingState>(
+          builder: (context, roomState) {
+            // Can only advance from step 0 to step 1 if room is closed
+            final canAdvance =
+                simulationState.steps.isNotEmpty &&
+                (simulationState.activeStepIndex > 0 || roomState.isRoomClosed);
+
+            return SonalyzeSurface(
+              padding: const EdgeInsets.all(28),
+              backgroundColor: panelColor.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _tr('simulation_page.timeline.title'),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SonalyzeButton(
+                            onPressed: simulationState.activeStepIndex > 0
+                                ? () => context.read<SimulationPageBloc>().add(
+                                    const SimulationTimelineStepBack(),
+                                  )
+                                : null,
+                            backgroundColor: inactiveColor,
+                            foregroundColor: onPrimary,
+                            borderRadius: BorderRadius.circular(18),
+                            icon: const Icon(Icons.fast_rewind_outlined),
+                            child: Text(_tr('simulation_page.timeline.back')),
+                          ),
+                          const SizedBox(width: 12),
+                          SonalyzeButton(
+                            onPressed: canAdvance
+                                ? () => context.read<SimulationPageBloc>().add(
+                                    const SimulationTimelineAdvanced(),
+                                  )
+                                : null,
+                            backgroundColor: activeColor,
+                            foregroundColor: onPrimary,
+                            borderRadius: BorderRadius.circular(18),
+                            icon: const Icon(Icons.fast_forward_outlined),
+                            child: Text(
+                              _tr('simulation_page.timeline.advance'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (simulationState.activeStepIndex == 0 &&
+                      !roomState.isRoomClosed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Text(
+                        _tr('simulation_page.timeline.close_room_hint'),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: warningColor),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  Column(
+                    children: [
+                      for (var i = 0; i < simulationState.steps.length; i++)
+                        _SimulationTimelineStepTile(
+                          descriptor: simulationState.steps[i],
+                          isActive: simulationState.activeStepIndex == i,
+                          isComplete: i < simulationState.activeStepIndex,
+                          isLast: i == simulationState.steps.length - 1,
+                          activeColor: activeColor,
+                          inactiveColor: inactiveColor,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _SimulationTimelineStepTile extends StatelessWidget {
+  const _SimulationTimelineStepTile({
+    required this.descriptor,
+    required this.isActive,
+    required this.isComplete,
+    required this.isLast,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
+
+  final SimulationStepDescriptor descriptor;
+  final bool isActive;
+  final bool isComplete;
+  final bool isLast;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final titleStyle = textTheme.titleMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+      fontWeight: FontWeight.w700,
+    );
+    final descriptionStyle = textTheme.bodySmall?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      height: 1.5,
+    );
+
+    final indicatorColor = isActive
+        ? activeColor
+        : isComplete
+        ? activeColor.withValues(alpha: 0.5)
+        : inactiveColor;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: indicatorColor.withValues(
+                    alpha: isActive ? 0.25 : 0.18,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: indicatorColor, width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    '${descriptor.index + 1}',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: indicatorColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              if (!isLast)
+                Container(
+                  width: 2,
+                  height: 48,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: indicatorColor.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_tr(descriptor.titleKey), style: titleStyle),
+                const SizedBox(height: 6),
+                Text(_tr(descriptor.descriptionKey), style: descriptionStyle),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

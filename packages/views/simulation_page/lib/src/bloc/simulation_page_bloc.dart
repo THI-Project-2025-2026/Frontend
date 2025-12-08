@@ -20,6 +20,8 @@ class SimulationPageBloc
     on<SimulationFurnitureRemoved>(_onFurnitureRemoved);
     on<SimulationFurnitureCleared>(_onFurnitureCleared);
     on<SimulationRoomPresetApplied>(_onPresetApplied);
+    on<SimulationTimelineAdvanced>(_onTimelineAdvanced);
+    on<SimulationTimelineStepBack>(_onTimelineStepBack);
   }
 
   void _onDimensionChanged(
@@ -114,6 +116,23 @@ class SimulationPageBloc
           )
           .recalculate(),
     );
+  }
+
+  void _onTimelineAdvanced(
+    SimulationTimelineAdvanced event,
+    Emitter<SimulationPageState> emit,
+  ) {
+    final nextIndex = (state.activeStepIndex + 1) % state.steps.length;
+    emit(state.copyWith(activeStepIndex: nextIndex));
+  }
+
+  void _onTimelineStepBack(
+    SimulationTimelineStepBack event,
+    Emitter<SimulationPageState> emit,
+  ) {
+    if (state.activeStepIndex > 0) {
+      emit(state.copyWith(activeStepIndex: state.activeStepIndex - 1));
+    }
   }
 }
 

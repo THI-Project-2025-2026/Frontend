@@ -16,14 +16,6 @@ class ToolsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<RoomModelingBloc, RoomModelingState>(
       builder: (context, state) {
-        final structureLabel = RoomModelingL10n.text('tools.steps.structure');
-        final furnishingLabel = RoomModelingL10n.text('tools.steps.furnishing');
-        final showStructureGuidance = !state.isRoomClosed &&
-            state.currentStep == RoomModelingStep.structure;
-        final warningColor = RoomModelingColors.color('stepper.warning_text');
-        final stepperBackground =
-            RoomModelingColors.color('stepper.background');
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -32,49 +24,6 @@ class ToolsPanel extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-
-            // Step Switcher
-            Container(
-              decoration: BoxDecoration(
-                color: stepperBackground,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStepButton(
-                      context,
-                      label: structureLabel,
-                      step: RoomModelingStep.structure,
-                      currentStep: state.currentStep,
-                      isEnabled: true,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildStepButton(
-                      context,
-                      label: furnishingLabel,
-                      step: RoomModelingStep.furnishing,
-                      currentStep: state.currentStep,
-                      isEnabled: state.isRoomClosed,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (showStructureGuidance)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  RoomModelingL10n.text('tools.close_room_hint'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: warningColor,
-                      ),
-                ),
-              ),
-            const SizedBox(height: 16),
-
             if (state.currentStep == RoomModelingStep.structure) ...[
               _buildSectionTitle(
                 context,
@@ -109,7 +58,6 @@ class ToolsPanel extends StatelessWidget {
               _buildFurnitureMenu(context, state),
               ..._buildSelectedFurnitureEditor(context, state),
             ],
-
             const Spacer(),
             SonalyzeButton(
               onPressed: () {
@@ -121,49 +69,6 @@ class ToolsPanel extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildStepButton(
-    BuildContext context, {
-    required String label,
-    required RoomModelingStep step,
-    required RoomModelingStep currentStep,
-    required bool isEnabled,
-  }) {
-    final isSelected = step == currentStep;
-    final selectedBackground =
-        RoomModelingColors.color('stepper.selected_background');
-    final unselectedBackground =
-        RoomModelingColors.color('stepper.unselected_background');
-    final selectedText = RoomModelingColors.color('stepper.selected_text');
-    final defaultText = RoomModelingColors.color('stepper.text');
-    final disabledText = RoomModelingColors.color('stepper.disabled_text');
-
-    return InkWell(
-      onTap: isEnabled
-          ? () {
-              context.read<RoomModelingBloc>().add(StepChanged(step));
-            }
-          : null,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? selectedBackground : unselectedBackground,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: isSelected
-                    ? selectedText
-                    : (isEnabled ? defaultText : disabledText),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-        ),
-      ),
     );
   }
 

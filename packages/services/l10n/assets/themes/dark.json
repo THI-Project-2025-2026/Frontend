@@ -102,7 +102,9 @@
             "sti_line_fill": "#38BDF833",
             "d50_line": "#8B5CF6",
             "d50_line_fill": "#8B5CF633"
-        }
+        },
+        "timeline_active": "#38BDF8",
+        "timeline_inactive": "#475569"
     },
     "room_modeling": {
         "stepper": {

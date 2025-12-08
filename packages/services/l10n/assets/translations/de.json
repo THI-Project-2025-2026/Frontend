@@ -259,6 +259,33 @@
                 "label": "D50",
                 "unit": "Verhältnis"
             }
+        },
+        "results": {
+            "title": "Simulationsergebnisse"
+        },
+        "timeline": {
+            "title": "Simulations-Ablauf",
+            "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um zum nächsten Schritt zu gelangen.",
+            "steps": {
+                "0": {
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
+                },
+                "1": {
+                    "title": "Raum einrichten",
+                    "description": "Möbel, Öffnungen und akustische Behandlungen platzieren."
+                },
+                "2": {
+                    "title": "Simulation starten",
+                    "description": "Akustiksimulation mit der aktuellen Raumkonfiguration durchführen."
+                },
+                "3": {
+                    "title": "Simulationsergebnisse prüfen",
+                    "description": "Prognostizierte akustische Kennzahlen und Antwortkurven analysieren."
+                }
+            }
         }
     },
     "room_modeling": {

@@ -48,3 +48,13 @@ class SimulationRoomPresetApplied extends SimulationPageEvent {
 
   final int index;
 }
+
+/// Advances the simulation timeline to the next step.
+class SimulationTimelineAdvanced extends SimulationPageEvent {
+  const SimulationTimelineAdvanced();
+}
+
+/// Goes back to the previous step in the simulation timeline.
+class SimulationTimelineStepBack extends SimulationPageEvent {
+  const SimulationTimelineStepBack();
+}

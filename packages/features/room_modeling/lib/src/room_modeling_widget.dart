@@ -8,27 +8,58 @@ import 'room_3d_preview.dart';
 import 'room_modeling_l10n.dart';
 
 class RoomModelingWidget extends StatelessWidget {
-  const RoomModelingWidget({super.key});
+  const RoomModelingWidget({super.key, this.bloc, this.hideToolsPanel = false});
+
+  /// Optional external bloc. If not provided, creates its own.
+  final RoomModelingBloc? bloc;
+
+  /// Whether to hide the tools panel and show only the canvas.
+  final bool hideToolsPanel;
 
   @override
   Widget build(BuildContext context) {
+    if (bloc != null) {
+      return BlocProvider<RoomModelingBloc>.value(
+        value: bloc!,
+        child: RoomModelingView(hideToolsPanel: hideToolsPanel),
+      );
+    }
     return BlocProvider(
       create: (context) => RoomModelingBloc(),
-      child: const RoomModelingView(),
+      child: RoomModelingView(hideToolsPanel: hideToolsPanel),
     );
   }
 }
 
 class RoomModelingView extends StatelessWidget {
-  const RoomModelingView({super.key});
+  const RoomModelingView({super.key, this.hideToolsPanel = false});
+
+  final bool hideToolsPanel;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Left Tools Panel
-        SizedBox(width: 250, child: SonalyzeSurface(child: const ToolsPanel())),
-        const SizedBox(width: 16),
+        // Left Tools Panel with animated size
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: hideToolsPanel ? 0.0 : 1.0,
+            child: SizedBox(
+              width: hideToolsPanel ? 0 : 250,
+              child: hideToolsPanel
+                  ? null
+                  : SonalyzeSurface(child: const ToolsPanel()),
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: SizedBox(width: hideToolsPanel ? 0 : 16),
+        ),
         // Right Room Plan
         Expanded(
           child: SonalyzeSurface(
