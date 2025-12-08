@@ -7,93 +7,90 @@
         "hero": {
             "badge": "Acoustic intelligence",
             "title": "Understand the sound of every space",
-            "subtitle": "Sonalyze transforms raw acoustic captures into actionable spatial insights for architects, audio engineers, and researchers.",
+            "subtitle": "Sonalyze helps you model room acoustics, coordinate multi-device measurements, and simulate acoustic responses — all from a single app.",
             "primary_cta": "Start simulation",
             "secondary_cta": "View measurement tools"
         },
         "metrics": {
-            "title": "Trusted acoustic insights",
+            "title": "What you can do",
             "items": {
                 "0": {
-                    "label": "Rooms profiled",
-                    "value": "1.2k+"
+                    "label": "Model rooms in 2D and 3D with walls, furniture, and openings",
+                    "value": "Design"
                 },
                 "1": {
-                    "label": "Average setup time",
-                    "value": "3 min"
+                    "label": "Coordinate multi-device measurements with real-time sync",
+                    "value": "Measure"
                 },
                 "2": {
-                    "label": "Prediction accuracy",
-                    "value": "+/- 1.4 dB"
+                    "label": "Simulate RT60, STI, and D50 acoustic metrics instantly",
+                    "value": "Simulate"
                 }
             }
         },
         "features": {
             "0": {
-                "title": "Impulse response mapping",
-                "description": "Visualize 3D energy decay, modal hotspots, and clarity coefficients to optimize acoustic treatments in seconds.",
-                "metric_label": "Spatial coverage",
-                "metric_value": "92%"
+                "title": "Room modeling",
+                "description": "Draw walls, place furniture and openings, and visualize your room in an interactive 3D preview before running simulations.",
+                "metric_label": "Interactive preview",
+                "metric_value": "3D"
             },
             "1": {
-                "title": "Real-time analyzer",
-                "description": "Stream binaural readings with noise classification, RT60 tracking, and smart alerts for regulatory compliance.",
-                "metric_label": "Noise classes",
-                "metric_value": "11"
+                "title": "Collaborative measurement",
+                "description": "Create lobbies, assign device roles (microphone or speaker), and monitor connection status as your team captures impulse responses.",
+                "metric_label": "Real-time sync",
+                "metric_value": "Live"
             },
             "2": {
-                "title": "AI noise profiling",
-                "description": "Predict how layout changes impact reverberation, early reflections, and speech intelligibility before construction.",
-                "metric_label": "Scenario throughput",
-                "metric_value": "45/hr"
+                "title": "Acoustic simulation",
+                "description": "Run simulations on your room model to predict reverberation time (RT60), speech transmission index (STI), and definition (D50).",
+                "metric_label": "Key metrics",
+                "metric_value": "RT60"
             }
         },
         "workflow": {
-            "title": "From capture to insight",
+            "title": "How it works",
             "steps": {
                 "0": {
-                    "title": "Capture",
-                    "description": "Deploy Sonalyze beacons or upload existing sweeps to unify multi-channel recordings."
+                    "title": "Model your room",
+                    "description": "Draw walls, set ceiling height, and place furniture like sofas, tables, and openings like doors and windows."
                 },
                 "1": {
-                    "title": "Model",
-                    "description": "Combine sensors, CAD geometry, and material presets to generate high-fidelity simulation meshes."
+                    "title": "Simulate or measure",
+                    "description": "Run an acoustic simulation on your model, or coordinate a real measurement with multiple devices in a shared lobby."
                 },
                 "2": {
-                    "title": "Optimize",
-                    "description": "Iterate acoustic treatments, seating layouts, and speaker arrays with instant impact projections."
+                    "title": "Review results",
+                    "description": "Analyze acoustic metrics like RT60, STI, and D50 to understand how your space performs."
                 }
             }
         },
-        "live_preview": {
-            "title": "Listen before you build",
-            "description": "Toggle demo scenes to experience acoustic changes. The preview stacks convolution, early reflections, and noise masking in real time.",
-            "toggle_label": "Play preview",
-            "scene_a": "Concert hall - untreated",
-            "scene_b": "Concert hall - tuned"
-        },
         "contact": {
-            "title": "Try Sonalyze with your team",
-            "subtitle": "Share a project outline and we will set up a tailored pilot within 48 hours.",
-            "email_label": "Work email",
-            "message_label": "Project goals",
-            "submit": "Request pilot",
+            "title": "Questions or feedback?",
+            "subtitle": "We'd love to hear from you. Drop us a message and we'll get back to you soon.",
+            "email_label": "Your email",
+            "message_label": "Your message",
+            "submit": "Send message",
             "success": "Thanks! We will reach out shortly."
         },
         "faq": {
             "title": "Frequently asked questions",
             "items": {
                 "0": {
-                    "question": "Can Sonalyze process legacy measurements?",
-                    "answer": "Yes. Import WAV, AAF, or SON files and Sonalyze will auto-align impulse responses across channels."
+                    "question": "What is Sonalyze for?",
+                    "answer": "Sonalyze is an acoustic analysis tool for modeling rooms, simulating acoustic responses, and coordinating multi-device measurements. It's perfect for studios, home theaters, living rooms, classrooms, conference rooms, and any space where sound quality matters."
                 },
                 "1": {
-                    "question": "Does the simulation engine run offline?",
-                    "answer": "All processing runs on-device by default. Optionally push workloads to Sonalyze Cloud for heavy geometries."
+                    "question": "Who is Sonalyze for?",
+                    "answer": "Sonalyze is designed for students learning acoustics, audio enthusiasts improving their listening spaces, architects and interior designers planning rooms, and anyone curious about how sound behaves in different environments."
                 },
                 "2": {
-                    "question": "How does licensing work?",
-                    "answer": "Choose from project-based passes or organization seats with shared simulation hours and asset libraries."
+                    "question": "How is my data processed?",
+                    "answer": "Your data is processed 100% GDPR-compliant on servers located in Germany. We take privacy seriously and ensure your room models and measurements are handled securely."
+                },
+                "3": {
+                    "question": "What devices can I use Sonalyze on?",
+                    "answer": "Sonalyze is available on iOS, Android, Windows, and macOS. You can use it on your phone, tablet, or desktop — and even coordinate measurements across multiple devices at once."
                 }
             }
         }

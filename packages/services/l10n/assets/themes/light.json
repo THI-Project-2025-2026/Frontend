@@ -38,8 +38,6 @@
         "metric_card_text_muted": "#64748B",
         "workflow_card_background": "#FFFFFF",
         "workflow_timeline_color": "#2563EB",
-        "live_preview_background": "#FFFFFF",
-        "live_preview_waveform": "#2563EB",
         "contact_card_background": "#FFFFFF",
         "contact_input_background": "#F1F5F9",
         "contact_input_border": "#CBD5F5",

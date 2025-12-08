@@ -261,5 +261,10 @@ class LandingPageFaqItem {
       questionKey: 'landing_page.faq.items.2.question',
       answerKey: 'landing_page.faq.items.2.answer',
     ),
+    LandingPageFaqItem(
+      index: 3,
+      questionKey: 'landing_page.faq.items.3.question',
+      answerKey: 'landing_page.faq.items.3.answer',
+    ),
   ];
 }
