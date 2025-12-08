@@ -121,6 +121,7 @@
             "link_placeholder": "Lobby erstellen, um einen teilbaren Link zu erhalten"
         },
         "qr_panel": {
+            "title": "QR-Code",
             "helper": "Teile die Einladung als QR-Code für schnelle Teilnahme vor Ort.",
             "placeholder": "Lobby erstellen, um den QR-Code zu erzeugen"
         },
@@ -172,24 +173,28 @@
             }
         },
         "timeline": {
-            "title": "Ablauf der Aufnahme",
+            "title": "Mess-Ablauf",
             "advance": "Nächster Schritt",
             "steps": {
                 "0": {
-                    "title": "Empfänger platzieren",
-                    "description": "Kalibrierte Mikrofone positionieren und Grundgeräusch prüfen."
+                    "title": "Geräte verbinden",
+                    "description": "Alle Messgeräte mit der Lobby verbinden und Konnektivität prüfen."
                 },
                 "1": {
-                    "title": "Quelle positionieren",
-                    "description": "Sweep-Lautsprecher aufstellen und Pegelausgleich prüfen."
+                    "title": "Raum modellieren",
+                    "description": "Raumgeometrie definieren und Mikrofone sowie Lautsprecher positionieren."
                 },
                 "2": {
+                    "title": "Geräte synchronisieren",
+                    "description": "Timing aller verbundenen Geräte für präzise Messungen kalibrieren."
+                },
+                "3": {
                     "title": "Sweep starten",
                     "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
                 },
-                "3": {
-                    "title": "Impuls prüfen",
-                    "description": "Energieabfall analysieren und Session bestätigen."
+                "4": {
+                    "title": "Impulsergebnisse prüfen",
+                    "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
                 }
             }
         }

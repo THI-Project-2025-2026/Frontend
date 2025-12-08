@@ -121,6 +121,7 @@
             "link_placeholder": "Create a lobby to generate a shareable link"
         },
         "qr_panel": {
+            "title": "QR Code",
             "helper": "Share the invite as a QR code for on-site quick joins.",
             "placeholder": "Generate a lobby to render the QR"
         },
@@ -172,24 +173,28 @@
             }
         },
         "timeline": {
-            "title": "Capture timeline",
+            "title": "Measurement timeline",
             "advance": "Next step",
             "steps": {
                 "0": {
-                    "title": "Deploy receivers",
-                    "description": "Place calibrated microphones and confirm baseline noise levels."
+                    "title": "Connect devices",
+                    "description": "Join all measurement devices to the lobby and verify connectivity."
                 },
                 "1": {
-                    "title": "Position source",
-                    "description": "Set the swept sine source and verify level compensation."
+                    "title": "Model room",
+                    "description": "Define room geometry and place microphones and speakers in position."
                 },
                 "2": {
+                    "title": "Synchronize devices",
+                    "description": "Calibrate timing across all connected devices for accurate measurements."
+                },
+                "3": {
                     "title": "Run sweep",
                     "description": "Trigger synchronized sweeps while monitoring headroom and clipping indicators."
                 },
-                "3": {
-                    "title": "Review impulse",
-                    "description": "Validate energy decay curves before finalizing the session."
+                "4": {
+                    "title": "Review impulse results",
+                    "description": "Validate energy decay curves and analyze impulse response data."
                 }
             }
         }

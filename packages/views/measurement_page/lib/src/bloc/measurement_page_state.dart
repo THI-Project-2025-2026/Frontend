@@ -148,6 +148,11 @@ class MeasurementPageState {
         titleKey: 'measurement_page.timeline.steps.3.title',
         descriptionKey: 'measurement_page.timeline.steps.3.description',
       ),
+      MeasurementStepDescriptor(
+        index: 4,
+        titleKey: 'measurement_page.timeline.steps.4.title',
+        descriptionKey: 'measurement_page.timeline.steps.4.description',
+      ),
     ];
 
     const devices = <MeasurementDevice>[

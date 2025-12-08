@@ -178,9 +178,6 @@ class _LobbyCard extends StatelessWidget {
     final borderColor = _themeColor('measurement_page.panel_border');
     final accent = _themeColor('measurement_page.accent');
     final onPrimary = _themeColor('app.on_primary');
-    final muted = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.7);
 
     Future<void> copyLink() async {
       if (state.inviteLink.isEmpty) {
@@ -220,14 +217,15 @@ class _LobbyCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {
-                  context.read<MeasurementPageBloc>().add(
-                    const MeasurementLobbyQrToggled(),
+                  _showQrCodeDialog(
+                    context,
+                    lobbyCode: state.lobbyCode,
+                    accent: accent,
+                    borderColor: borderColor,
                   );
                 },
                 color: accent,
-                icon: Icon(
-                  state.showQr ? Icons.qr_code_scanner : Icons.qr_code_rounded,
-                ),
+                icon: const Icon(Icons.qr_code_rounded),
                 tooltip: _tr('measurement_page.lobby.actions.toggle_qr'),
               ),
             ],
@@ -302,45 +300,6 @@ class _LobbyCard extends StatelessWidget {
             accent: accent,
             isSelectable: true,
           ),
-          if (state.showQr) ...[
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _themeColor(
-                  'measurement_page.qr_background',
-                ).withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: borderColor.withValues(alpha: 0.35)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code_2, size: 120, color: accent),
-                  const SizedBox(height: 12),
-                  Text(
-                    state.lobbyCode.isEmpty
-                        ? _tr('measurement_page.qr_panel.placeholder')
-                        : state.lobbyCode,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _tr('measurement_page.qr_panel.helper'),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: muted),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -629,42 +588,52 @@ class _DeviceDataRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accent.withValues(alpha: 0.25)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<MeasurementDeviceRole>(
-                value: device.role,
-                isExpanded: true,
-                isDense: true,
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  color: onBackground.withValues(alpha: 0.6),
-                ),
-                style: textTheme.bodyMedium?.copyWith(
-                  color: onBackground.withValues(alpha: 0.85),
-                ),
-                dropdownColor: _themeColor('measurement_page.panel_background'),
-                items: MeasurementDeviceRole.values.map((role) {
-                  return DropdownMenuItem<MeasurementDeviceRole>(
-                    value: role,
-                    child: Text(_roleLabel(role)),
-                  );
-                }).toList(),
-                onChanged: (newRole) {
-                  if (newRole != null) {
-                    bloc.add(
-                      MeasurementDeviceRoleChanged(
-                        deviceId: device.id,
-                        role: newRole,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withValues(alpha: 0.25)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<MeasurementDeviceRole>(
+                  value: device.role,
+                  isExpanded: true,
+                  isDense: false,
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: onBackground.withValues(alpha: 0.6),
+                    size: 20,
+                  ),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: onBackground.withValues(alpha: 0.85),
+                  ),
+                  dropdownColor: _themeColor(
+                    'measurement_page.panel_background',
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  items: MeasurementDeviceRole.values.map((role) {
+                    return DropdownMenuItem<MeasurementDeviceRole>(
+                      value: role,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(_roleLabel(role)),
                       ),
                     );
-                  }
-                },
+                  }).toList(),
+                  onChanged: (newRole) {
+                    if (newRole != null) {
+                      bloc.add(
+                        MeasurementDeviceRoleChanged(
+                          deviceId: device.id,
+                          role: newRole,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -851,6 +820,89 @@ class _TimelineStepTile extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showQrCodeDialog(
+  BuildContext context, {
+  required String lobbyCode,
+  required Color accent,
+  required Color borderColor,
+}) {
+  final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
+
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: _themeColor('measurement_page.qr_background'),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: borderColor.withValues(alpha: 0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _tr('measurement_page.qr_panel.title'),
+                    style: Theme.of(dialogContext).textTheme.titleLarge
+                        ?.copyWith(
+                          color: Theme.of(dialogContext).colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: Icon(
+                      Icons.close,
+                      color: Theme.of(
+                        dialogContext,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Icon(Icons.qr_code_2, size: 160, color: accent),
+              const SizedBox(height: 20),
+              Text(
+                lobbyCode.isEmpty
+                    ? _tr('measurement_page.qr_panel.placeholder')
+                    : lobbyCode,
+                style: Theme.of(dialogContext).textTheme.headlineSmall
+                    ?.copyWith(
+                      color: Theme.of(dialogContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 8,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tr('measurement_page.qr_panel.helper'),
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  dialogContext,
+                ).textTheme.bodyMedium?.copyWith(color: muted, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 String _roleLabel(MeasurementDeviceRole role) {
