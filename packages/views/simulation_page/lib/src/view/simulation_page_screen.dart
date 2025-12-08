@@ -387,6 +387,7 @@ class _SimulationTimelineCard extends StatelessWidget {
     final panelColor = _themeColor('simulation_page.metrics_background');
     final activeColor = _themeColor('simulation_page.timeline_active');
     final inactiveColor = _themeColor('simulation_page.timeline_inactive');
+    final backColor = _themeColor('simulation_page.timeline_back');
     final onPrimary = _themeColor('app.on_primary');
     final warningColor = _themeColor('simulation_page.timeline_inactive');
 
@@ -425,7 +426,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                                     const SimulationTimelineStepBack(),
                                   )
                                 : null,
-                            backgroundColor: inactiveColor,
+                            backgroundColor: backColor,
                             foregroundColor: onPrimary,
                             borderRadius: BorderRadius.circular(18),
                             icon: const Icon(Icons.fast_rewind_outlined),

@@ -52,15 +52,15 @@
     "measurement_page": {
         "background_gradient": ["#F8FAFC", "#E2E8F0"],
         "scrollbar_thumb": "#CBD5F5",
-        "header_badge_background": "#DCFCE7",
-        "header_badge_text": "#15803D",
+        "header_badge_background": "#DBEAFE",
+        "header_badge_text": "#1D4ED8",
         "panel_background": "#FFFFFF",
-        "panel_border": "#D1D5DB",
-        "accent": "#16A34A",
-        "role_chip_background": "#DCFCE7",
-        "role_chip_selected": "#14532D",
+        "panel_border": "#CBD5F5",
+        "accent": "#2563EB",
+        "role_chip_background": "#DBEAFE",
+        "role_chip_selected": "#1E3A8A",
         "telemetry_background": "#FFFFFF",
-        "timeline_active": "#16A34A",
+        "timeline_active": "#2563EB",
         "timeline_inactive": "#E2E8F0",
         "ready_badge_ready": "#16A34A",
         "ready_badge_waiting": "#F59E0B",
@@ -104,7 +104,8 @@
             "d50_line_fill": "#A855F733"
         },
         "timeline_active": "#2563EB",
-        "timeline_inactive": "#94A3B8"
+        "timeline_inactive": "#94A3B8",
+        "timeline_back": "#3B82F6"
     },
     "room_modeling": {
         "stepper": {
