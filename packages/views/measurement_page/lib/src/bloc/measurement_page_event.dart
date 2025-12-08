@@ -25,10 +25,14 @@ class MeasurementLobbyLinkCopied extends MeasurementPageEvent {
   const MeasurementLobbyLinkCopied();
 }
 
-/// Selects the active role for the local device.
-class MeasurementRoleSelected extends MeasurementPageEvent {
-  const MeasurementRoleSelected(this.role);
+/// Changes the role for a specific device.
+class MeasurementDeviceRoleChanged extends MeasurementPageEvent {
+  const MeasurementDeviceRoleChanged({
+    required this.deviceId,
+    required this.role,
+  });
 
+  final String deviceId;
   final MeasurementDeviceRole role;
 }
 
@@ -53,17 +57,7 @@ class MeasurementDeviceDemoLeft extends MeasurementPageEvent {
   final String deviceId;
 }
 
-/// Periodic tick to refresh synthetic telemetry.
-class MeasurementTelemetryTick extends MeasurementPageEvent {
-  const MeasurementTelemetryTick();
-}
-
 /// Advances the measurement timeline to the next step.
 class MeasurementTimelineAdvanced extends MeasurementPageEvent {
   const MeasurementTimelineAdvanced();
-}
-
-/// Toggles device discovery scanning indicator.
-class MeasurementScanningToggled extends MeasurementPageEvent {
-  const MeasurementScanningToggled();
 }

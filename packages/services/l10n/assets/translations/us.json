@@ -126,10 +126,10 @@
         },
         "roles": {
             "title": "Your device role",
-            "helper": "Switch between receiver, sweep source, and session coordinator to preview responsibilities.",
-            "receiver": "Receiver mic array",
-            "sender": "Sweep source",
-            "coordinator": "Session coordinator",
+            "helper": "Select whether this device acts as a microphone or loudspeaker during the measurement.",
+            "none": "None",
+            "microphone": "Microphone",
+            "loudspeaker": "Loudspeaker",
             "updated": "Device role updated."
         },
         "scanning": {

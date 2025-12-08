@@ -126,10 +126,10 @@
         },
         "roles": {
             "title": "Rolle dieses Geräts",
-            "helper": "Wechsle zwischen Empfänger, Sweep-Quelle und Koordinator, um Verantwortlichkeiten zu sehen.",
-            "receiver": "Empfänger-Mikrofonarray",
-            "sender": "Sweep-Quelle",
-            "coordinator": "Sitzungskoordinator",
+            "helper": "Wähle, ob dieses Gerät während der Messung als Mikrofon oder Lautsprecher fungiert.",
+            "none": "Keine",
+            "microphone": "Mikrofon",
+            "loudspeaker": "Lautsprecher",
             "updated": "Geräterolle aktualisiert."
         },
         "scanning": {
