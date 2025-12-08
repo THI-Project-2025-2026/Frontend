@@ -1,4 +1,7 @@
 {
+    "common": {
+        "back": "Zurück"
+    },
     "app": {
         "loading_title": "Sonalyze wird geladen",
         "loading_message": "Akustische Arbeitsumgebung wird vorbereitet..."
@@ -7,93 +10,90 @@
         "hero": {
             "badge": "Akustische Intelligenz",
             "title": "Verstehe den Klang jedes Raums",
-            "subtitle": "Sonalyze verwandelt rohe Akustikaufnahmen in verwertbare Raum-Insights für Architektinnen, Audio Engineers und Forschende.",
+            "subtitle": "Sonalyze hilft dir, Raumakustik zu modellieren, Mehrgeräte-Messungen zu koordinieren und akustische Antworten zu simulieren — alles in einer App.",
             "primary_cta": "Simulation starten",
             "secondary_cta": "Messwerkzeuge ansehen"
         },
         "metrics": {
-            "title": "Verlässliche Akustikdaten",
+            "title": "Was du tun kannst",
             "items": {
                 "0": {
-                    "label": "Profilierte Räume",
-                    "value": "1,2k+"
+                    "label": "Räume in 2D und 3D mit Wänden, Möbeln und Öffnungen modellieren",
+                    "value": "Design"
                 },
                 "1": {
-                    "label": "Durchschnittliche Aufbauzeit",
-                    "value": "3 Min"
+                    "label": "Mehrgeräte-Messungen mit Echtzeit-Synchronisation koordinieren",
+                    "value": "Messen"
                 },
                 "2": {
-                    "label": "Prognosegenauigkeit",
-                    "value": "+/- 1,4 dB"
+                    "label": "RT60, STI und D50 Akustikmetriken sofort simulieren",
+                    "value": "Simulieren"
                 }
             }
         },
         "features": {
             "0": {
-                "title": "Impulsantwort-Mapping",
-                "description": "Visualisiere 3D-Energieabfall, modale Hotspots und Klarheitskoeffizienten, um Behandlungen in Sekunden zu planen.",
-                "metric_label": "Flächenabdeckung",
-                "metric_value": "92%"
+                "title": "Raummodellierung",
+                "description": "Zeichne Wände, platziere Möbel und Öffnungen und visualisiere deinen Raum in einer interaktiven 3D-Vorschau vor der Simulation.",
+                "metric_label": "Interaktive Vorschau",
+                "metric_value": "3D"
             },
             "1": {
-                "title": "Echtzeitanalysator",
-                "description": "Streame binaurale Messungen mit Geräuschklassifikation, RT60-Tracking und smarten Hinweisen für Richtlinienkonformität.",
-                "metric_label": "Geräuschklassen",
-                "metric_value": "11"
+                "title": "Kooperative Messung",
+                "description": "Erstelle Lobbys, weise Geräterollen zu (Mikrofon oder Lautsprecher) und überwache den Verbindungsstatus während dein Team Impulsantworten erfasst.",
+                "metric_label": "Echtzeit-Sync",
+                "metric_value": "Live"
             },
             "2": {
-                "title": "KI-Geräuschprofiling",
-                "description": "Prognostiziere, wie Layoutänderungen Nachhall, frühe Reflexionen und Sprachverständlichkeit vor dem Bau beeinflussen.",
-                "metric_label": "Szenarien pro Stunde",
-                "metric_value": "45/h"
+                "title": "Akustiksimulation",
+                "description": "Führe Simulationen an deinem Raummodell durch, um Nachhallzeit (RT60), Sprachübertragungsindex (STI) und Deutlichkeitsmaß (D50) vorherzusagen.",
+                "metric_label": "Schlüsselmetriken",
+                "metric_value": "RT60"
             }
         },
         "workflow": {
-            "title": "Vom Capture zur Erkenntnis",
+            "title": "So funktioniert es",
             "steps": {
                 "0": {
-                    "title": "Erfassen",
-                    "description": "Setze Sonalyze-Beacons ein oder lade vorhandene Sweeps hoch, um Mehrkanalaufnahmen zu vereinheitlichen."
+                    "title": "Raum modellieren",
+                    "description": "Zeichne Wände, lege die Deckenhöhe fest und platziere Möbel wie Sofas, Tische sowie Öffnungen wie Türen und Fenster."
                 },
                 "1": {
-                    "title": "Modellieren",
-                    "description": "Kombiniere Sensoren, CAD-Geometrie und Materialpresets, um hochauflösende Simulationsnetze zu erzeugen."
+                    "title": "Simulieren oder messen",
+                    "description": "Führe eine Akustiksimulation an deinem Modell durch oder koordiniere eine echte Messung mit mehreren Geräten in einer gemeinsamen Lobby."
                 },
                 "2": {
-                    "title": "Optimieren",
-                    "description": "Variiere Akustikmaßnahmen, Bestuhlungspläne und Lautsprecherarrays mit unmittelbaren Wirkungsvorhersagen."
+                    "title": "Ergebnisse prüfen",
+                    "description": "Analysiere Akustikmetriken wie RT60, STI und D50, um zu verstehen, wie dein Raum klingt."
                 }
             }
         },
-        "live_preview": {
-            "title": "Höre, bevor du baust",
-            "description": "Wechsle Demo-Szenen, um Veränderungen zu erleben. Die Vorschau kombiniert Faltung, frühe Reflexionen und Maskierung in Echtzeit.",
-            "toggle_label": "Vorschau abspielen",
-            "scene_a": "Konzertsaal - unbehandelt",
-            "scene_b": "Konzertsaal - optimiert"
-        },
         "contact": {
-            "title": "Teste Sonalyze mit deinem Team",
-            "subtitle": "Teile Eckdaten deines Projekts und wir richten innerhalb von 48 Stunden einen Pilotversuch ein.",
-            "email_label": "Arbeits-E-Mail",
-            "message_label": "Projektziele",
-            "submit": "Pilot anfragen",
+            "title": "Fragen oder Feedback?",
+            "subtitle": "Wir freuen uns von dir zu hören. Schreib uns eine Nachricht und wir melden uns bald.",
+            "email_label": "Deine E-Mail",
+            "message_label": "Deine Nachricht",
+            "submit": "Nachricht senden",
             "success": "Danke! Wir melden uns kurzfristig."
         },
         "faq": {
             "title": "Häufig gestellte Fragen",
             "items": {
                 "0": {
-                    "question": "Kann Sonalyze Bestandsmessungen verarbeiten?",
-                    "answer": "Ja. Importiere WAV-, AAF- oder SON-Dateien und Sonalyze richtet Impulsantworten kanalübergreifend automatisch aus."
+                    "question": "Wofür ist Sonalyze gedacht?",
+                    "answer": "Sonalyze ist ein Akustikanalyse-Tool zum Modellieren von Räumen, Simulieren akustischer Antworten und Koordinieren von Mehrgeräte-Messungen. Perfekt für Studios, Heimkinos, Wohnzimmer, Klassenzimmer, Konferenzräume und jeden Raum, in dem Klangqualität wichtig ist."
                 },
                 "1": {
-                    "question": "Läuft die Simulation offline?",
-                    "answer": "Standardmäßig erfolgt die Verarbeitung lokal. Optional lassen sich rechenintensive Geometrien in die Sonalyze Cloud auslagern."
+                    "question": "Für wen ist Sonalyze?",
+                    "answer": "Sonalyze ist für Studierende der Akustik, Audio-Enthusiasten die ihre Hörräume verbessern möchten, Architekten und Innenarchitekten die Räume planen, und alle die neugierig sind wie Schall sich in verschiedenen Umgebungen verhält."
                 },
                 "2": {
-                    "question": "Wie funktioniert die Lizenzierung?",
-                    "answer": "Wähle projektbasierte Pässe oder Organisationslizenzen mit gemeinsamen Simulationsstunden und Asset-Bibliotheken."
+                    "question": "Wie werden meine Daten verarbeitet?",
+                    "answer": "Deine Daten werden 100% DSGVO-konform auf Servern in Deutschland verarbeitet. Wir nehmen Datenschutz ernst und stellen sicher, dass deine Raummodelle und Messungen sicher behandelt werden."
+                },
+                "3": {
+                    "question": "Auf welchen Geräten kann ich Sonalyze nutzen?",
+                    "answer": "Sonalyze ist verfügbar für iOS, Android, Windows und macOS. Du kannst es auf deinem Handy, Tablet oder Desktop nutzen — und sogar Messungen über mehrere Geräte gleichzeitig koordinieren."
                 }
             }
         }
@@ -121,15 +121,16 @@
             "link_placeholder": "Lobby erstellen, um einen teilbaren Link zu erhalten"
         },
         "qr_panel": {
+            "title": "QR-Code",
             "helper": "Teile die Einladung als QR-Code für schnelle Teilnahme vor Ort.",
             "placeholder": "Lobby erstellen, um den QR-Code zu erzeugen"
         },
         "roles": {
             "title": "Rolle dieses Geräts",
-            "helper": "Wechsle zwischen Empfänger, Sweep-Quelle und Koordinator, um Verantwortlichkeiten zu sehen.",
-            "receiver": "Empfänger-Mikrofonarray",
-            "sender": "Sweep-Quelle",
-            "coordinator": "Sitzungskoordinator",
+            "helper": "Wähle, ob dieses Gerät während der Messung als Mikrofon oder Lautsprecher fungiert.",
+            "none": "Keine",
+            "microphone": "Mikrofon",
+            "loudspeaker": "Lautsprecher",
             "updated": "Geräterolle aktualisiert."
         },
         "scanning": {
@@ -172,24 +173,28 @@
             }
         },
         "timeline": {
-            "title": "Ablauf der Aufnahme",
+            "title": "Mess-Ablauf",
             "advance": "Nächster Schritt",
             "steps": {
                 "0": {
-                    "title": "Empfänger platzieren",
-                    "description": "Kalibrierte Mikrofone positionieren und Grundgeräusch prüfen."
+                    "title": "Geräte verbinden",
+                    "description": "Alle Messgeräte mit der Lobby verbinden und Konnektivität prüfen."
                 },
                 "1": {
-                    "title": "Quelle positionieren",
-                    "description": "Sweep-Lautsprecher aufstellen und Pegelausgleich prüfen."
+                    "title": "Raum modellieren",
+                    "description": "Raumgeometrie definieren und Mikrofone sowie Lautsprecher positionieren."
                 },
                 "2": {
+                    "title": "Geräte synchronisieren",
+                    "description": "Timing aller verbundenen Geräte für präzise Messungen kalibrieren."
+                },
+                "3": {
                     "title": "Sweep starten",
                     "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
                 },
-                "3": {
-                    "title": "Impuls prüfen",
-                    "description": "Energieabfall analysieren und Session bestätigen."
+                "4": {
+                    "title": "Impulsergebnisse prüfen",
+                    "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
                 }
             }
         }
@@ -253,6 +258,37 @@
             "d50": {
                 "label": "D50",
                 "unit": "Verhältnis"
+            }
+        },
+        "results": {
+            "title": "Simulationsergebnisse"
+        },
+        "progress": {
+            "title": "Simulation läuft",
+            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment."
+        },
+        "timeline": {
+            "title": "Simulations-Ablauf",
+            "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um zum nächsten Schritt zu gelangen.",
+            "steps": {
+                "0": {
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
+                },
+                "1": {
+                    "title": "Raum einrichten",
+                    "description": "Möbel, Öffnungen und akustische Behandlungen platzieren."
+                },
+                "2": {
+                    "title": "Simulation starten",
+                    "description": "Akustiksimulation mit der aktuellen Raumkonfiguration durchführen."
+                },
+                "3": {
+                    "title": "Simulationsergebnisse prüfen",
+                    "description": "Prognostizierte akustische Kennzahlen und Antwortkurven analysieren."
+                }
             }
         }
     },

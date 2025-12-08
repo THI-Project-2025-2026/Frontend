@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-
-import 'package:common_helpers/common_helpers.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -77,11 +74,7 @@ class _MeasurementPageView extends StatelessWidget {
                       SizedBox(height: isWide ? 40 : 32),
                       BlocBuilder<MeasurementPageBloc, MeasurementPageState>(
                         builder: (context, state) {
-                          return _MeasurementPrimaryLayout(
-                            state: state,
-                            isWide: isWide,
-                            isMedium: isMedium,
-                          );
+                          return _MeasurementPrimaryLayout(state: state);
                         },
                       ),
                     ],
@@ -106,10 +99,23 @@ class _MeasurementHeader extends StatelessWidget {
       'measurement_page.header_badge_background',
     );
     final badgeText = _themeColor('measurement_page.header_badge_text');
+    final accentColor = _themeColor('measurement_page.accent');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back, color: accentColor),
+          tooltip: _tr('common.back'),
+          style: IconButton.styleFrom(
+            backgroundColor: accentColor.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           decoration: BoxDecoration(
@@ -150,61 +156,22 @@ class _MeasurementHeader extends StatelessWidget {
 }
 
 class _MeasurementPrimaryLayout extends StatelessWidget {
-  const _MeasurementPrimaryLayout({
-    required this.state,
-    required this.isWide,
-    required this.isMedium,
-  });
+  const _MeasurementPrimaryLayout({required this.state});
 
   final MeasurementPageState state;
-  final bool isWide;
-  final bool isMedium;
 
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[];
 
-    if (isWide || isMedium) {
-      children.add(
-        _EqualHeightFlexRow(
-          leading: _LobbyCard(state: state),
-          trailing: _RoleAndScanningCard(state: state),
-          gap: 24,
-          leadingFlex: isWide ? 5 : 1,
-          trailingFlex: isWide ? 3 : 1,
-        ),
-      );
-    } else {
-      children.addAll([
-        _LobbyCard(state: state),
-        const SizedBox(height: 24),
-        _RoleAndScanningCard(state: state),
-      ]);
-    }
+    children.add(_LobbyCard(state: state));
 
     children.addAll([
       const SizedBox(height: 28),
       _DeviceListCard(state: state),
       const SizedBox(height: 28),
+      _TimelineCard(state: state),
     ]);
-
-    if (isWide || isMedium) {
-      children.add(
-        _EqualHeightFlexRow(
-          leading: _TelemetryCard(state: state),
-          trailing: _TimelineCard(state: state),
-          gap: 24,
-          leadingFlex: isWide ? 4 : 1,
-          trailingFlex: isWide ? 4 : 1,
-        ),
-      );
-    } else {
-      children.addAll([
-        _TelemetryCard(state: state),
-        const SizedBox(height: 24),
-        _TimelineCard(state: state),
-      ]);
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -224,9 +191,6 @@ class _LobbyCard extends StatelessWidget {
     final borderColor = _themeColor('measurement_page.panel_border');
     final accent = _themeColor('measurement_page.accent');
     final onPrimary = _themeColor('app.on_primary');
-    final muted = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.7);
 
     Future<void> copyLink() async {
       if (state.inviteLink.isEmpty) {
@@ -266,14 +230,15 @@ class _LobbyCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {
-                  context.read<MeasurementPageBloc>().add(
-                    const MeasurementLobbyQrToggled(),
+                  _showQrCodeDialog(
+                    context,
+                    lobbyCode: state.lobbyCode,
+                    accent: accent,
+                    borderColor: borderColor,
                   );
                 },
                 color: accent,
-                icon: Icon(
-                  state.showQr ? Icons.qr_code_scanner : Icons.qr_code_rounded,
-                ),
+                icon: const Icon(Icons.qr_code_rounded),
                 tooltip: _tr('measurement_page.lobby.actions.toggle_qr'),
               ),
             ],
@@ -348,45 +313,6 @@ class _LobbyCard extends StatelessWidget {
             accent: accent,
             isSelectable: true,
           ),
-          if (state.showQr) ...[
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _themeColor(
-                  'measurement_page.qr_background',
-                ).withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: borderColor.withValues(alpha: 0.35)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code_2, size: 120, color: accent),
-                  const SizedBox(height: 12),
-                  Text(
-                    state.lobbyCode.isEmpty
-                        ? _tr('measurement_page.qr_panel.placeholder')
-                        : state.lobbyCode,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _tr('measurement_page.qr_panel.helper'),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: muted),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -437,158 +363,6 @@ class _LobbyField extends StatelessWidget {
           child: content,
         ),
       ],
-    );
-  }
-}
-
-class _RoleAndScanningCard extends StatelessWidget {
-  const _RoleAndScanningCard({required this.state});
-
-  final MeasurementPageState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final panelColor = _themeColor('measurement_page.panel_background');
-    final accent = _themeColor('measurement_page.accent');
-    final chipSelected = _themeColor('measurement_page.role_chip_selected');
-    final chipBackground = _themeColor('measurement_page.role_chip_background');
-
-    return SonalyzeSurface(
-      padding: const EdgeInsets.all(28),
-      backgroundColor: panelColor.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _tr('measurement_page.roles.title'),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _tr('measurement_page.roles.helper'),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-              height: 1.6,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              for (final role in MeasurementDeviceRole.values)
-                ChoiceChip(
-                  selected: state.selectedRole == role,
-                  label: Text(_roleLabel(role)),
-                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: state.selectedRole == role
-                        ? chipSelected
-                        : Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.75),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  selectedColor: chipBackground,
-                  backgroundColor: chipBackground.withValues(alpha: 0.35),
-                  onSelected: (_) {
-                    context.read<MeasurementPageBloc>().add(
-                      MeasurementRoleSelected(role),
-                    );
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: accent.withValues(alpha: 0.25)),
-            ),
-            child: SwitchListTile.adaptive(
-              title: Text(_tr('measurement_page.scanning.title')),
-              subtitle: Text(
-                state.isScanning
-                    ? _tr('measurement_page.scanning.active')
-                    : _tr('measurement_page.scanning.inactive'),
-              ),
-              value: state.isScanning,
-              activeThumbColor: accent,
-              onChanged: (_) => context.read<MeasurementPageBloc>().add(
-                const MeasurementScanningToggled(),
-              ),
-            ),
-          ),
-          if (state.localDevice != null) ...[
-            const SizedBox(height: 24),
-            _LocalDeviceSummary(device: state.localDevice!, accent: accent),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _LocalDeviceSummary extends StatelessWidget {
-  const _LocalDeviceSummary({required this.device, required this.accent});
-
-  final MeasurementDevice device;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.devices_other_outlined, color: accent),
-              const SizedBox(width: 12),
-              Text(
-                device.name,
-                style: textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  _tr('measurement_page.devices.local_badge'),
-                  style: textTheme.labelSmall?.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _DeviceMetricsRow(device: device),
-        ],
-      ),
     );
   }
 }
@@ -782,6 +556,7 @@ class _DeviceDataRow extends StatelessWidget {
     final bloc = context.read<MeasurementPageBloc>();
     final textTheme = Theme.of(context).textTheme;
     final onBackground = Theme.of(context).colorScheme.onSurface;
+    final accent = _themeColor('measurement_page.accent');
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -826,10 +601,53 @@ class _DeviceDataRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Text(
-            _roleLabel(device.role),
-            style: textTheme.bodyMedium?.copyWith(
-              color: onBackground.withValues(alpha: 0.75),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withValues(alpha: 0.25)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<MeasurementDeviceRole>(
+                  value: device.role,
+                  isExpanded: true,
+                  isDense: false,
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: onBackground.withValues(alpha: 0.6),
+                    size: 20,
+                  ),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: onBackground.withValues(alpha: 0.85),
+                  ),
+                  dropdownColor: _themeColor(
+                    'measurement_page.panel_background',
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  items: MeasurementDeviceRole.values.map((role) {
+                    return DropdownMenuItem<MeasurementDeviceRole>(
+                      value: role,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(_roleLabel(role)),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newRole) {
+                    if (newRole != null) {
+                      bloc.add(
+                        MeasurementDeviceRoleChanged(
+                          deviceId: device.id,
+                          role: newRole,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -859,230 +677,6 @@ class _DeviceDataRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DeviceMetricsRow extends StatelessWidget {
-  const _DeviceMetricsRow({required this.device});
-
-  final MeasurementDevice device;
-
-  @override
-  Widget build(BuildContext context) {
-    final onBackground = Theme.of(context).colorScheme.onSurface;
-    final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: onBackground.withValues(alpha: 0.65),
-    );
-    final valueStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-      color: onBackground,
-      fontWeight: FontWeight.w600,
-    );
-
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _tr('measurement_page.devices.headers.role'),
-                style: labelStyle,
-              ),
-              const SizedBox(height: 4),
-              Text(_roleLabel(device.role), style: valueStyle),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _tr('measurement_page.devices.headers.latency'),
-                style: labelStyle,
-              ),
-              const SizedBox(height: 4),
-              Text('${device.latencyMs} ms', style: valueStyle),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _tr('measurement_page.devices.headers.battery'),
-                style: labelStyle,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${(device.batteryLevel * 100).round()}%',
-                style: valueStyle,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TelemetryCard extends StatelessWidget {
-  const _TelemetryCard({required this.state});
-
-  final MeasurementPageState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final panelColor = _themeColor('measurement_page.telemetry_background');
-    final accent = _themeColor('measurement_page.accent');
-
-    final metrics = [
-      _TelemetryMetric(
-        label: _tr('measurement_page.telemetry.uplink.label'),
-        value: formatNumber(state.uplinkRssi, fractionDigits: 1),
-        unit: _tr('measurement_page.telemetry.uplink.unit'),
-      ),
-      _TelemetryMetric(
-        label: _tr('measurement_page.telemetry.downlink.label'),
-        value: formatNumber(state.downlinkRssi, fractionDigits: 1),
-        unit: _tr('measurement_page.telemetry.downlink.unit'),
-      ),
-      _TelemetryMetric(
-        label: _tr('measurement_page.telemetry.jitter.label'),
-        value: formatNumber(state.networkJitterMs, fractionDigits: 0),
-        unit: _tr('measurement_page.telemetry.jitter.unit'),
-      ),
-    ];
-
-    final formattedTime = _formatTimestamp(state.lastUpdated);
-
-    return SonalyzeSurface(
-      padding: const EdgeInsets.all(28),
-      backgroundColor: panelColor.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _tr('measurement_page.telemetry.title'),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 720;
-              if (isCompact) {
-                return Column(
-                  children: [
-                    for (var i = 0; i < metrics.length; i++) ...[
-                      _TelemetryTile(metric: metrics[i], accent: accent),
-                      if (i != metrics.length - 1) const SizedBox(height: 12),
-                    ],
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  for (var i = 0; i < metrics.length; i++) ...[
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: i == metrics.length - 1 ? 0 : 12,
-                        ),
-                        child: _TelemetryTile(
-                          metric: metrics[i],
-                          accent: accent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-          Text(
-            '${_tr('measurement_page.telemetry.last_updated')} $formattedTime',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.65),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TelemetryMetric {
-  const _TelemetryMetric({
-    required this.label,
-    required this.value,
-    required this.unit,
-  });
-
-  final String label;
-  final String value;
-  final String unit;
-}
-
-class _TelemetryTile extends StatelessWidget {
-  const _TelemetryTile({required this.metric, required this.accent});
-
-  final _TelemetryMetric metric;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: accent.withValues(alpha: 0.25), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            metric.label,
-            style: textTheme.labelMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 12),
-          RichText(
-            text: TextSpan(
-              text: metric.value,
-              style: textTheme.displaySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
-              children: [
-                const WidgetSpan(child: SizedBox(width: 6)),
-                TextSpan(
-                  text: metric.unit,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1241,142 +835,91 @@ class _TimelineStepTile extends StatelessWidget {
   }
 }
 
-class _EqualHeightFlexRow extends StatefulWidget {
-  const _EqualHeightFlexRow({
-    required this.leading,
-    required this.trailing,
-    required this.gap,
-    this.leadingFlex = 1,
-    this.trailingFlex = 1,
-  });
+void _showQrCodeDialog(
+  BuildContext context, {
+  required String lobbyCode,
+  required Color accent,
+  required Color borderColor,
+}) {
+  final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
 
-  final Widget leading;
-  final Widget trailing;
-  final double gap;
-  final int leadingFlex;
-  final int trailingFlex;
-
-  @override
-  State<_EqualHeightFlexRow> createState() => _EqualHeightFlexRowState();
-}
-
-class _EqualHeightFlexRowState extends State<_EqualHeightFlexRow> {
-  final GlobalKey _leadingKey = GlobalKey();
-  final GlobalKey _trailingKey = GlobalKey();
-
-  double? _maxHeight;
-  bool _measurementScheduled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleMeasurement();
-  }
-
-  @override
-  void didUpdateWidget(covariant _EqualHeightFlexRow oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.leading.key != widget.leading.key ||
-        oldWidget.trailing.key != widget.trailing.key ||
-        oldWidget.leadingFlex != widget.leadingFlex ||
-        oldWidget.trailingFlex != widget.trailingFlex) {
-      _maxHeight = null;
-    }
-    _scheduleMeasurement();
-  }
-
-  void _scheduleMeasurement() {
-    if (_measurementScheduled) {
-      return;
-    }
-    _measurementScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measurementScheduled = false;
-      if (!mounted) {
-        return;
-      }
-      _updateHeight();
-    });
-  }
-
-  void _updateHeight() {
-    final leadingContext = _leadingKey.currentContext;
-    final trailingContext = _trailingKey.currentContext;
-    if (leadingContext == null || trailingContext == null) {
-      return;
-    }
-    final leadingHeight = leadingContext.size?.height ?? 0;
-    final trailingHeight = trailingContext.size?.height ?? 0;
-    final candidate = math.max(leadingHeight, trailingHeight);
-    if (candidate <= 0) {
-      return;
-    }
-    if (_maxHeight == null || (_maxHeight! - candidate).abs() > 0.5) {
-      setState(() {
-        _maxHeight = candidate;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    _scheduleMeasurement();
-    final targetHeight = _maxHeight;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: widget.leadingFlex,
-          child: _EqualHeightChild(
-            key: _leadingKey,
-            height: targetHeight,
-            child: widget.leading,
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: _themeColor('measurement_page.qr_background'),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: borderColor.withValues(alpha: 0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _tr('measurement_page.qr_panel.title'),
+                    style: Theme.of(dialogContext).textTheme.titleLarge
+                        ?.copyWith(
+                          color: Theme.of(dialogContext).colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: Icon(
+                      Icons.close,
+                      color: Theme.of(
+                        dialogContext,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Icon(Icons.qr_code_2, size: 160, color: accent),
+              const SizedBox(height: 20),
+              Text(
+                lobbyCode.isEmpty
+                    ? _tr('measurement_page.qr_panel.placeholder')
+                    : lobbyCode,
+                style: Theme.of(dialogContext).textTheme.headlineSmall
+                    ?.copyWith(
+                      color: Theme.of(dialogContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 8,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tr('measurement_page.qr_panel.helper'),
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  dialogContext,
+                ).textTheme.bodyMedium?.copyWith(color: muted, height: 1.5),
+              ),
+            ],
           ),
         ),
-        SizedBox(width: widget.gap),
-        Expanded(
-          flex: widget.trailingFlex,
-          child: _EqualHeightChild(
-            key: _trailingKey,
-            height: targetHeight,
-            child: widget.trailing,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EqualHeightChild extends StatelessWidget {
-  const _EqualHeightChild({super.key, required this.child, this.height});
-
-  final Widget child;
-  final double? height;
-
-  @override
-  Widget build(BuildContext context) {
-    if (height == null) {
-      return child;
-    }
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: height!),
-      child: child,
-    );
-  }
+      );
+    },
+  );
 }
 
 String _roleLabel(MeasurementDeviceRole role) {
   return _tr('measurement_page.roles.${role.name}');
-}
-
-String _formatTimestamp(DateTime timestamp) {
-  final local = timestamp.toLocal();
-  final hours = local.hour.toString().padLeft(2, '0');
-  final minutes = local.minute.toString().padLeft(2, '0');
-  final seconds = local.second.toString().padLeft(2, '0');
-  return '$hours:$minutes:$seconds';
 }
 
 String _tr(String keyPath) {

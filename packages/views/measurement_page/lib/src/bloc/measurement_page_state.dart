@@ -1,7 +1,7 @@
 part of 'measurement_page_bloc.dart';
 
 /// Roles a device can take within a collaborative measurement session.
-enum MeasurementDeviceRole { receiver, sender, coordinator }
+enum MeasurementDeviceRole { none, microphone, loudspeaker }
 
 /// Metadata for the measurement step timeline.
 class MeasurementStepDescriptor {
@@ -64,14 +64,9 @@ class MeasurementPageState {
     required this.lobbyCode,
     required this.inviteLink,
     required this.showQr,
-    required this.selectedRole,
     required List<MeasurementDevice> devices,
     required List<MeasurementStepDescriptor> steps,
     required this.activeStepIndex,
-    required this.uplinkRssi,
-    required this.downlinkRssi,
-    required this.networkJitterMs,
-    required this.isScanning,
     required this.lastActionMessage,
     required this.lastUpdated,
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
@@ -81,14 +76,9 @@ class MeasurementPageState {
   final String lobbyCode;
   final String inviteLink;
   final bool showQr;
-  final MeasurementDeviceRole selectedRole;
   final List<MeasurementDevice> devices;
   final List<MeasurementStepDescriptor> steps;
   final int activeStepIndex;
-  final double uplinkRssi;
-  final double downlinkRssi;
-  final double networkJitterMs;
-  final bool isScanning;
   final String lastActionMessage;
   final DateTime lastUpdated;
 
@@ -117,14 +107,9 @@ class MeasurementPageState {
     String? lobbyCode,
     String? inviteLink,
     bool? showQr,
-    MeasurementDeviceRole? selectedRole,
     List<MeasurementDevice>? devices,
     List<MeasurementStepDescriptor>? steps,
     int? activeStepIndex,
-    double? uplinkRssi,
-    double? downlinkRssi,
-    double? networkJitterMs,
-    bool? isScanning,
     String? lastActionMessage,
     DateTime? lastUpdated,
   }) {
@@ -133,14 +118,9 @@ class MeasurementPageState {
       lobbyCode: lobbyCode ?? this.lobbyCode,
       inviteLink: inviteLink ?? this.inviteLink,
       showQr: showQr ?? this.showQr,
-      selectedRole: selectedRole ?? this.selectedRole,
       devices: devices ?? this.devices,
       steps: steps ?? this.steps,
       activeStepIndex: activeStepIndex ?? this.activeStepIndex,
-      uplinkRssi: uplinkRssi ?? this.uplinkRssi,
-      downlinkRssi: downlinkRssi ?? this.downlinkRssi,
-      networkJitterMs: networkJitterMs ?? this.networkJitterMs,
-      isScanning: isScanning ?? this.isScanning,
       lastActionMessage: lastActionMessage ?? this.lastActionMessage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
@@ -168,17 +148,22 @@ class MeasurementPageState {
         titleKey: 'measurement_page.timeline.steps.3.title',
         descriptionKey: 'measurement_page.timeline.steps.3.description',
       ),
+      MeasurementStepDescriptor(
+        index: 4,
+        titleKey: 'measurement_page.timeline.steps.4.title',
+        descriptionKey: 'measurement_page.timeline.steps.4.description',
+      ),
     ];
 
     const devices = <MeasurementDevice>[
       MeasurementDevice(
         id: 'local-device',
-        name: 'Host device',
-        role: MeasurementDeviceRole.receiver,
+        name: 'This device',
+        role: MeasurementDeviceRole.none,
         isLocal: true,
         isReady: false,
-        latencyMs: 12,
-        batteryLevel: 0.92,
+        latencyMs: 0,
+        batteryLevel: 1.0,
       ),
     ];
 
@@ -187,14 +172,9 @@ class MeasurementPageState {
       lobbyCode: '',
       inviteLink: '',
       showQr: false,
-      selectedRole: MeasurementDeviceRole.receiver,
       devices: devices,
       steps: steps,
       activeStepIndex: 0,
-      uplinkRssi: -52,
-      downlinkRssi: -54,
-      networkJitterMs: 6,
-      isScanning: false,
       lastActionMessage: 'measurement_page.lobby.status_idle',
       lastUpdated: DateTime.now(),
     );

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,26 +16,11 @@ class MeasurementPageBloc
     on<MeasurementLobbyQrToggled>(_onLobbyQrToggled);
     on<MeasurementLobbyCodeRefreshed>(_onLobbyCodeRefreshed);
     on<MeasurementLobbyLinkCopied>(_onLobbyLinkCopied);
-    on<MeasurementRoleSelected>(_onRoleSelected);
+    on<MeasurementDeviceRoleChanged>(_onDeviceRoleChanged);
     on<MeasurementDeviceReadyToggled>(_onDeviceReadyToggled);
     on<MeasurementDeviceDemoJoined>(_onDeviceJoined);
     on<MeasurementDeviceDemoLeft>(_onDeviceLeft);
-    on<MeasurementTelemetryTick>(_onTelemetryTick);
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
-    on<MeasurementScanningToggled>(_onScanningToggled);
-
-    _telemetryTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => add(const MeasurementTelemetryTick()),
-    );
-  }
-
-  Timer? _telemetryTimer;
-
-  @override
-  Future<void> close() {
-    _telemetryTimer?.cancel();
-    return super.close();
   }
 
   void _onLobbyCreated(
@@ -87,26 +71,20 @@ class MeasurementPageBloc
     );
   }
 
-  void _onRoleSelected(
-    MeasurementRoleSelected event,
+  void _onDeviceRoleChanged(
+    MeasurementDeviceRoleChanged event,
     Emitter<MeasurementPageState> emit,
   ) {
     final devices = state.devices
         .map((device) {
-          if (device.isLocal) {
+          if (device.id == event.deviceId) {
             return device.copyWith(role: event.role);
           }
           return device;
         })
         .toList(growable: false);
 
-    emit(
-      state.copyWith(
-        selectedRole: event.role,
-        devices: devices,
-        lastActionMessage: 'measurement_page.roles.updated',
-      ),
-    );
+    emit(state.copyWith(devices: devices));
   }
 
   void _onDeviceReadyToggled(
@@ -168,63 +146,12 @@ class MeasurementPageBloc
     );
   }
 
-  void _onTelemetryTick(
-    MeasurementTelemetryTick event,
-    Emitter<MeasurementPageState> emit,
-  ) {
-    if (!state.lobbyActive) {
-      return;
-    }
-    final random = Random();
-    final devices = state.devices
-        .map((device) {
-          if (device.isLocal) {
-            return device.copyWith(
-              latencyMs: 8 + random.nextInt(7),
-              batteryLevel: (device.batteryLevel - 0.002).clamp(0.35, 1.0),
-            );
-          }
-          return device.copyWith(
-            latencyMs: device.latencyMs + random.nextInt(7) - 3,
-            batteryLevel: (device.batteryLevel - 0.0015).clamp(0.25, 1.0),
-          );
-        })
-        .toList(growable: false);
-
-    final uplink = (state.uplinkRssi + (random.nextDouble() * 2 - 1.0)).clamp(
-      -60.0,
-      -42.0,
-    );
-    final downlink = (state.downlinkRssi + (random.nextDouble() * 2 - 1.2))
-        .clamp(-64.0, -45.0);
-    final jitter = (state.networkJitterMs + random.nextInt(7) - 3)
-        .clamp(2, 18)
-        .toDouble();
-
-    emit(
-      state.copyWith(
-        devices: devices,
-        uplinkRssi: uplink,
-        downlinkRssi: downlink,
-        networkJitterMs: jitter,
-        lastUpdated: DateTime.now(),
-      ),
-    );
-  }
-
   void _onTimelineAdvanced(
     MeasurementTimelineAdvanced event,
     Emitter<MeasurementPageState> emit,
   ) {
     final nextIndex = (state.activeStepIndex + 1) % state.steps.length;
     emit(state.copyWith(activeStepIndex: nextIndex));
-  }
-
-  void _onScanningToggled(
-    MeasurementScanningToggled event,
-    Emitter<MeasurementPageState> emit,
-  ) {
-    emit(state.copyWith(isScanning: !state.isScanning));
   }
 
   String _generateLobbyCode() {
