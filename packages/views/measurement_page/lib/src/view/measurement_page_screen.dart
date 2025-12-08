@@ -99,10 +99,23 @@ class _MeasurementHeader extends StatelessWidget {
       'measurement_page.header_badge_background',
     );
     final badgeText = _themeColor('measurement_page.header_badge_text');
+    final accentColor = _themeColor('measurement_page.accent');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back, color: accentColor),
+          tooltip: _tr('common.back'),
+          style: IconButton.styleFrom(
+            backgroundColor: accentColor.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           decoration: BoxDecoration(

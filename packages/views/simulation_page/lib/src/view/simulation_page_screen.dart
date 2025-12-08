@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:common_helpers/common_helpers.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
@@ -24,8 +26,84 @@ class SimulationPageScreen extends StatelessWidget {
   }
 }
 
-class _SimulationPageView extends StatelessWidget {
+class _SimulationPageView extends StatefulWidget {
   const _SimulationPageView();
+
+  @override
+  State<_SimulationPageView> createState() => _SimulationPageViewState();
+}
+
+class _SimulationPageViewState extends State<_SimulationPageView> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _metricsKey = GlobalKey();
+  bool _isSimulationDialogShowing = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _showSimulationDialog(BuildContext context) {
+    if (_isSimulationDialogShowing) return;
+    _isSimulationDialogShowing = true;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return _SimulationProgressDialog(
+          onComplete: () {
+            Navigator.of(context).pop();
+            _isSimulationDialogShowing = false;
+            // Advance to step 4 (results)
+            this.context.read<SimulationPageBloc>().add(
+              const SimulationTimelineAdvanced(),
+            );
+            // Scroll to results after a short delay
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _scrollToMetrics();
+            });
+          },
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.9, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  void _scrollToMetrics() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_metricsKey.currentContext != null) {
+        final renderBox =
+            _metricsKey.currentContext!.findRenderObject() as RenderBox?;
+        if (renderBox != null) {
+          final position = renderBox.localToGlobal(Offset.zero);
+          final scrollOffset =
+              _scrollController.offset +
+              position.dy -
+              MediaQuery.of(context).padding.top -
+              100;
+          _scrollController.animateTo(
+            scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,20 +111,27 @@ class _SimulationPageView extends StatelessWidget {
       'simulation_page.background_gradient',
     );
 
-    return BlocListener<SimulationPageBloc, SimulationPageState>(
-      listenWhen: (previous, current) =>
-          previous.activeStepIndex != current.activeStepIndex,
-      listener: (context, state) {
-        // Sync room modeling step with simulation step
-        final roomBloc = context.read<RoomModelingBloc>();
-        if (state.activeStepIndex == 0) {
-          // Step 1: Construct wall structure
-          roomBloc.add(const StepChanged(RoomModelingStep.structure));
-        } else if (state.activeStepIndex >= 1) {
-          // Step 2+: Furnishing
-          roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SimulationPageBloc, SimulationPageState>(
+          listenWhen: (previous, current) =>
+              previous.activeStepIndex != current.activeStepIndex,
+          listener: (context, state) {
+            // Sync room modeling step with simulation step
+            final roomBloc = context.read<RoomModelingBloc>();
+            if (state.activeStepIndex == 0) {
+              roomBloc.add(const StepChanged(RoomModelingStep.structure));
+            } else if (state.activeStepIndex >= 1) {
+              roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+            }
+
+            // Show simulation dialog when entering step 3 (index 2)
+            if (state.activeStepIndex == 2) {
+              _showSimulationDialog(context);
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: _themeColor('app.background'),
         body: Container(
@@ -87,6 +172,7 @@ class _SimulationPageView extends StatelessWidget {
                     radius: const Radius.circular(999),
                   ),
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: contentPadding,
                     child: BlocBuilder<SimulationPageBloc, SimulationPageState>(
                       buildWhen: (previous, current) =>
@@ -115,7 +201,7 @@ class _SimulationPageView extends StatelessWidget {
                             const _SimulationTimelineCard(),
                             if (showMetrics) ...[
                               SizedBox(height: isWide ? 48 : 36),
-                              const _SimulationMetricSection(),
+                              _SimulationMetricSection(key: _metricsKey),
                             ],
                           ],
                         );
@@ -132,6 +218,126 @@ class _SimulationPageView extends StatelessWidget {
   }
 }
 
+class _SimulationProgressDialog extends StatefulWidget {
+  const _SimulationProgressDialog({required this.onComplete});
+
+  final VoidCallback onComplete;
+
+  @override
+  State<_SimulationProgressDialog> createState() =>
+      _SimulationProgressDialogState();
+}
+
+class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
+  int _countdown = 3;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown > 1) {
+        setState(() {
+          _countdown--;
+        });
+      } else {
+        timer.cancel();
+        widget.onComplete();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final panelColor = _themeColor('simulation_page.metrics_background');
+    final accentColor = _themeColor('simulation_page.timeline_active');
+
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          margin: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: panelColor,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _tr('simulation_page.progress.title'),
+                style: textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tr('simulation_page.progress.description'),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '$_countdown',
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SimulationHeader extends StatelessWidget {
   const _SimulationHeader();
 
@@ -140,10 +346,23 @@ class _SimulationHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final badgeColor = _themeColor('simulation_page.header_badge_background');
     final badgeText = _themeColor('simulation_page.header_badge_text');
+    final accentColor = _themeColor('simulation_page.timeline_active');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back, color: accentColor),
+          tooltip: _tr('common.back'),
+          style: IconButton.styleFrom(
+            backgroundColor: accentColor.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           decoration: BoxDecoration(
@@ -184,7 +403,7 @@ class _SimulationHeader extends StatelessWidget {
 }
 
 class _SimulationMetricSection extends StatelessWidget {
-  const _SimulationMetricSection();
+  const _SimulationMetricSection({super.key});
 
   @override
   Widget build(BuildContext context) {

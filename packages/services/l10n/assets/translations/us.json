@@ -1,4 +1,7 @@
 {
+    "common": {
+        "back": "Back"
+    },
     "app": {
         "loading_title": "Loading Sonalyze",
         "loading_message": "Preparing your acoustic workspace..."
@@ -31,7 +34,7 @@
         "features": {
             "0": {
                 "title": "Room modeling",
-                "description": "Draw walls, place furniture and openings, and visualize your room in an interactive 3D preview before running simulations.",
+                "description": "Draw walls, place furniture and openings, and visualize your room in an interactive 3D preview before running simulations to make sure everything looks right.",
                 "metric_label": "Interactive preview",
                 "metric_value": "3D"
             },
@@ -259,6 +262,10 @@
         },
         "results": {
             "title": "Simulation results"
+        },
+        "progress": {
+            "title": "Running simulation",
+            "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment."
         },
         "timeline": {
             "title": "Simulation timeline",

@@ -120,8 +120,6 @@ class _LandingPageView extends StatelessWidget {
                         SizedBox(height: sectionSpacing),
                         _FeatureShowcase(isWide: isWide, isMedium: isMedium),
                         SizedBox(height: sectionSpacing),
-                        _MetricsSection(isWide: isWide),
-                        SizedBox(height: sectionSpacing),
                         _WorkflowSection(isWide: isWide),
                         SizedBox(height: sectionSpacing),
                         const _ContactSection(),
@@ -555,76 +553,6 @@ class _FeatureShowcase extends StatelessWidget {
               },
             ),
           ],
-        );
-      },
-    );
-  }
-}
-
-class _MetricsSection extends StatelessWidget {
-  const _MetricsSection({required this.isWide});
-
-  final bool isWide;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final cardBackground = _themeColor('landing_page.metric_card_background');
-    final mutedText = _themeColor('landing_page.metric_card_text_muted');
-
-    return BlocBuilder<LandingPageBloc, LandingPageState>(
-      buildWhen: (previous, current) => previous.metrics != current.metrics,
-      builder: (context, state) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            const gap = 24.0;
-            final metrics = state.metrics;
-            final maxWidth = constraints.maxWidth;
-            final targetWidth = isWide ? 320.0 : 280.0;
-            final rawColumns = ((maxWidth + gap) / (targetWidth + gap)).floor();
-            final columns = math.max(1, math.min(metrics.length, rawColumns));
-            final itemWidth = columns > 0
-                ? (maxWidth - gap * (columns - 1)) / columns
-                : maxWidth;
-
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: metrics.map((metric) {
-                return SizedBox(
-                  width: itemWidth,
-                  child: SonalyzeSurface(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 26,
-                    ),
-                    backgroundColor: cardBackground.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _tr(metric.valueKey),
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _tr(metric.labelKey),
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: mutedText,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            );
-          },
         );
       },
     );

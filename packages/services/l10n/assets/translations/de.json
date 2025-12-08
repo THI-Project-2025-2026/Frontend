@@ -1,4 +1,7 @@
 {
+    "common": {
+        "back": "Zurück"
+    },
     "app": {
         "loading_title": "Sonalyze wird geladen",
         "loading_message": "Akustische Arbeitsumgebung wird vorbereitet..."
@@ -259,6 +262,10 @@
         },
         "results": {
             "title": "Simulationsergebnisse"
+        },
+        "progress": {
+            "title": "Simulation läuft",
+            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment."
         },
         "timeline": {
             "title": "Simulations-Ablauf",
