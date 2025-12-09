@@ -2,9 +2,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sonalyze_webview/sonalyze_webview.dart';
 import 'package:core_ui/core_ui.dart';
 import 'room_modeling_l10n.dart';
+import 'bloc/room_modeling_bloc.dart';
+import 'bloc/room_modeling_state.dart';
+import 'storage/room_plan_exporter.dart';
 
 class Room3DPreview extends StatefulWidget {
   const Room3DPreview({super.key});
@@ -16,7 +20,29 @@ class Room3DPreview extends StatefulWidget {
 class _Room3DPreviewState extends State<Room3DPreview> {
   static const _bundlePrefix = 'assets/frontend_roomcreator/';
 
-  late final Future<String> _htmlFuture = _loadInlineBundle();
+  late final Future<String> _htmlFuture;
+  String? _roomJsonString;
+
+  @override
+  void initState() {
+    super.initState();
+    _htmlFuture = _loadInlineBundle();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get JSON data from BLoC here where context is available
+    try {
+      final bloc = context.read<RoomModelingBloc>();
+      final state = bloc.state;
+      final exporter = RoomPlanExporter();
+      final roomJson = exporter.export(state);
+      _roomJsonString = jsonEncode(roomJson);
+    } catch (e) {
+      // Silently handle errors - will just not inject data
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +126,7 @@ class _Room3DPreviewState extends State<Room3DPreview> {
                       wrapInSurface: false,
                     );
                   }
-                  final html = snapshot.data ?? '';
+                  var html = snapshot.data ?? '';
                   if (html.isEmpty) {
                     return _RoomCreatorNotice(
                       title: title,
@@ -113,6 +139,16 @@ class _Room3DPreviewState extends State<Room3DPreview> {
                       wrapInSurface: false,
                     );
                   }
+
+                  // Inject room JSON data into HTML
+                  if (_roomJsonString != null) {
+                    try {
+                      html = _injectJsonData(html, _roomJsonString!);
+                    } catch (e) {
+                      // Silently handle injection errors
+                    }
+                  }
+
                   return SonalyzeWebView(
                     htmlContent: html,
                     backgroundColor:
@@ -200,6 +236,35 @@ class _Room3DPreviewState extends State<Room3DPreview> {
       RegExp(r'<noscript>.*?</noscript>', dotAll: true),
       '',
     );
+  }
+
+  String _injectJsonData(String html, String jsonString) {
+    final jsonScript = '<script type="text/javascript">'
+        'window.sonalyzeData = $jsonString;'
+        '</script>';
+
+    // Insert BEFORE the first <script> tag (before polyfills/main)
+    // This ensures it runs before Angular initializes
+    final scriptMatch = RegExp(r'<script[^>]*>').firstMatch(html);
+    if (scriptMatch != null) {
+      final insertPos = scriptMatch.start;
+      return html.substring(0, insertPos) +
+          jsonScript +
+          html.substring(insertPos);
+    }
+
+    // Fallback: Insert before </body>
+    if (html.contains('</body>')) {
+      return html.replaceFirst('</body>', jsonScript + '</body>');
+    }
+
+    // Last resort: Insert before </head>
+    if (html.contains('</head>')) {
+      return html.replaceFirst('</head>', jsonScript + '</head>');
+    }
+
+    // Final fallback: prepend to entire HTML
+    return jsonScript + html;
   }
 
   String _text(String key, String fallback) {
