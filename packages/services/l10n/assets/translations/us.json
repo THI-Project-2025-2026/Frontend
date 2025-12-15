@@ -260,6 +260,20 @@
                 "unit": "ratio"
             }
         },
+        "room_type_selector": {
+            "label": "Room Type"
+        },
+        "room_type": {
+            "classroom": "Classroom",
+            "concertHall": "Concert Hall",
+            "homeTheater": "Home Theater",
+            "recordingStudio": "Recording Studio",
+            "office": "Office"
+        },
+        "legend": {
+            "measured": "Measured",
+            "ideal": "Ideal"
+        },
         "results": {
             "title": "Simulation results"
         },

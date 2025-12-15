@@ -260,6 +260,20 @@
                 "unit": "Verhältnis"
             }
         },
+        "room_type_selector": {
+            "label": "Raumtyp"
+        },
+        "room_type": {
+            "classroom": "Klassenzimmer",
+            "concertHall": "Konzertsaal",
+            "homeTheater": "Heimkino",
+            "recordingStudio": "Tonstudio",
+            "office": "Büro"
+        },
+        "legend": {
+            "measured": "Gemessen",
+            "ideal": "Ideal"
+        },
         "results": {
             "title": "Simulationsergebnisse"
         },
