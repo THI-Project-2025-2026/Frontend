@@ -25,6 +25,7 @@ workspace:
   - packages/core/ui
   - packages/services/l10n
   - packages/services/recording
+  - packages/services/backend_gateway
   - packages/views/landing_page
   - packages/views/measurement_page
   - packages/views/simulation_page
@@ -49,6 +50,8 @@ dependencies:
     path: packages/services/l10n
   recording_service:
     path: packages/services/recording
+  backend_gateway:
+    path: packages/services/backend_gateway
   core_ui:
     path: packages/core/ui
   landing_page:
