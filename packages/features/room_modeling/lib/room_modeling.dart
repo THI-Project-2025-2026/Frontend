@@ -3,3 +3,4 @@ export 'src/bloc/room_modeling_bloc.dart';
 export 'src/bloc/room_modeling_event.dart';
 export 'src/bloc/room_modeling_state.dart'
     show RoomModelingState, RoomModelingStep, RoomModelingTool;
+export 'src/storage/room_plan_exporter.dart' show RoomPlanExporter;

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../gateway_config.dart';
 import '../gateway_connection_repository.dart';
+import '../gateway_envelope.dart';
 
 part 'gateway_connection_event.dart';
 part 'gateway_connection_state.dart';
@@ -25,13 +26,18 @@ class GatewayConnectionBloc
 
   final GatewayConfig _config;
   final GatewayConnectionRepository _repository;
+  final StreamController<GatewayEnvelope> _envelopeController =
+      StreamController<GatewayEnvelope>.broadcast();
   StreamSubscription? _channelSubscription;
+
+  Stream<GatewayEnvelope> get envelopes => _envelopeController.stream;
 
   Future<void> _onConnectionRequested(
     GatewayConnectionRequested event,
     Emitter<GatewayConnectionState> emit,
   ) async {
     final targetUri = event.overrideUri ?? _config.buildUri();
+    debugPrint('Gateway connection requested for $targetUri');
     emit(
       state.copyWith(
         status: GatewayConnectionStatus.connecting,
@@ -44,10 +50,21 @@ class GatewayConnectionBloc
     try {
       final channel = await _repository.connect(targetUri);
       _channelSubscription = channel.stream.listen(
-        (_) {},
-        onError: (Object error, StackTrace stackTrace) => add(
-          _GatewayConnectionDropped(error: error, stackTrace: stackTrace),
-        ),
+        (dynamic raw) {
+          final envelope = GatewayEnvelope.tryParse(raw);
+          if (envelope != null) {
+            debugPrint(
+              'Gateway recv <- ${envelope.event} (request_id=${envelope.requestId ?? 'n/a'})',
+            );
+            _envelopeController.add(envelope);
+          } else {
+            debugPrint('Gateway connection received unknown payload: $raw');
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _envelopeController.addError(error, stackTrace);
+          add(_GatewayConnectionDropped(error: error, stackTrace: stackTrace));
+        },
         onDone: () => add(const _GatewayConnectionDropped(remoteClose: true)),
         cancelOnError: false,
       );
@@ -124,6 +141,7 @@ class GatewayConnectionBloc
   Future<void> close() async {
     await _channelSubscription?.cancel();
     await _repository.close();
+    await _envelopeController.close();
     await super.close();
   }
 }

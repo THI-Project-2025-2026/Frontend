@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:backend_gateway/backend_gateway.dart';
 import 'package:common_helpers/common_helpers.dart';
 import 'package:core_ui/core_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
 import 'package:room_modeling/room_modeling.dart';
+import 'package:uuid/uuid.dart';
 
 import '../bloc/simulation_page_bloc.dart';
 
@@ -16,10 +21,12 @@ class SimulationPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gatewayBloc = GetIt.instance<GatewayConnectionBloc>();
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => SimulationPageBloc()),
         BlocProvider(create: (_) => RoomModelingBloc()),
+        BlocProvider.value(value: gatewayBloc),
       ],
       child: const _SimulationPageView(),
     );
@@ -37,6 +44,8 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _metricsKey = GlobalKey();
   bool _isSimulationDialogShowing = false;
+  final GatewayConnectionRepository _gatewayRepository =
+      GetIt.instance<GatewayConnectionRepository>();
 
   @override
   void dispose() {
@@ -47,6 +56,8 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
   void _showSimulationDialog(BuildContext context) {
     if (_isSimulationDialogShowing) return;
     _isSimulationDialogShowing = true;
+    final gatewayBloc = context.read<GatewayConnectionBloc>();
+    final roomBloc = context.read<RoomModelingBloc>();
 
     showGeneralDialog(
       context: context,
@@ -55,9 +66,11 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
         return _SimulationProgressDialog(
+          gatewayBloc: gatewayBloc,
+          gatewayRepository: _gatewayRepository,
+          roomBloc: roomBloc,
           onComplete: () {
             Navigator.of(context).pop();
-            _isSimulationDialogShowing = false;
             // Advance to step 4 (results)
             this.context.read<SimulationPageBloc>().add(
               const SimulationTimelineAdvanced(),
@@ -80,7 +93,9 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
           ),
         );
       },
-    );
+    ).then((_) {
+      _isSimulationDialogShowing = false;
+    });
   }
 
   void _scrollToMetrics() {
@@ -219,9 +234,17 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
 }
 
 class _SimulationProgressDialog extends StatefulWidget {
-  const _SimulationProgressDialog({required this.onComplete});
+  const _SimulationProgressDialog({
+    required this.onComplete,
+    required this.gatewayBloc,
+    required this.gatewayRepository,
+    required this.roomBloc,
+  });
 
   final VoidCallback onComplete;
+  final GatewayConnectionBloc gatewayBloc;
+  final GatewayConnectionRepository gatewayRepository;
+  final RoomModelingBloc roomBloc;
 
   @override
   State<_SimulationProgressDialog> createState() =>
@@ -229,31 +252,181 @@ class _SimulationProgressDialog extends StatefulWidget {
 }
 
 class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
-  int _countdown = 3;
-  Timer? _timer;
+  static const Duration _connectionTimeout = Duration(seconds: 12);
+  static const Duration _simulationTimeout = Duration(seconds: 45);
+  static const Uuid _uuid = Uuid();
+
+  final List<_SimulationTask> _tasks = <_SimulationTask>[
+    const _SimulationTask(label: 'Connection to backend successful'),
+    const _SimulationTask(label: 'Data sent to backend successful'),
+    const _SimulationTask(label: 'Simulation completed'),
+  ];
+
+  bool _hasError = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _startCountdown();
+    _runWorkflow();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startCountdown() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdown > 1) {
-        setState(() {
-          _countdown--;
-        });
-      } else {
-        timer.cancel();
-        widget.onComplete();
+  Future<void> _runWorkflow() async {
+    final workflowTimer = Stopwatch()..start();
+    String? requestId;
+    try {
+      await _ensureConnected();
+      requestId = _uuid.v4();
+      debugPrint('Simulation workflow started (requestId: $requestId)');
+      final responseFuture = _responseFor(requestId);
+      await _sendSimulationPayload(requestId);
+      debugPrint('Awaiting simulation response (requestId: $requestId)');
+      await _awaitSimulationCompletion(responseFuture, requestId);
+      if (!mounted) {
+        return;
       }
+      debugPrint(
+        'Simulation workflow finished in ${workflowTimer.elapsedMilliseconds} ms '
+        '(requestId: $requestId)',
+      );
+      widget.onComplete();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Simulation workflow failed (requestId: ${requestId ?? 'n/a'}): $error',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _hasError = true;
+        _errorMessage = error.toString();
+      });
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stackTrace),
+      );
+    }
+  }
+
+  Future<void> _ensureConnected() async {
+    final timer = Stopwatch()..start();
+    debugPrint('Ensuring gateway connection...');
+    _updateTask(0, _SimulationTaskStatus.active);
+    final bloc = widget.gatewayBloc;
+    if (bloc.state.status == GatewayConnectionStatus.connected) {
+      _updateTask(0, _SimulationTaskStatus.success);
+      debugPrint('Gateway already connected.');
+      return;
+    }
+    if (bloc.state.status == GatewayConnectionStatus.failure ||
+        bloc.state.status == GatewayConnectionStatus.disconnected ||
+        bloc.state.status == GatewayConnectionStatus.initial) {
+      bloc.add(const GatewayConnectionRequested());
+    }
+    try {
+      await bloc.stream
+          .firstWhere(
+            (state) => state.status == GatewayConnectionStatus.connected,
+          )
+          .timeout(_connectionTimeout);
+      _updateTask(0, _SimulationTaskStatus.success);
+      debugPrint('Gateway connected in ${timer.elapsedMilliseconds} ms.');
+    } on Object catch (error) {
+      _updateTask(0, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint('Gateway connection failed: $error');
+      rethrow;
+    }
+  }
+
+  Future<void> _sendSimulationPayload(String requestId) async {
+    final timer = Stopwatch()..start();
+    _updateTask(1, _SimulationTaskStatus.active);
+    try {
+      final exporter = RoomPlanExporter();
+      final roomJson = exporter.export(widget.roomBloc.state);
+      final rooms = roomJson['rooms'];
+      final roomCount = rooms is List ? rooms.length : 0;
+      final furnitureCount = rooms is List && rooms.isNotEmpty
+          ? ((rooms.first as Map<String, dynamic>)['furniture'] as List?)
+                    ?.length ??
+                0
+          : 0;
+      final payload = <String, dynamic>{
+        'event': 'simulation.run',
+        'request_id': requestId,
+        'data': {'room_model': roomJson, 'include_rir': false},
+      };
+      debugPrint('Simulation request payload: ${jsonEncode(payload)}');
+      await widget.gatewayRepository.sendJson(payload);
+      debugPrint(
+        'Simulation payload sent (requestId: $requestId, rooms: $roomCount, '
+        'furniture: $furnitureCount, elapsed: ${timer.elapsedMilliseconds} ms)',
+      );
+      _updateTask(1, _SimulationTaskStatus.success);
+    } on Object catch (error) {
+      _updateTask(1, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint(
+        'Simulation payload send failed (requestId: $requestId): $error',
+      );
+      rethrow;
+    }
+  }
+
+  Future<GatewayEnvelope> _awaitSimulationCompletion(
+    Future<GatewayEnvelope> responseFuture,
+    String requestId,
+  ) async {
+    final timer = Stopwatch()..start();
+    _updateTask(2, _SimulationTaskStatus.active);
+    try {
+      final envelope = await responseFuture;
+      if (envelope.isError) {
+        final message = jsonEncode(envelope.error ?? {'message': 'error'});
+        throw StateError('Simulation failed: $message');
+      }
+      if (envelope.data != null) {
+        debugPrint('Simulation completed result: ${jsonEncode(envelope.data)}');
+      }
+      final responseId = envelope.requestId ?? 'n/a';
+      debugPrint(
+        'Simulation completed successfully (requestId: $requestId, '
+        'responseId: $responseId, elapsed: ${timer.elapsedMilliseconds} ms)',
+      );
+      _updateTask(2, _SimulationTaskStatus.success);
+      return envelope;
+    } on Object catch (error) {
+      _updateTask(2, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint(
+        'Simulation response wait failed (requestId: $requestId): $error',
+      );
+      rethrow;
+    }
+  }
+
+  Future<GatewayEnvelope> _responseFor(String requestId) {
+    return widget.gatewayBloc.envelopes
+        .where(
+          (envelope) =>
+              envelope.requestId == requestId &&
+              envelope.event == 'simulation.run',
+        )
+        .first
+        .timeout(_simulationTimeout);
+  }
+
+  void _updateTask(int index, _SimulationTaskStatus status, {String? detail}) {
+    if (!mounted || index < 0 || index >= _tasks.length) {
+      return;
+    }
+    setState(() {
+      final shouldClearDetail =
+          detail == null &&
+          status != _SimulationTaskStatus.failure &&
+          status != _SimulationTaskStatus.pending;
+      _tasks[index] = _tasks[index].copyWith(
+        status: status,
+        detail: detail,
+        resetDetail: shouldClearDetail,
+      );
     });
   }
 
@@ -267,7 +440,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 460),
           margin: const EdgeInsets.all(32),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
@@ -283,23 +456,14 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 64,
-                height: 64,
-                child: CircularProgressIndicator(
-                  strokeWidth: 4,
-                  valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                ),
-              ),
-              const SizedBox(height: 28),
               Text(
                 _tr('simulation_page.progress.title'),
                 style: textTheme.titleLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
@@ -310,30 +474,146 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
                   ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '$_countdown',
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.w700,
+              for (final task in _tasks) ...[
+                _ProgressStatusRow(task: task, accentColor: accentColor),
+                const SizedBox(height: 16),
+              ],
+              if (_hasError) ...[
+                Text(
+                  _errorMessage ?? 'Simulation failed.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                SonalyzeButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Text(_tr('common.close')),
+                ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProgressStatusRow extends StatelessWidget {
+  const _ProgressStatusRow({required this.task, required this.accentColor});
+
+  final _SimulationTask task;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    late final Widget icon;
+    late final Color detailColor;
+
+    switch (task.status) {
+      case _SimulationTaskStatus.success:
+        icon = Icon(Icons.check_circle, color: accentColor, size: 28);
+        detailColor = accentColor;
+        break;
+      case _SimulationTaskStatus.failure:
+        icon = Icon(Icons.error, color: colorScheme.error, size: 28);
+        detailColor = colorScheme.error;
+        break;
+      case _SimulationTaskStatus.active:
+        icon = SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          ),
+        );
+        detailColor = accentColor;
+        break;
+      case _SimulationTaskStatus.pending:
+      default:
+        final faded = colorScheme.onSurface.withValues(alpha: 0.3);
+        icon = Icon(Icons.radio_button_unchecked, color: faded, size: 24);
+        detailColor = faded;
+        break;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(padding: const EdgeInsets.only(top: 4), child: icon),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                task.label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (task.detail != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    task.detail!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: detailColor.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SimulationTaskStatus { pending, active, success, failure }
+
+class _SimulationTask {
+  const _SimulationTask({
+    required this.label,
+    this.status = _SimulationTaskStatus.pending,
+    this.detail,
+  });
+
+  final String label;
+  final _SimulationTaskStatus status;
+  final String? detail;
+
+  _SimulationTask copyWith({
+    _SimulationTaskStatus? status,
+    String? detail,
+    bool resetDetail = false,
+  }) {
+    return _SimulationTask(
+      label: label,
+      status: status ?? this.status,
+      detail: resetDetail ? null : (detail ?? this.detail),
     );
   }
 }

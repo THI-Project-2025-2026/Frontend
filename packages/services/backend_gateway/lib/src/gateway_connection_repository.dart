@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'websocket/websocket_connector_stub.dart'
@@ -28,5 +31,18 @@ class GatewayConnectionRepository {
     if (current != null) {
       await current.sink.close();
     }
+  }
+
+  Future<void> sendJson(Map<String, dynamic> payload) async {
+    final activeChannel = _channel;
+    if (activeChannel == null) {
+      throw StateError('Gateway connection is not established.');
+    }
+    final event = payload['event'];
+    final requestId = payload['request_id'];
+    debugPrint(
+      'Gateway send -> ${event ?? 'unknown'} (request_id=${requestId ?? 'n/a'})',
+    );
+    activeChannel.sink.add(jsonEncode(payload));
   }
 }
