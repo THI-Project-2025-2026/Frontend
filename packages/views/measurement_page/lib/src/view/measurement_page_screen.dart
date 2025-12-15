@@ -1,7 +1,9 @@
+import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
 
 import '../bloc/measurement_page_bloc.dart';
@@ -14,7 +16,10 @@ class MeasurementPageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => MeasurementPageBloc(),
+      create: (_) => MeasurementPageBloc(
+        repository: GetIt.I<GatewayConnectionRepository>(),
+        gatewayBloc: GetIt.I<GatewayConnectionBloc>(),
+      ),
       child: const _MeasurementPageView(),
     );
   }
@@ -166,12 +171,21 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
 
     children.add(_LobbyCard(state: state));
 
-    children.addAll([
-      const SizedBox(height: 28),
-      _DeviceListCard(state: state),
-      const SizedBox(height: 28),
-      _TimelineCard(state: state),
-    ]);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 28),
+        _DeviceListCard(state: state),
+        const SizedBox(height: 28),
+        _TimelineCard(state: state),
+      ],
+    );
+
+    if (state.lobbyActive && !state.isHost) {
+      children.add(IgnorePointer(child: Opacity(opacity: 0.5, child: content)));
+    } else {
+      children.add(content);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,33 +274,36 @@ class _LobbyCard extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              SonalyzeButton(
-                onPressed: () {
-                  context.read<MeasurementPageBloc>().add(
-                    const MeasurementLobbyCreated(),
-                  );
-                },
-                backgroundColor: accent,
-                foregroundColor: onPrimary,
-                borderRadius: BorderRadius.circular(18),
-                icon: const Icon(Icons.play_circle_outline),
-                child: Text(_tr('measurement_page.lobby.actions.create')),
-              ),
-              SonalyzeButton(
-                onPressed: state.lobbyActive
-                    ? () {
-                        context.read<MeasurementPageBloc>().add(
-                          const MeasurementLobbyCodeRefreshed(),
-                        );
-                      }
-                    : null,
-                variant: SonalyzeButtonVariant.outlined,
-                foregroundColor: accent,
-                borderColor: accent.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(18),
-                icon: const Icon(Icons.refresh),
-                child: Text(_tr('measurement_page.lobby.actions.refresh')),
-              ),
+              if (!state.lobbyActive) ...[
+                SonalyzeButton(
+                  onPressed: () {
+                    context.read<MeasurementPageBloc>().add(
+                      const MeasurementLobbyCreated(),
+                    );
+                  },
+                  backgroundColor: accent,
+                  foregroundColor: onPrimary,
+                  borderRadius: BorderRadius.circular(18),
+                  icon: const Icon(Icons.play_circle_outline),
+                  child: Text(_tr('measurement_page.lobby.actions.create')),
+                ),
+                SonalyzeButton(
+                  onPressed: () => _showJoinLobbyDialog(
+                    context,
+                    context.read<MeasurementPageBloc>(),
+                    accent,
+                    borderColor,
+                  ),
+                  variant: SonalyzeButtonVariant.outlined,
+                  foregroundColor: accent,
+                  borderColor: accent.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(18),
+                  icon: const Icon(Icons.login),
+                  child: const Text('Join'),
+                ),
+              ] else if (state.isHost) ...[
+                // Host controls could go here (e.g. close lobby)
+              ],
               SonalyzeButton(
                 onPressed: state.inviteLink.isEmpty ? null : copyLink,
                 variant: SonalyzeButtonVariant.outlined,
@@ -936,4 +953,51 @@ Color _themeColor(String keyPath) {
 
 List<Color> _themeColors(String keyPath) {
   return AppConstants.getThemeColors(keyPath);
+}
+
+void _showJoinLobbyDialog(
+  BuildContext context,
+  MeasurementPageBloc bloc,
+  Color accent,
+  Color borderColor,
+) {
+  final controller = TextEditingController();
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: _themeColor('measurement_page.panel_background'),
+        title: Text('Join Lobby', style: TextStyle(color: accent)),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: 'Lobby Code',
+            labelStyle: TextStyle(color: accent),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: accent),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Cancel', style: TextStyle(color: accent)),
+          ),
+          TextButton(
+            onPressed: () {
+              final code = controller.text.trim();
+              if (code.isNotEmpty) {
+                bloc.add(MeasurementLobbyJoined(code: code));
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: Text('Join', style: TextStyle(color: accent)),
+          ),
+        ],
+      );
+    },
+  );
 }

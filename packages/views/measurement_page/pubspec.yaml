@@ -18,6 +18,9 @@ dependencies:
     path: ../../core/ui
   common_helpers:
     path: ../../helpers/common
+  backend_gateway:
+    path: ../../services/backend_gateway
+  get_it: ^7.7.0
 
 dev_dependencies:
   flutter_test:

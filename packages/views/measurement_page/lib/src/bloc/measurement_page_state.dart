@@ -61,6 +61,7 @@ class MeasurementDevice {
 class MeasurementPageState {
   MeasurementPageState({
     required this.lobbyActive,
+    required this.lobbyId,
     required this.lobbyCode,
     required this.inviteLink,
     required this.showQr,
@@ -69,10 +70,13 @@ class MeasurementPageState {
     required this.activeStepIndex,
     required this.lastActionMessage,
     required this.lastUpdated,
+    this.isHost = false,
+    this.currentDeviceId = '',
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
        steps = List<MeasurementStepDescriptor>.unmodifiable(steps);
 
   final bool lobbyActive;
+  final String lobbyId;
   final String lobbyCode;
   final String inviteLink;
   final bool showQr;
@@ -81,6 +85,8 @@ class MeasurementPageState {
   final int activeStepIndex;
   final String lastActionMessage;
   final DateTime lastUpdated;
+  final bool isHost;
+  final String currentDeviceId;
 
   MeasurementDevice? get localDevice {
     for (final device in devices) {
@@ -104,6 +110,7 @@ class MeasurementPageState {
 
   MeasurementPageState copyWith({
     bool? lobbyActive,
+    String? lobbyId,
     String? lobbyCode,
     String? inviteLink,
     bool? showQr,
@@ -112,9 +119,12 @@ class MeasurementPageState {
     int? activeStepIndex,
     String? lastActionMessage,
     DateTime? lastUpdated,
+    bool? isHost,
+    String? currentDeviceId,
   }) {
     return MeasurementPageState(
       lobbyActive: lobbyActive ?? this.lobbyActive,
+      lobbyId: lobbyId ?? this.lobbyId,
       lobbyCode: lobbyCode ?? this.lobbyCode,
       inviteLink: inviteLink ?? this.inviteLink,
       showQr: showQr ?? this.showQr,
@@ -123,6 +133,8 @@ class MeasurementPageState {
       activeStepIndex: activeStepIndex ?? this.activeStepIndex,
       lastActionMessage: lastActionMessage ?? this.lastActionMessage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      isHost: isHost ?? this.isHost,
+      currentDeviceId: currentDeviceId ?? this.currentDeviceId,
     );
   }
 
@@ -169,6 +181,7 @@ class MeasurementPageState {
 
     return MeasurementPageState(
       lobbyActive: false,
+      lobbyId: '',
       lobbyCode: '',
       inviteLink: '',
       showQr: false,

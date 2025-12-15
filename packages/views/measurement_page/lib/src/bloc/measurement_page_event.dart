@@ -43,6 +43,18 @@ class MeasurementDeviceReadyToggled extends MeasurementPageEvent {
   final String deviceId;
 }
 
+/// Joins an existing lobby with the given code.
+class MeasurementLobbyJoined extends MeasurementPageEvent {
+  const MeasurementLobbyJoined({required this.code});
+
+  final String code;
+}
+
+/// Refreshes the lobby state from the backend.
+class MeasurementLobbyRefreshed extends MeasurementPageEvent {
+  const MeasurementLobbyRefreshed();
+}
+
 /// Adds a demo remote device into the lobby.
 class MeasurementDeviceDemoJoined extends MeasurementPageEvent {
   const MeasurementDeviceDemoJoined({required this.alias});
