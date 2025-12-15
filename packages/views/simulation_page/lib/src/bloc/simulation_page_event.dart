@@ -58,3 +58,10 @@ class SimulationTimelineAdvanced extends SimulationPageEvent {
 class SimulationTimelineStepBack extends SimulationPageEvent {
   const SimulationTimelineStepBack();
 }
+
+/// Stores the raw payload from a completed simulation run.
+class SimulationResultReceived extends SimulationPageEvent {
+  const SimulationResultReceived(this.payload);
+
+  final Map<String, dynamic>? payload;
+}

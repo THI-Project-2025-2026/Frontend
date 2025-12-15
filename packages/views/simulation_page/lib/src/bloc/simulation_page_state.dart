@@ -1,5 +1,7 @@
 part of 'simulation_page_bloc.dart';
 
+const Object _copyWithUnset = Object();
+
 /// High level categories of furniture or treatment elements that can be placed
 /// into the simulation grid.
 enum SimulationFurnitureKind { absorber, diffuser, seating, stage }
@@ -98,6 +100,146 @@ class SimulationMetricSeries {
   final List<double> values;
 }
 
+/// Captures the parsed response from the backend simulation service.
+class SimulationResult {
+  SimulationResult({
+    required this.sampleRateHz,
+    required List<SimulationResultPair> pairs,
+    required List<String> warnings,
+  }) : pairs = List.unmodifiable(pairs),
+       warnings = List.unmodifiable(warnings);
+
+  final int sampleRateHz;
+  final List<SimulationResultPair> pairs;
+  final List<String> warnings;
+
+  static SimulationResult? tryParse(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    final sampleRate = _asInt(json['sample_rate_hz']);
+    final pairsRaw = json['pairs'];
+    if (sampleRate == null || pairsRaw is! List) {
+      return null;
+    }
+    final parsedPairs = <SimulationResultPair>[];
+    for (final rawPair in pairsRaw) {
+      final pair = SimulationResultPair.tryParse(rawPair);
+      if (pair != null) {
+        parsedPairs.add(pair);
+      }
+    }
+
+    return SimulationResult(
+      sampleRateHz: sampleRate,
+      pairs: parsedPairs,
+      warnings: _stringList(json['warnings']),
+    );
+  }
+}
+
+class SimulationResultPair {
+  SimulationResultPair({
+    required this.sourceId,
+    required this.microphoneId,
+    required this.metrics,
+    required List<String> warnings,
+  }) : warnings = List.unmodifiable(warnings);
+
+  final String sourceId;
+  final String microphoneId;
+  final SimulationResultMetrics metrics;
+  final List<String> warnings;
+
+  static SimulationResultPair? tryParse(dynamic raw) {
+    if (raw is! Map<String, dynamic>) {
+      return null;
+    }
+    final sourceId = raw['source_id'] as String?;
+    final microphoneId = raw['microphone_id'] as String?;
+    if (sourceId == null || microphoneId == null) {
+      return null;
+    }
+    final metrics = SimulationResultMetrics.fromJson(
+      raw['metrics'] as Map<String, dynamic>?,
+    );
+    return SimulationResultPair(
+      sourceId: sourceId,
+      microphoneId: microphoneId,
+      metrics: metrics,
+      warnings: _stringList(raw['warnings']),
+    );
+  }
+}
+
+class SimulationResultMetrics {
+  const SimulationResultMetrics({
+    this.rt60Seconds,
+    this.edtSeconds,
+    this.earlyDecay50,
+    this.clarity50Db,
+    this.clarity80Db,
+    this.directToReverberantDb,
+    this.sti,
+    this.stiMethod,
+  });
+
+  final double? rt60Seconds;
+  final double? edtSeconds;
+  final double? earlyDecay50;
+  final double? clarity50Db;
+  final double? clarity80Db;
+  final double? directToReverberantDb;
+  final double? sti;
+  final String? stiMethod;
+
+  static SimulationResultMetrics fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SimulationResultMetrics();
+    }
+    return SimulationResultMetrics(
+      rt60Seconds: _asDouble(json['rt60_s']),
+      edtSeconds: _asDouble(json['edt_s']),
+      earlyDecay50: _asDouble(json['d50']),
+      clarity50Db: _asDouble(json['c50_db']),
+      clarity80Db: _asDouble(json['c80_db']),
+      directToReverberantDb: _asDouble(json['drr_db']),
+      sti: _asDouble(json['sti']),
+      stiMethod: json['sti_method'] as String?,
+    );
+  }
+}
+
+List<String> _stringList(dynamic value) {
+  if (value is List) {
+    return value.whereType<String>().toList(growable: false);
+  }
+  return const <String>[];
+}
+
+int? _asInt(dynamic value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value);
+  }
+  return null;
+}
+
+double? _asDouble(dynamic value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value);
+  }
+  return null;
+}
+
 @immutable
 class SimulationPageState {
   SimulationPageState({
@@ -112,6 +254,7 @@ class SimulationPageState {
     required List<SimulationFurnitureDescriptor> palette,
     required List<SimulationStepDescriptor> steps,
     required this.activeStepIndex,
+    required this.lastResult,
   }) : furniture = List.unmodifiable(furniture),
        metrics = List.unmodifiable(metrics),
        presets = List.unmodifiable(presets),
@@ -131,6 +274,7 @@ class SimulationPageState {
   final List<SimulationFurnitureDescriptor> palette;
   final List<SimulationStepDescriptor> steps;
   final int activeStepIndex;
+  final SimulationResult? lastResult;
 
   SimulationStepDescriptor? get activeStep {
     if (steps.isEmpty) {
@@ -161,6 +305,7 @@ class SimulationPageState {
     List<SimulationFurnitureDescriptor>? palette,
     List<SimulationStepDescriptor>? steps,
     int? activeStepIndex,
+    Object? lastResult = _copyWithUnset,
   }) {
     return SimulationPageState(
       width: width ?? this.width,
@@ -175,6 +320,9 @@ class SimulationPageState {
       palette: palette ?? this.palette,
       steps: steps ?? this.steps,
       activeStepIndex: activeStepIndex ?? this.activeStepIndex,
+      lastResult: identical(lastResult, _copyWithUnset)
+          ? this.lastResult
+          : lastResult as SimulationResult?,
     );
   }
 
@@ -314,6 +462,7 @@ class SimulationPageState {
       palette: palette,
       steps: steps,
       activeStepIndex: 0,
+      lastResult: null,
     );
 
     return state.recalculate();

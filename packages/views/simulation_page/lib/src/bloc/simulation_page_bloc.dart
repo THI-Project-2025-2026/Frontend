@@ -22,6 +22,7 @@ class SimulationPageBloc
     on<SimulationRoomPresetApplied>(_onPresetApplied);
     on<SimulationTimelineAdvanced>(_onTimelineAdvanced);
     on<SimulationTimelineStepBack>(_onTimelineStepBack);
+    on<SimulationResultReceived>(_onResultReceived);
   }
 
   void _onDimensionChanged(
@@ -133,6 +134,18 @@ class SimulationPageBloc
     if (state.activeStepIndex > 0) {
       emit(state.copyWith(activeStepIndex: state.activeStepIndex - 1));
     }
+  }
+
+  void _onResultReceived(
+    SimulationResultReceived event,
+    Emitter<SimulationPageState> emit,
+  ) {
+    final result = SimulationResult.tryParse(event.payload);
+    if (result == null) {
+      debugPrint('Simulation result parsing failed; payload ignored.');
+      return;
+    }
+    emit(state.copyWith(lastResult: result));
   }
 }
 

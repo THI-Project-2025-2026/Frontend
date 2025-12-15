@@ -69,12 +69,12 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
           gatewayBloc: gatewayBloc,
           gatewayRepository: _gatewayRepository,
           roomBloc: roomBloc,
-          onComplete: () {
+          onComplete: (result) {
             Navigator.of(context).pop();
+            final simulationBloc = this.context.read<SimulationPageBloc>();
+            simulationBloc.add(SimulationResultReceived(result));
             // Advance to step 4 (results)
-            this.context.read<SimulationPageBloc>().add(
-              const SimulationTimelineAdvanced(),
-            );
+            simulationBloc.add(const SimulationTimelineAdvanced());
             // Scroll to results after a short delay
             Future.delayed(const Duration(milliseconds: 100), () {
               _scrollToMetrics();
@@ -241,7 +241,7 @@ class _SimulationProgressDialog extends StatefulWidget {
     required this.roomBloc,
   });
 
-  final VoidCallback onComplete;
+  final ValueChanged<Map<String, dynamic>?> onComplete;
   final GatewayConnectionBloc gatewayBloc;
   final GatewayConnectionRepository gatewayRepository;
   final RoomModelingBloc roomBloc;
@@ -281,7 +281,10 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
       final responseFuture = _responseFor(requestId);
       await _sendSimulationPayload(requestId);
       debugPrint('Awaiting simulation response (requestId: $requestId)');
-      await _awaitSimulationCompletion(responseFuture, requestId);
+      final envelope = await _awaitSimulationCompletion(
+        responseFuture,
+        requestId,
+      );
       if (!mounted) {
         return;
       }
@@ -289,7 +292,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
         'Simulation workflow finished in ${workflowTimer.elapsedMilliseconds} ms '
         '(requestId: $requestId)',
       );
-      widget.onComplete();
+      widget.onComplete(_payloadAsJsonMap(envelope.data));
     } catch (error, stackTrace) {
       debugPrint(
         'Simulation workflow failed (requestId: ${requestId ?? 'n/a'}): $error',
@@ -411,6 +414,16 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
         )
         .first
         .timeout(_simulationTimeout);
+  }
+
+  Map<String, dynamic>? _payloadAsJsonMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
   }
 
   void _updateTask(int index, _SimulationTaskStatus status, {String? detail}) {
@@ -691,6 +704,7 @@ class _SimulationMetricSection extends StatelessWidget {
 
     return BlocBuilder<SimulationPageBloc, SimulationPageState>(
       builder: (context, state) {
+        final result = state.lastResult;
         return SonalyzeSurface(
           padding: const EdgeInsets.all(28),
           backgroundColor: panelColor.withValues(alpha: 0.95),
@@ -706,31 +720,455 @@ class _SimulationMetricSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth > 1000;
-                  final itemWidth = isWide
-                      ? (constraints.maxWidth - 32) / 3
-                      : double.infinity;
-                  return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      for (final series in state.metrics)
-                        SizedBox(
-                          width: itemWidth,
-                          child: _MetricChartCard(series: series),
-                        ),
-                    ],
-                  );
-                },
-              ),
+              if (result != null)
+                _SimulationResultCards(result: result)
+              else
+                _SimulationMetricsPlaceholder(series: state.metrics),
             ],
           ),
         );
       },
     );
   }
+}
+
+class _SimulationMetricsPlaceholder extends StatelessWidget {
+  const _SimulationMetricsPlaceholder({required this.series});
+
+  final List<SimulationMetricSeries> series;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (series.isEmpty) {
+          return Text(
+            _localizedOr(
+              'simulation_page.results.empty',
+              'Run a simulation to preview estimated responses.',
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          );
+        }
+        final isWide = constraints.maxWidth > 1000;
+        final itemWidth = isWide
+            ? (constraints.maxWidth - 32) / 3
+            : double.infinity;
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            for (final metric in series)
+              SizedBox(
+                width: itemWidth,
+                child: _MetricChartCard(series: metric),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SimulationResultCards extends StatelessWidget {
+  const _SimulationResultCards({required this.result});
+
+  final SimulationResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _ResultInfoChip(
+              icon: Icons.graphic_eq,
+              label: _localizedOr(
+                'simulation_page.results.sample_rate',
+                'Sample rate',
+              ),
+              value: '${result.sampleRateHz} Hz',
+            ),
+            _ResultInfoChip(
+              icon: Icons.blur_linear,
+              label: _localizedOr(
+                'simulation_page.results.pair_count',
+                'Source/Mic pairs',
+              ),
+              value: '${result.pairs.length}',
+            ),
+          ],
+        ),
+        if (result.warnings.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            _localizedOr('simulation_page.results.warnings', 'Warnings'),
+            style: textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final warning in result.warnings)
+                _ResultWarningChip(label: warning),
+            ],
+          ),
+        ],
+        const SizedBox(height: 24),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 1100;
+            final itemWidth = isWide
+                ? (constraints.maxWidth - 32) / 2
+                : double.infinity;
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                for (final pair in result.pairs)
+                  SizedBox(
+                    width: itemWidth,
+                    child: _SimulationResultCard(pair: pair),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _SimulationResultCard extends StatelessWidget {
+  const _SimulationResultCard({required this.pair});
+
+  final SimulationResultPair pair;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = _themeColor('simulation_page.graphs.card_background');
+    final heading =
+        _localizedOr(
+              'simulation_page.results.pair_heading',
+              'Source {source} → Mic {mic}',
+            )
+            .replaceAll('{source}', pair.sourceId)
+            .replaceAll('{mic}', pair.microphoneId);
+    final metricData = _buildResultMetricData(pair.metrics);
+
+    return SonalyzeSurface(
+      padding: const EdgeInsets.all(20),
+      backgroundColor: cardColor.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            heading,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (metricData.isEmpty)
+            Text(
+              _localizedOr(
+                'simulation_page.results.no_metrics',
+                'No metrics available for this pair.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final data in metricData) _MetricValueChip(data: data),
+              ],
+            ),
+          if (pair.warnings.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              _localizedOr('simulation_page.results.warnings', 'Warnings'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final warning in pair.warnings)
+                  _ResultWarningChip(label: warning),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricValueChip extends StatelessWidget {
+  const _MetricValueChip({required this.data});
+
+  final _MetricValueData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceColor = _themeColor('simulation_page.metrics_background');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: surfaceColor.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+        ),
+      ),
+      constraints: const BoxConstraints(minWidth: 160),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            data.label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                data.value,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (data.unit != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  data.unit!,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (data.detail != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              data.detail!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultInfoChip extends StatelessWidget {
+  const _ResultInfoChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceColor = _themeColor('simulation_page.metrics_background');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: surfaceColor.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultWarningChip extends StatelessWidget {
+  const _ResultWarningChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final warningColor = _themeColor('simulation_page.timeline_inactive');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: warningColor.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: warningColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricValueData {
+  const _MetricValueData({
+    required this.label,
+    required this.value,
+    this.unit,
+    this.detail,
+  });
+
+  final String label;
+  final String value;
+  final String? unit;
+  final String? detail;
+}
+
+List<_MetricValueData> _buildResultMetricData(SimulationResultMetrics metrics) {
+  final items = <_MetricValueData>[];
+
+  void addMetric({
+    required String labelKey,
+    required String fallbackLabel,
+    String? unitKey,
+    String? fallbackUnit,
+    String? value,
+    String? detail,
+  }) {
+    if (value == null) {
+      return;
+    }
+    String? unit;
+    if (unitKey != null || fallbackUnit != null) {
+      final resolved = unitKey != null
+          ? _localizedOr(unitKey, fallbackUnit ?? '')
+          : (fallbackUnit ?? '');
+      unit = resolved.isEmpty ? null : resolved;
+    }
+    items.add(
+      _MetricValueData(
+        label: _localizedOr(labelKey, fallbackLabel),
+        value: value,
+        unit: unit,
+        detail: detail,
+      ),
+    );
+  }
+
+  addMetric(
+    labelKey: 'simulation_page.metrics.rt60.label',
+    fallbackLabel: 'RT60',
+    unitKey: 'simulation_page.metrics.rt60.unit',
+    fallbackUnit: 's',
+    value: _formatSecondsValue(metrics.rt60Seconds),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.edt.label',
+    fallbackLabel: 'EDT',
+    fallbackUnit: 's',
+    value: _formatSecondsValue(metrics.edtSeconds),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.d50.label',
+    fallbackLabel: 'D50',
+    value: _formatRatioValue(metrics.earlyDecay50),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.c50.label',
+    fallbackLabel: 'C50',
+    fallbackUnit: 'dB',
+    value: _formatDbValue(metrics.clarity50Db),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.c80.label',
+    fallbackLabel: 'C80',
+    fallbackUnit: 'dB',
+    value: _formatDbValue(metrics.clarity80Db),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.drr.label',
+    fallbackLabel: 'DRR',
+    fallbackUnit: 'dB',
+    value: _formatDbValue(metrics.directToReverberantDb),
+  );
+  addMetric(
+    labelKey: 'simulation_page.metrics.sti.label',
+    fallbackLabel: 'STI',
+    value: _formatRatioValue(metrics.sti),
+    detail: metrics.stiMethod,
+  );
+
+  return items;
 }
 
 class _MetricChartCard extends StatelessWidget {
@@ -1082,6 +1520,32 @@ String _tr(String keyPath) {
     return value;
   }
   return '';
+}
+
+String _localizedOr(String keyPath, String fallback) {
+  final value = _tr(keyPath);
+  return value.isNotEmpty ? value : fallback;
+}
+
+String? _formatSecondsValue(double? value) {
+  if (value == null) {
+    return null;
+  }
+  return formatNumber(value, fractionDigits: 2);
+}
+
+String? _formatDbValue(double? value) {
+  if (value == null) {
+    return null;
+  }
+  return formatNumber(value, fractionDigits: 1);
+}
+
+String? _formatRatioValue(double? value) {
+  if (value == null) {
+    return null;
+  }
+  return formatNumber(value, fractionDigits: 2);
 }
 
 Color _themeColor(String keyPath) {
