@@ -150,14 +150,16 @@ class RoomPlanExporter {
     final posM = _toMetersCentered(f.position, centroid);
 
     final typeString = _typeToString(f.type);
-    final heightM = _defaultFurnitureHeightMeters(f.type);
+    final heightM = f.heightMeters ?? _defaultFurnitureHeightMeters(f.type);
     final color = _defaultFurnitureColor(f.type);
 
     return {
       'id': f.id,
       'type': typeString,
       'position': {'x': posM.dx, 'y': 0.0, 'z': posM.dy},
-      'rotation': {'x': 0.0, 'y': f.rotation * pi / 180, 'z': 0.0},
+      // `f.rotation` is stored in radians internally. Negate Y to match
+      // three.js coordinate handedness and rotation direction.
+      'rotation': {'x': 0.0, 'y': -f.rotation, 'z': 0.0},
       'dimensions': {'width': widthM, 'height': heightM, 'depth': depthM},
       'color': color,
     };
@@ -183,6 +185,18 @@ class RoomPlanExporter {
         return 'door';
       case FurnitureType.window:
         return 'window';
+      case FurnitureType.wardrobe:
+        return 'wardrobe';
+      case FurnitureType.desk:
+        return 'desk';
+      case FurnitureType.shelf:
+        return 'shelf';
+      case FurnitureType.stove:
+        return 'stove';
+      case FurnitureType.fridge:
+        return 'fridge';
+      case FurnitureType.shower:
+        return 'shower';
     }
   }
 
@@ -205,6 +219,18 @@ class RoomPlanExporter {
       case FurnitureType.door:
       case FurnitureType.window:
         return 0.0;
+      case FurnitureType.wardrobe:
+        return 2.0;
+      case FurnitureType.desk:
+        return 0.75;
+      case FurnitureType.shelf:
+        return 1.8;
+      case FurnitureType.stove:
+        return 0.9;
+      case FurnitureType.fridge:
+        return 1.8;
+      case FurnitureType.shower:
+        return 2.2;
     }
   }
 
@@ -228,6 +254,18 @@ class RoomPlanExporter {
         return doorColor;
       case FurnitureType.window:
         return windowColor;
+      case FurnitureType.wardrobe:
+        return '#8B7355';
+      case FurnitureType.desk:
+        return '#A0826D';
+      case FurnitureType.shelf:
+        return '#8B7355';
+      case FurnitureType.stove:
+        return '#3a3a3a';
+      case FurnitureType.fridge:
+        return '#e8e8e8';
+      case FurnitureType.shower:
+        return '#c0c0c0';
     }
   }
 

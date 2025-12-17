@@ -119,9 +119,15 @@
             "title": "#BFDBFE"
         },
         "menu": {
+            "background": "#0F172A",
             "border": "#1E293B",
             "header_text": "#E2E8F0",
-            "icon": "#F8FAFC"
+            "icon": "#94A3B8",
+            "text": "#CBD5F5",
+            "active_background": "#1E3A8A",
+            "active_border": "#38BDF8",
+            "active_icon": "#38BDF8",
+            "active_text": "#E0F2FE"
         },
         "card": {
             "background": "#0F172A",
