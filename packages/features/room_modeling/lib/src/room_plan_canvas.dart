@@ -503,6 +503,43 @@ class RoomPainter extends CustomPainter {
         canvas.drawRRect(backrestRRect, fillPaint);
         canvas.drawRRect(backrestRRect, strokePaint);
         break;
+      case FurnitureType.deskchair:
+        // Desk chair: similar to chair but with a neck/headrest indicator
+        final seatRect = Rect.fromCenter(
+          center: Offset(0, height * 0.1),
+          width: width,
+          height: height * 0.75,
+        );
+        final seatRRect = RRect.fromRectAndRadius(
+          seatRect,
+          const Radius.circular(4.0),
+        );
+        canvas.drawRRect(seatRRect, fillPaint);
+        canvas.drawRRect(seatRRect, strokePaint);
+
+        final backrestRect = Rect.fromLTWH(
+          -halfWidth,
+          -halfHeight,
+          width,
+          height * 0.35,
+        );
+        final backrestRRect = RRect.fromRectAndCorners(
+          backrestRect,
+          topLeft: const Radius.circular(8.0),
+          topRight: const Radius.circular(8.0),
+          bottomLeft: const Radius.circular(4.0),
+          bottomRight: const Radius.circular(4.0),
+        );
+        canvas.drawRRect(backrestRRect, fillPaint);
+        canvas.drawRRect(backrestRRect, strokePaint);
+
+        // Small headrest bar
+        canvas.drawLine(
+          Offset(-halfWidth * 0.6, -halfHeight + 4),
+          Offset(halfWidth * 0.6, -halfHeight + 4),
+          strokePaint,
+        );
+        break;
       case FurnitureType.table:
         canvas.drawRect(
           Rect.fromCenter(center: Offset.zero, width: width, height: height),
@@ -626,8 +663,8 @@ class RoomPainter extends CustomPainter {
         );
         canvas.drawCircle(Offset.zero, min(width, height) / 3, strokePaint);
         break;
-      case FurnitureType.wardrobe:
-        // Wardrobe: rectangle with vertical door lines
+      case FurnitureType.closet:
+        // Closet: rectangle with vertical door lines
         canvas.drawRect(
           Rect.fromCenter(center: Offset.zero, width: width, height: height),
           fillPaint,
