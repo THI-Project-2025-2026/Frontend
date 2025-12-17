@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:core_ui/core_ui.dart';
@@ -48,7 +46,6 @@ class ToolsPanel extends StatelessWidget {
                           .add(const DeleteSelectedWall());
                     },
                     variant: SonalyzeButtonVariant.filled,
-                    // color: Theme.of(context).colorScheme.error, // If supported
                     child: Text(
                       RoomModelingL10n.text('tools.delete_wall'),
                     ),
@@ -58,7 +55,7 @@ class ToolsPanel extends StatelessWidget {
               _buildFurnitureMenu(context, state),
               ..._buildSelectedFurnitureEditor(context, state),
             ],
-            const Spacer(),
+            const SizedBox(height: 16),
             SonalyzeButton(
               onPressed: () {
                 context.read<RoomModelingBloc>().add(const ClearRoom());
@@ -102,14 +99,32 @@ class ToolsPanel extends StatelessWidget {
       _FurnitureEditor(furniture: selectedFurniture),
       Padding(
         padding: const EdgeInsets.only(top: 8.0),
-        child: SonalyzeButton(
-          onPressed: () {
-            context
-                .read<RoomModelingBloc>()
-                .add(const DeleteSelectedFurniture());
-          },
-          variant: SonalyzeButtonVariant.filled,
-          child: Text(RoomModelingL10n.text('tools.delete_item')),
+        child: Row(
+          children: [
+            Expanded(
+              child: SonalyzeButton(
+                onPressed: () {
+                  context.read<RoomModelingBloc>().add(
+                        const FurnitureSelected(null),
+                      );
+                },
+                variant: SonalyzeButtonVariant.outlined,
+                child: Text(RoomModelingL10n.text('editor.apply')),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SonalyzeButton(
+                onPressed: () {
+                  context
+                      .read<RoomModelingBloc>()
+                      .add(const DeleteSelectedFurniture());
+                },
+                variant: SonalyzeButtonVariant.filled,
+                child: Text(RoomModelingL10n.text('tools.delete_item')),
+              ),
+            ),
+          ],
         ),
       ),
     ];
@@ -129,132 +144,138 @@ class ToolsPanel extends StatelessWidget {
   }
 
   Widget _buildFurnitureMenu(BuildContext context, RoomModelingState state) {
-    final openingsLabel = RoomModelingL10n.text('tools.menu.openings');
-    final furnitureLabel = RoomModelingL10n.text('tools.menu.furniture');
-    final bathKitchenLabel = RoomModelingL10n.text('tools.menu.bath_kitchen');
-
-    return PopupMenuButton<RoomModelingTool>(
-      initialValue: state.activeTool,
-      onSelected: (tool) {
-        context.read<RoomModelingBloc>().add(ToolSelected(tool));
-      },
-      itemBuilder: (context) => [
-        _buildMenuHeader(openingsLabel),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.door,
-          RoomModelingL10n.text('tools.menu.items.door'),
-          Icons.door_front_door,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.window,
-          RoomModelingL10n.text('tools.menu.items.window'),
-          Icons.window,
-        ),
-        const PopupMenuDivider(),
-        _buildMenuHeader(furnitureLabel),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.chair,
-          RoomModelingL10n.text('tools.menu.items.chair'),
-          Icons.chair,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.table,
-          RoomModelingL10n.text('tools.menu.items.table'),
-          Icons.table_bar,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.sofa,
-          RoomModelingL10n.text('tools.menu.items.sofa'),
-          Icons.weekend,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.bed,
-          RoomModelingL10n.text('tools.menu.items.bed'),
-          Icons.bed,
-        ),
-        const PopupMenuDivider(),
-        _buildMenuHeader(bathKitchenLabel),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.bathtub,
-          RoomModelingL10n.text('tools.menu.items.bathtub'),
-          Icons.bathtub,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.toilet,
-          RoomModelingL10n.text('tools.menu.items.toilet'),
-          Icons.wc,
-        ),
-        _buildMenuItem(
-          context,
-          RoomModelingTool.sink,
-          RoomModelingL10n.text('tools.menu.items.sink'),
-          Icons.wash,
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: RoomModelingColors.color('menu.border')),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
+    return Expanded(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(_getToolIcon(state.activeTool), size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _getToolLabel(state.activeTool),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+            _buildToolCategory(
+              context,
+              state,
+              RoomModelingL10n.text('tools.menu.openings'),
+              [
+                _ToolItem(RoomModelingTool.door, Icons.door_front_door),
+                _ToolItem(RoomModelingTool.window, Icons.window),
+              ],
             ),
-            const Icon(Icons.arrow_drop_down),
+            const SizedBox(height: 16),
+            _buildToolCategory(
+              context,
+              state,
+              RoomModelingL10n.text('tools.menu.furniture'),
+              [
+                _ToolItem(RoomModelingTool.chair, Icons.chair),
+                _ToolItem(RoomModelingTool.table, Icons.table_bar),
+                _ToolItem(RoomModelingTool.sofa, Icons.weekend),
+                _ToolItem(RoomModelingTool.bed, Icons.bed),
+                _ToolItem(RoomModelingTool.wardrobe, Icons.checkroom),
+                _ToolItem(RoomModelingTool.desk, Icons.desk),
+                _ToolItem(RoomModelingTool.shelf, Icons.shelves),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildToolCategory(
+              context,
+              state,
+              RoomModelingL10n.text('tools.menu.bath_kitchen'),
+              [
+                _ToolItem(RoomModelingTool.bathtub, Icons.bathtub),
+                _ToolItem(RoomModelingTool.toilet, Icons.wc),
+                _ToolItem(RoomModelingTool.sink, Icons.wash),
+                _ToolItem(RoomModelingTool.shower, Icons.shower),
+                _ToolItem(RoomModelingTool.stove, Icons.countertops),
+                _ToolItem(RoomModelingTool.fridge, Icons.kitchen),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  PopupMenuItem<RoomModelingTool> _buildMenuHeader(String title) {
-    return PopupMenuItem<RoomModelingTool>(
-      enabled: false,
-      height: 32,
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: RoomModelingColors.color('menu.header_text'),
+  Widget _buildToolCategory(
+    BuildContext context,
+    RoomModelingState state,
+    String title,
+    List<_ToolItem> tools,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: RoomModelingColors.color('menu.header_text'),
+                ),
+          ),
         ),
-      ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: tools
+              .map((item) => _buildToolButton(context, state, item))
+              .toList(),
+        ),
+      ],
     );
   }
 
-  PopupMenuItem<RoomModelingTool> _buildMenuItem(
+  Widget _buildToolButton(
     BuildContext context,
-    RoomModelingTool tool,
-    String label,
-    IconData icon,
+    RoomModelingState state,
+    _ToolItem item,
   ) {
-    return PopupMenuItem<RoomModelingTool>(
-      value: tool,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: RoomModelingColors.color('menu.icon'),
+    final isActive = state.activeTool == item.tool;
+    final label = _getToolLabel(item.tool);
+
+    return InkWell(
+      onTap: () {
+        context.read<RoomModelingBloc>().add(ToolSelected(item.tool));
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive
+              ? RoomModelingColors.color('menu.active_background')
+              : RoomModelingColors.color('menu.background'),
+          border: Border.all(
+            color: isActive
+                ? RoomModelingColors.color('menu.active_border')
+                : RoomModelingColors.color('menu.border'),
+            width: 2,
           ),
-          const SizedBox(width: 12),
-          Text(label),
-        ],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              item.icon,
+              size: 20,
+              color: isActive
+                  ? RoomModelingColors.color('menu.active_icon')
+                  : RoomModelingColors.color('menu.icon'),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isActive
+                          ? RoomModelingColors.color('menu.active_text')
+                          : RoomModelingColors.color('menu.text'),
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.normal,
+                    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -267,31 +288,13 @@ class ToolsPanel extends StatelessWidget {
     }
     return label;
   }
+}
 
-  IconData _getToolIcon(RoomModelingTool tool) {
-    switch (tool) {
-      case RoomModelingTool.door:
-        return Icons.door_front_door;
-      case RoomModelingTool.window:
-        return Icons.window;
-      case RoomModelingTool.chair:
-        return Icons.chair;
-      case RoomModelingTool.table:
-        return Icons.table_bar;
-      case RoomModelingTool.sofa:
-        return Icons.weekend;
-      case RoomModelingTool.bed:
-        return Icons.bed;
-      case RoomModelingTool.bathtub:
-        return Icons.bathtub;
-      case RoomModelingTool.toilet:
-        return Icons.wc;
-      case RoomModelingTool.sink:
-        return Icons.wash;
-      default:
-        return Icons.build;
-    }
-  }
+class _ToolItem {
+  final RoomModelingTool tool;
+  final IconData icon;
+
+  const _ToolItem(this.tool, this.icon);
 }
 
 class _FurnitureEditor extends StatefulWidget {
@@ -306,7 +309,7 @@ class _FurnitureEditor extends StatefulWidget {
 class _FurnitureEditorState extends State<_FurnitureEditor> {
   late final TextEditingController _widthController;
   late final TextEditingController _heightController;
-  late final TextEditingController _rotationController;
+  late final TextEditingController _verticalHeightController;
   late final TextEditingController _sillHeightController;
   late final TextEditingController _windowHeightController;
 
@@ -316,63 +319,95 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
   @override
   void initState() {
     super.initState();
-    _widthController = TextEditingController();
-    _heightController = TextEditingController();
-    _rotationController = TextEditingController();
-    _sillHeightController = TextEditingController();
-    _windowHeightController = TextEditingController();
-    _syncControllers();
-  }
-
-  @override
-  void didUpdateWidget(covariant _FurnitureEditor oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.furniture != oldWidget.furniture ||
-        widget.furniture.size != oldWidget.furniture.size ||
-        widget.furniture.rotation != oldWidget.furniture.rotation ||
-        widget.furniture.sillHeightMeters !=
-            oldWidget.furniture.sillHeightMeters ||
-        widget.furniture.openingHeightMeters !=
-            oldWidget.furniture.openingHeightMeters) {
-      _syncControllers();
-    }
+    _widthController = TextEditingController(
+      text: (widget.furniture.size.width / 50).toStringAsFixed(2),
+    );
+    _heightController = TextEditingController(
+      text: (widget.furniture.size.height / 50).toStringAsFixed(2),
+    );
+    // Vertical furniture height (meters): use explicit value if set, otherwise fall back to defaults
+    final initialVerticalHeight = (widget.furniture.heightMeters ??
+        _defaultFurnitureHeightMeters(widget.furniture.type));
+    _verticalHeightController = TextEditingController(
+      text: initialVerticalHeight.toStringAsFixed(2),
+    );
+    _sillHeightController = TextEditingController(
+      text: (widget.furniture.sillHeightMeters ??
+              Furniture.defaultWindowSillHeightMeters)
+          .toStringAsFixed(2),
+    );
+    _windowHeightController = TextEditingController(
+      text: (widget.furniture.openingHeightMeters ??
+              Furniture.defaultWindowHeightMeters)
+          .toStringAsFixed(2),
+    );
   }
 
   @override
   void dispose() {
     _widthController.dispose();
     _heightController.dispose();
-    _rotationController.dispose();
+    _verticalHeightController.dispose();
     _sillHeightController.dispose();
     _windowHeightController.dispose();
     super.dispose();
   }
 
-  void _syncControllers() {
-    _widthController.text = _formatMeters(widget.furniture.size.width);
-    _heightController.text = _formatMeters(widget.furniture.size.height);
-    _rotationController.text = _formatDegrees(widget.furniture.rotation);
-    final sill = widget.furniture.sillHeightMeters ??
-        Furniture.defaultWindowSillHeightMeters;
-    final winHeight = widget.furniture.openingHeightMeters ??
-        Furniture.defaultWindowHeightMeters;
-    _sillHeightController.text = sill.toStringAsFixed(2);
-    _windowHeightController.text = winHeight.toStringAsFixed(2);
+  @override
+  void didUpdateWidget(covariant _FurnitureEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only reset controllers if a different furniture item is selected
+    if (oldWidget.furniture.id != widget.furniture.id) {
+      // Reset controllers to reflect the new furniture's values
+      _widthController.text =
+          (widget.furniture.size.width / RoomModelingBloc.pixelsPerMeter)
+              .toStringAsFixed(2);
+      _heightController.text =
+          (widget.furniture.size.height / RoomModelingBloc.pixelsPerMeter)
+              .toStringAsFixed(2);
+      final initialVerticalHeight = (widget.furniture.heightMeters ??
+          _defaultFurnitureHeightMeters(widget.furniture.type));
+      _verticalHeightController.text = initialVerticalHeight.toStringAsFixed(2);
+      _sillHeightController.text = (widget.furniture.sillHeightMeters ??
+              Furniture.defaultWindowSillHeightMeters)
+          .toStringAsFixed(2);
+      _windowHeightController.text = (widget.furniture.openingHeightMeters ??
+              Furniture.defaultWindowHeightMeters)
+          .toStringAsFixed(2);
+    } else if (widget.furniture.id == oldWidget.furniture.id) {
+      // Same furniture item was updated (e.g., by canvas drag or event).
+      // Update controllers only if the actual value differs significantly from user's input.
+      _syncControllerIfNeeded(_widthController,
+          widget.furniture.size.width / RoomModelingBloc.pixelsPerMeter);
+      _syncControllerIfNeeded(_heightController,
+          widget.furniture.size.height / RoomModelingBloc.pixelsPerMeter);
+      _syncControllerIfNeeded(
+          _verticalHeightController,
+          widget.furniture.heightMeters ??
+              _defaultFurnitureHeightMeters(widget.furniture.type));
+      if (widget.furniture.type == FurnitureType.window) {
+        _syncControllerIfNeeded(
+            _sillHeightController,
+            widget.furniture.sillHeightMeters ??
+                Furniture.defaultWindowSillHeightMeters);
+        _syncControllerIfNeeded(
+            _windowHeightController,
+            widget.furniture.openingHeightMeters ??
+                Furniture.defaultWindowHeightMeters);
+      }
+    }
   }
 
-  String _formatMeters(double value) {
-    final meters = value / RoomModelingBloc.pixelsPerMeter;
-    return meters.toStringAsFixed(2);
-  }
-
-  String _formatDegrees(double radians) {
-    final degrees = (radians * 180 / math.pi) % 360;
-    final normalized = degrees < 0 ? degrees + 360 : degrees;
-    return normalized.toStringAsFixed(1);
+  void _syncControllerIfNeeded(TextEditingController controller, double value) {
+    final parsed = double.tryParse(controller.text.replaceAll(',', '.'));
+    if (parsed == null || (parsed - value).abs() > 0.01) {
+      controller.text = value.toStringAsFixed(2);
+    }
   }
 
   void _handleWidthChanged(String value) {
-    final meters = double.tryParse(value);
+    final sanitized = value.replaceAll(',', '.');
+    final meters = double.tryParse(sanitized);
     if (meters == null) return;
 
     final widthPx = meters * RoomModelingBloc.pixelsPerMeter;
@@ -385,7 +420,8 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
 
   void _handleHeightChanged(String value) {
     if (_isOpening) return;
-    final meters = double.tryParse(value);
+    final sanitized = value.replaceAll(',', '.');
+    final meters = double.tryParse(sanitized);
     if (meters == null) return;
 
     final heightPx = meters * RoomModelingBloc.pixelsPerMeter;
@@ -396,18 +432,54 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
         );
   }
 
-  void _handleRotationChanged(String value) {
-    final degrees = double.tryParse(value);
-    if (degrees == null) return;
 
-    final radians = degrees * math.pi / 180;
+  void _handleVerticalHeightChanged(String value) {
+    final sanitized = value.replaceAll(',', '.');
+    final meters = double.tryParse(sanitized);
+    if (meters == null) return;
+
     context
         .read<RoomModelingBloc>()
-        .add(UpdateSelectedFurniture(rotation: radians));
+        .add(UpdateSelectedFurniture(heightMeters: meters));
+  }
+
+  double _defaultFurnitureHeightMeters(FurnitureType t) {
+    switch (t) {
+      case FurnitureType.table:
+        return 0.75;
+      case FurnitureType.chair:
+        return 1.0;
+      case FurnitureType.sofa:
+        return 0.8;
+      case FurnitureType.bed:
+        return 0.6;
+      case FurnitureType.bathtub:
+        return 0.6;
+      case FurnitureType.toilet:
+        return 0.8;
+      case FurnitureType.sink:
+        return 0.9;
+      case FurnitureType.door:
+      case FurnitureType.window:
+        return 0.0;
+      case FurnitureType.wardrobe:
+        return 2.0;
+      case FurnitureType.desk:
+        return 0.75;
+      case FurnitureType.shelf:
+        return 1.8;
+      case FurnitureType.stove:
+        return 0.9;
+      case FurnitureType.fridge:
+        return 1.8;
+      case FurnitureType.shower:
+        return 2.2;
+    }
   }
 
   void _handleSillHeightChanged(String value) {
-    final meters = double.tryParse(value);
+    final sanitized = value.replaceAll(',', '.');
+    final meters = double.tryParse(sanitized);
     if (meters == null) return;
 
     context
@@ -416,7 +488,8 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
   }
 
   void _handleWindowHeightChanged(String value) {
-    final meters = double.tryParse(value);
+    final sanitized = value.replaceAll(',', '.');
+    final meters = double.tryParse(sanitized);
     if (meters == null) return;
 
     context
@@ -471,7 +544,7 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
                 suffixText: RoomModelingL10n.metersSuffix(),
                 textInputAction: TextInputAction.next,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildNumberField(
                 context,
                 label: RoomModelingL10n.text('editor.window_height'),
@@ -482,21 +555,22 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
               ),
             ],
           ] else ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _buildNumberField(
               context,
               label: RoomModelingL10n.text('editor.width'),
               controller: _heightController,
               onChanged: _handleHeightChanged,
               suffixText: RoomModelingL10n.metersSuffix(),
+              textInputAction: TextInputAction.next,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _buildNumberField(
               context,
-              label: RoomModelingL10n.text('editor.rotation'),
-              controller: _rotationController,
-              onChanged: _handleRotationChanged,
-              suffixText: RoomModelingL10n.degreesSuffix(),
+              label: RoomModelingL10n.text('editor.height'),
+              controller: _verticalHeightController,
+              onChanged: _handleVerticalHeightChanged,
+              suffixText: RoomModelingL10n.metersSuffix(),
               textInputAction: TextInputAction.done,
             ),
           ],
@@ -510,18 +584,18 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
     required String label,
     required TextEditingController controller,
     required ValueChanged<String> onChanged,
-    String? suffixText,
-    bool enabled = true,
+    required String suffixText,
     TextInputAction textInputAction = TextInputAction.next,
   }) {
-    return TextFormField(
+    return TextField(
       controller: controller,
-      textInputAction: textInputAction,
-      enabled: enabled,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: textInputAction,
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffixText,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       onChanged: onChanged,
     );
@@ -538,78 +612,58 @@ class _RoomStructureOptions extends StatefulWidget {
 }
 
 class _RoomStructureOptionsState extends State<_RoomStructureOptions> {
-  late final TextEditingController _controller;
+  late final TextEditingController _heightController;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
-    _syncController();
-  }
-
-  @override
-  void didUpdateWidget(covariant _RoomStructureOptions oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if ((widget.roomHeight - oldWidget.roomHeight).abs() > 0.001) {
-      _syncController();
-    }
+    _heightController =
+        TextEditingController(text: widget.roomHeight.toStringAsFixed(2));
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _heightController.dispose();
     super.dispose();
-  }
-
-  void _syncController() {
-    _controller.text = widget.roomHeight.toStringAsFixed(2);
   }
 
   void _handleHeightChanged(String value) {
     final meters = double.tryParse(value);
-    if (meters == null) return;
-
+    if (meters == null || meters <= 0) return;
     context.read<RoomModelingBloc>().add(RoomHeightChanged(meters));
   }
 
   @override
   Widget build(BuildContext context) {
-    final cardBackground = RoomModelingColors.color('card.background');
-    final cardBorder = RoomModelingColors.color('card.border');
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            RoomModelingL10n.text('structure.options_title'),
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: RoomModelingL10n.text('structure.room_height_label'),
-              suffixText: RoomModelingL10n.metersSuffix(),
-              helperText: RoomModelingL10n.format(
-                'structure.room_height_helper',
-                {
-                  'value': RoomModelingState.defaultRoomHeightMeters
-                      .toStringAsFixed(2),
-                },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          RoomModelingL10n.text('structure.options_title'),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: RoomModelingColors.color('section.title'),
               ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _heightController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          textInputAction: TextInputAction.done,
+          decoration: InputDecoration(
+            labelText: RoomModelingL10n.text('structure.room_height_label'),
+            suffixText: RoomModelingL10n.metersSuffix(),
+            helperText: RoomModelingL10n.text('structure.room_height_helper')
+                .replaceAll(
+              '{value}',
+              RoomModelingState.defaultRoomHeightMeters.toStringAsFixed(1),
             ),
-            textInputAction: TextInputAction.done,
-            onChanged: _handleHeightChanged,
+            border: const OutlineInputBorder(),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
-        ],
-      ),
+          onChanged: _handleHeightChanged,
+        ),
+      ],
     );
   }
 }

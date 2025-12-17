@@ -36,6 +36,15 @@ class WallSelected extends RoomModelingEvent {
   List<Object?> get props => [wallId];
 }
 
+class FurnitureSelected extends RoomModelingEvent {
+  final String? furnitureId;
+
+  const FurnitureSelected(this.furnitureId);
+
+  @override
+  List<Object?> get props => [furnitureId];
+}
+
 class DeleteSelectedWall extends RoomModelingEvent {
   const DeleteSelectedWall();
 }
@@ -81,19 +90,21 @@ class CanvasTap extends RoomModelingEvent {
 class UpdateSelectedFurniture extends RoomModelingEvent {
   final Size? size;
   final double? rotation;
+  final double? heightMeters;
   final double? sillHeightMeters;
   final double? openingHeightMeters;
 
   const UpdateSelectedFurniture({
     this.size,
     this.rotation,
+    this.heightMeters,
     this.sillHeightMeters,
     this.openingHeightMeters,
   });
 
   @override
   List<Object?> get props =>
-      [size, rotation, sillHeightMeters, openingHeightMeters];
+      [size, rotation, heightMeters, sillHeightMeters, openingHeightMeters];
 }
 
 class RoomHeightChanged extends RoomModelingEvent {

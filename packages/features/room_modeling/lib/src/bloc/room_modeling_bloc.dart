@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -20,6 +21,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<ToolSelected>(_onToolSelected);
     on<StepChanged>(_onStepChanged);
     on<WallSelected>(_onWallSelected);
+    on<FurnitureSelected>(_onFurnitureSelected);
     on<DeleteSelectedWall>(_onDeleteSelectedWall);
     on<DeleteSelectedFurniture>(_onDeleteSelectedFurniture);
     on<UpdateSelectedFurniture>(_onUpdateSelectedFurniture);
@@ -70,6 +72,19 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     emit(state.copyWith(selectedWallId: event.wallId));
   }
 
+  void _onFurnitureSelected(
+    FurnitureSelected event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    if (event.furnitureId == null) {
+      // Deselect: clear all selections
+      emit(state.copyWith(clearSelection: true));
+    } else {
+      // Select furniture
+      emit(state.copyWith(selectedFurnitureId: event.furnitureId));
+    }
+  }
+
   void _onDeleteSelectedWall(
     DeleteSelectedWall event,
     Emitter<RoomModelingState> emit,
@@ -114,6 +129,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     if (index == -1) return;
 
     var target = state.furniture[index];
+    // Capture previous metrics (meters) for logging
+    final oldWidthM = target.size.width / pixelsPerMeter;
+    final oldDepthM = target.size.height / pixelsPerMeter;
+    final oldHeightM =
+        target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
+    final fid = target.id;
+    final ftype = target.type;
 
     if (event.size != null) {
       target = target.copyWith(
@@ -137,6 +159,24 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         openingHeightMeters: _clampWindowMetric(event.openingHeightMeters!),
       );
     }
+
+    if (event.heightMeters != null) {
+      target = target.copyWith(heightMeters: event.heightMeters);
+    }
+
+    // Log changes to console when size or height changed
+    final newWidthM = target.size.width / pixelsPerMeter;
+    final newDepthM = target.size.height / pixelsPerMeter;
+    final newHeightM =
+        target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
+
+    void _maybeLog(String label, double oldVal, double newVal) {
+      // console logging removed
+    }
+
+    _maybeLog('width', oldWidthM, newWidthM);
+    _maybeLog('depth', oldDepthM, newDepthM);
+    _maybeLog('height', oldHeightM, newHeightM);
 
     final updatedFurniture = [...state.furniture];
     updatedFurniture[index] = target;
@@ -729,7 +769,11 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         }
       }
 
-      emit(state.copyWith(selectedWallId: hitWallId));
+      // If we clicked a wall, select it; otherwise deselect current selection
+      emit(state.copyWith(
+        selectedWallId: hitWallId,
+        clearSelection: hitWallId == null && state.selectedWallId != null,
+      ));
       return;
     }
 
@@ -790,6 +834,24 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         break;
       case RoomModelingTool.sink:
         type = FurnitureType.sink;
+        break;
+      case RoomModelingTool.wardrobe:
+        type = FurnitureType.wardrobe;
+        break;
+      case RoomModelingTool.desk:
+        type = FurnitureType.desk;
+        break;
+      case RoomModelingTool.shelf:
+        type = FurnitureType.shelf;
+        break;
+      case RoomModelingTool.stove:
+        type = FurnitureType.stove;
+        break;
+      case RoomModelingTool.fridge:
+        type = FurnitureType.fridge;
+        break;
+      case RoomModelingTool.shower:
+        type = FurnitureType.shower;
         break;
       default:
         return;
@@ -852,7 +914,10 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     }
 
     emit(
-      state.copyWith(furniture: List.from(state.furniture)..add(newFurniture)),
+      state.copyWith(
+        furniture: List.from(state.furniture)..add(newFurniture),
+        selectedFurnitureId: newFurniture.id,
+      ),
     );
   }
 
@@ -1108,6 +1173,40 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
   bool _isLinearOpening(FurnitureType type) {
     return Furniture.isOpeningType(type);
+  }
+
+  double _defaultFurnitureHeightMeters(FurnitureType t) {
+    switch (t) {
+      case FurnitureType.table:
+        return 0.75;
+      case FurnitureType.chair:
+        return 1.0;
+      case FurnitureType.sofa:
+        return 0.8;
+      case FurnitureType.bed:
+        return 0.6;
+      case FurnitureType.bathtub:
+        return 0.6;
+      case FurnitureType.toilet:
+        return 0.8;
+      case FurnitureType.sink:
+        return 0.9;
+      case FurnitureType.door:
+      case FurnitureType.window:
+        return 0.0;
+      case FurnitureType.wardrobe:
+        return 2.0;
+      case FurnitureType.desk:
+        return 0.75;
+      case FurnitureType.shelf:
+        return 1.8;
+      case FurnitureType.stove:
+        return 0.9;
+      case FurnitureType.fridge:
+        return 1.8;
+      case FurnitureType.shower:
+        return 2.2;
+    }
   }
 
   double _normalizeAngle(double angle) {

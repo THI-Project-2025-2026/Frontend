@@ -317,7 +317,7 @@
             "construction_title": "Wandkonstruktion",
             "construction_helper": "Tippe auf die Fläche, um Wände zu ziehen. Schließe den Verlauf, um den Grundriss zu fixieren.",
             "delete_wall": "Ausgewählte Wand löschen",
-            "delete_item": "Ausgewähltes Objekt löschen",
+            "delete_item": "Löschen",
             "clear_room": "Raum zurücksetzen",
             "selected_furniture": "Ausgewähltes Objekt",
             "menu": {
@@ -334,7 +334,13 @@
                     "bed": "Bett",
                     "bathtub": "Badewanne",
                     "toilet": "Toilette",
-                    "sink": "Waschbecken"
+                        "sink": "Waschbecken",
+                        "wardrobe": "Schrank",
+                        "desk": "Schreibtisch",
+                        "shelf": "Regal",
+                        "stove": "Herd",
+                        "fridge": "Kühlschrank",
+                        "shower": "Dusche"
                 }
             }
         },
@@ -346,10 +352,11 @@
         "editor": {
             "length": "Länge",
             "width": "Breite",
-            "rotation": "Rotation",
+            "height": "Höhe",
             "opening_hint": "Öffnungen bieten Breite sowie optional Brüstung und Öffnungshöhe.",
             "sill_height": "Brüstungshöhe",
-            "window_height": "Öffnungshöhe"
+            "window_height": "Öffnungshöhe",
+            "apply": "Übernehmen"
         },
         "units": {
             "meters_suffix": "m",

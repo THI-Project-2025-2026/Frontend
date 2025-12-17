@@ -317,7 +317,7 @@
             "construction_title": "Wall construction",
             "construction_helper": "Tap the canvas to draw walls. Close the loop to finalize the footprint.",
             "delete_wall": "Delete selected wall",
-            "delete_item": "Delete selected item",
+            "delete_item": "Delete",
             "clear_room": "Clear room",
             "selected_furniture": "Selected furniture",
             "menu": {
@@ -334,7 +334,13 @@
                     "bed": "Bed",
                     "bathtub": "Bathtub",
                     "toilet": "Toilet",
-                    "sink": "Sink"
+                        "sink": "Sink",
+                        "wardrobe": "Wardrobe",
+                        "desk": "Desk",
+                        "shelf": "Shelf",
+                        "stove": "Stove",
+                        "fridge": "Fridge",
+                        "shower": "Shower"
                 }
             }
         },
@@ -346,10 +352,11 @@
         "editor": {
             "length": "Length",
             "width": "Width",
-            "rotation": "Rotation",
+            "height": "Height",
             "opening_hint": "Openings expose width plus optional sill and opening height.",
             "sill_height": "Sill height",
-            "window_height": "Opening height"
+            "window_height": "Opening height",
+            "apply": "Apply"
         },
         "units": {
             "meters_suffix": "m",
