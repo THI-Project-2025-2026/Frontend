@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
+import 'package:room_modeling/room_modeling.dart';
 
 import '../bloc/measurement_page_bloc.dart';
 
@@ -15,11 +16,16 @@ class MeasurementPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => MeasurementPageBloc(
-        repository: GetIt.I<GatewayConnectionRepository>(),
-        gatewayBloc: GetIt.I<GatewayConnectionBloc>(),
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => MeasurementPageBloc(
+            repository: GetIt.I<GatewayConnectionRepository>(),
+            gatewayBloc: GetIt.I<GatewayConnectionBloc>(),
+          ),
+        ),
+        BlocProvider(create: (_) => RoomModelingBloc()),
+      ],
       child: const _MeasurementPageView(),
     );
   }
@@ -32,61 +38,73 @@ class _MeasurementPageView extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = _themeColors('measurement_page.background_gradient');
 
-    return Scaffold(
-      backgroundColor: _themeColor('app.background'),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: gradient.length >= 2
-              ? LinearGradient(
-                  colors: gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: gradient.isEmpty ? _themeColor('app.background') : null,
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 1280;
-              final isMedium = constraints.maxWidth >= 960;
-              final horizontalPadding = isWide
-                  ? 96.0
-                  : isMedium
-                  ? 72.0
-                  : 24.0;
-              final verticalPadding = isWide ? 48.0 : 32.0;
+    return BlocListener<MeasurementPageBloc, MeasurementPageState>(
+      listenWhen: (previous, current) =>
+          previous.activeStepIndex != current.activeStepIndex,
+      listener: (context, state) {
+        final roomBloc = context.read<RoomModelingBloc>();
+        if (state.activeStepIndex <= 1) {
+          roomBloc.add(const StepChanged(RoomModelingStep.structure));
+        } else if (state.activeStepIndex == 2) {
+          roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _themeColor('app.background'),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: gradient.length >= 2
+                ? LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: gradient.isEmpty ? _themeColor('app.background') : null,
+          ),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 1280;
+                final isMedium = constraints.maxWidth >= 960;
+                final horizontalPadding = isWide
+                    ? 96.0
+                    : isMedium
+                    ? 72.0
+                    : 24.0;
+                final verticalPadding = isWide ? 48.0 : 32.0;
 
-              return ScrollbarTheme(
-                data: ScrollbarThemeData(
-                  thumbColor: WidgetStateProperty.all<Color>(
-                    _themeColor(
-                      'measurement_page.scrollbar_thumb',
-                    ).withValues(alpha: 0.75),
+                return ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbColor: WidgetStateProperty.all<Color>(
+                      _themeColor(
+                        'measurement_page.scrollbar_thumb',
+                      ).withValues(alpha: 0.75),
+                    ),
+                    thickness: const WidgetStatePropertyAll<double>(6),
+                    radius: const Radius.circular(999),
                   ),
-                  thickness: const WidgetStatePropertyAll<double>(6),
-                  radius: const Radius.circular(999),
-                ),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: verticalPadding,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: verticalPadding,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _MeasurementHeader(),
+                        SizedBox(height: isWide ? 40 : 32),
+                        BlocBuilder<MeasurementPageBloc, MeasurementPageState>(
+                          builder: (context, state) {
+                            return _MeasurementPrimaryLayout(state: state);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const _MeasurementHeader(),
-                      SizedBox(height: isWide ? 40 : 32),
-                      BlocBuilder<MeasurementPageBloc, MeasurementPageState>(
-                        builder: (context, state) {
-                          return _MeasurementPrimaryLayout(state: state);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -169,11 +187,21 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[];
 
+    final hideRoomModelingTools = state.activeStepIndex >= 3;
+
     children.add(_LobbyCard(state: state));
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: 28),
+        SizedBox(
+          height: 600,
+          child: RoomModelingWidget(
+            bloc: context.read<RoomModelingBloc>(),
+            hideToolsPanel: hideRoomModelingTools,
+          ),
+        ),
         const SizedBox(height: 28),
         _DeviceListCard(state: state),
         const SizedBox(height: 28),
@@ -299,7 +327,7 @@ class _LobbyCard extends StatelessWidget {
                   borderColor: accent.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(18),
                   icon: const Icon(Icons.login),
-                  child: const Text('Join'),
+                  child: Text(_tr('measurement_page.lobby.actions.join')),
                 ),
               ] else if (state.isHost) ...[
                 // Host controls could go here (e.g. close lobby)
@@ -588,7 +616,7 @@ class _DeviceDataRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                device.name,
+                _localizedOrRaw(device.name),
                 style: textTheme.bodyLarge?.copyWith(
                   color: onBackground,
                   fontWeight: FontWeight.w600,
@@ -708,6 +736,7 @@ class _TimelineCard extends StatelessWidget {
     final panelColor = _themeColor('measurement_page.panel_background');
     final activeColor = _themeColor('measurement_page.timeline_active');
     final inactiveColor = _themeColor('measurement_page.timeline_inactive');
+    final backColor = _themeColor('measurement_page.timeline_back');
     final onPrimary = _themeColor('app.on_primary');
 
     return SonalyzeSurface(
@@ -727,17 +756,37 @@ class _TimelineCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SonalyzeButton(
-                onPressed: state.steps.isEmpty
-                    ? null
-                    : () => context.read<MeasurementPageBloc>().add(
-                        const MeasurementTimelineAdvanced(),
-                      ),
-                backgroundColor: activeColor,
-                foregroundColor: onPrimary,
-                borderRadius: BorderRadius.circular(18),
-                icon: const Icon(Icons.fast_forward_outlined),
-                child: Text(_tr('measurement_page.timeline.advance')),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SonalyzeButton(
+                    onPressed: state.activeStepIndex > 0
+                        ? () => context.read<MeasurementPageBloc>().add(
+                            const MeasurementTimelineStepBack(),
+                          )
+                        : null,
+                    backgroundColor: backColor,
+                    foregroundColor: onPrimary,
+                    borderRadius: BorderRadius.circular(18),
+                    icon: const Icon(Icons.fast_rewind_outlined),
+                    child: Text(_tr('measurement_page.timeline.back')),
+                  ),
+                  const SizedBox(width: 12),
+                  SonalyzeButton(
+                    onPressed:
+                        state.steps.isNotEmpty &&
+                            state.activeStepIndex < state.steps.length - 1
+                        ? () => context.read<MeasurementPageBloc>().add(
+                            const MeasurementTimelineAdvanced(),
+                          )
+                        : null,
+                    backgroundColor: activeColor,
+                    foregroundColor: onPrimary,
+                    borderRadius: BorderRadius.circular(18),
+                    icon: const Icon(Icons.fast_forward_outlined),
+                    child: Text(_tr('measurement_page.timeline.advance')),
+                  ),
+                ],
               ),
             ],
           ),
@@ -947,6 +996,11 @@ String _tr(String keyPath) {
   return '';
 }
 
+String _localizedOrRaw(String keyOrText) {
+  final value = _tr(keyOrText);
+  return value.isNotEmpty ? value : keyOrText;
+}
+
 Color _themeColor(String keyPath) {
   return AppConstants.getThemeColor(keyPath);
 }
@@ -967,11 +1021,14 @@ void _showJoinLobbyDialog(
     builder: (dialogContext) {
       return AlertDialog(
         backgroundColor: _themeColor('measurement_page.panel_background'),
-        title: Text('Join Lobby', style: TextStyle(color: accent)),
+        title: Text(
+          _tr('measurement_page.lobby.join_dialog.title'),
+          style: TextStyle(color: accent),
+        ),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: 'Lobby Code',
+            labelText: _tr('measurement_page.lobby.join_dialog.code_label'),
             labelStyle: TextStyle(color: accent),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(color: borderColor),
@@ -984,7 +1041,7 @@ void _showJoinLobbyDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text('Cancel', style: TextStyle(color: accent)),
+            child: Text(_tr('common.cancel'), style: TextStyle(color: accent)),
           ),
           TextButton(
             onPressed: () {
@@ -994,7 +1051,7 @@ void _showJoinLobbyDialog(
                 Navigator.of(dialogContext).pop();
               }
             },
-            child: Text('Join', style: TextStyle(color: accent)),
+            child: Text(_tr('common.join'), style: TextStyle(color: accent)),
           ),
         ],
       );

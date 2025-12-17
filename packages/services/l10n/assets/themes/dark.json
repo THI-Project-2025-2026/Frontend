@@ -60,6 +60,7 @@
         "telemetry_background": "#0F172A",
         "timeline_active": "#38BDF8",
         "timeline_inactive": "#1E293B",
+        "timeline_back": "#1E40AF",
         "ready_badge_ready": "#22C55E",
         "ready_badge_waiting": "#FACC15",
         "qr_background": "#0F172A"

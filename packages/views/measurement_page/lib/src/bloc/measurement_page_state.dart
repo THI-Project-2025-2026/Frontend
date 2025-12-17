@@ -165,12 +165,22 @@ class MeasurementPageState {
         titleKey: 'measurement_page.timeline.steps.4.title',
         descriptionKey: 'measurement_page.timeline.steps.4.description',
       ),
+      MeasurementStepDescriptor(
+        index: 5,
+        titleKey: 'measurement_page.timeline.steps.5.title',
+        descriptionKey: 'measurement_page.timeline.steps.5.description',
+      ),
+      MeasurementStepDescriptor(
+        index: 6,
+        titleKey: 'measurement_page.timeline.steps.6.title',
+        descriptionKey: 'measurement_page.timeline.steps.6.description',
+      ),
     ];
 
     const devices = <MeasurementDevice>[
       MeasurementDevice(
         id: 'local-device',
-        name: 'This device',
+        name: 'measurement_page.devices.local_name',
         role: MeasurementDeviceRole.none,
         isLocal: true,
         isReady: false,

@@ -1,6 +1,8 @@
 {
     "common": {
-        "back": "Zurück"
+        "back": "Zurück",
+        "cancel": "Abbrechen",
+        "join": "Beitreten"
     },
     "app": {
         "loading_title": "Sonalyze wird geladen",
@@ -114,7 +116,12 @@
                 "create": "Lobby erstellen",
                 "refresh": "Code aktualisieren",
                 "copy": "Link kopieren",
-                "toggle_qr": "QR-Vorschau umschalten"
+                "toggle_qr": "QR-Vorschau umschalten",
+                "join": "Beitreten"
+            },
+            "join_dialog": {
+                "title": "Lobby beitreten",
+                "code_label": "Lobby-Code"
             },
             "code_label": "Lobby-Code",
             "link_label": "Einladungslink",
@@ -145,6 +152,7 @@
             "empty": "Noch keine Geräte verbunden.",
             "demo_join": "Demo-Gerät hinzufügen",
             "demo_leave": "Letztes Remote-Gerät entfernen",
+            "local_name": "Dieses Gerät",
             "local_badge": "Dieses Gerät",
             "headers": {
                 "device": "Gerät",
@@ -175,24 +183,33 @@
         "timeline": {
             "title": "Mess-Ablauf",
             "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
             "steps": {
                 "0": {
-                    "title": "Geräte verbinden",
-                    "description": "Alle Messgeräte mit der Lobby verbinden und Konnektivität prüfen."
+                    "title": "Mess-Lobby erstellen",
+                    "description": "Lobby erstellen oder beitreten, um Geräte für die Sitzung zu koordinieren."
                 },
                 "1": {
-                    "title": "Raum modellieren",
-                    "description": "Raumgeometrie definieren und Mikrofone sowie Lautsprecher positionieren."
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
                 },
                 "2": {
+                    "title": "Raum einrichten",
+                    "description": "Möbel und Öffnungen im modellierten Raum platzieren."
+                },
+                "3": {
+                    "title": "Geräterollen festlegen",
+                    "description": "Mikrofon- und Lautsprecherrollen für alle verbundenen Geräte zuweisen."
+                },
+                "4": {
                     "title": "Geräte synchronisieren",
                     "description": "Timing aller verbundenen Geräte für präzise Messungen kalibrieren."
                 },
-                "3": {
+                "5": {
                     "title": "Sweep starten",
                     "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
                 },
-                "4": {
+                "6": {
                     "title": "Impulsergebnisse prüfen",
                     "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
                 }

@@ -1,6 +1,8 @@
 {
     "common": {
-        "back": "Back"
+        "back": "Back",
+        "cancel": "Cancel",
+        "join": "Join"
     },
     "app": {
         "loading_title": "Loading Sonalyze",
@@ -114,7 +116,12 @@
                 "create": "Create lobby",
                 "refresh": "Refresh code",
                 "copy": "Copy invite link",
-                "toggle_qr": "Toggle QR preview"
+                "toggle_qr": "Toggle QR preview",
+                "join": "Join"
+            },
+            "join_dialog": {
+                "title": "Join lobby",
+                "code_label": "Lobby code"
             },
             "code_label": "Lobby code",
             "link_label": "Invite link",
@@ -145,6 +152,7 @@
             "empty": "No devices connected yet.",
             "demo_join": "Add demo device",
             "demo_leave": "Remove last remote",
+            "local_name": "This device",
             "local_badge": "This device",
             "headers": {
                 "device": "Device",
@@ -175,24 +183,33 @@
         "timeline": {
             "title": "Measurement timeline",
             "advance": "Next step",
+            "back": "Previous step",
             "steps": {
                 "0": {
-                    "title": "Connect devices",
-                    "description": "Join all measurement devices to the lobby and verify connectivity."
+                    "title": "Create measurement lobby",
+                    "description": "Create or join a lobby to coordinate devices for the session."
                 },
                 "1": {
-                    "title": "Model room",
-                    "description": "Define room geometry and place microphones and speakers in position."
+                    "title": "Construct wall structure",
+                    "description": "Draw and define the room's wall layout and boundaries."
                 },
                 "2": {
+                    "title": "Furnish the room",
+                    "description": "Place furniture and openings in the modeled space."
+                },
+                "3": {
+                    "title": "Set connected device roles",
+                    "description": "Assign microphone and loudspeaker roles for all connected devices."
+                },
+                "4": {
                     "title": "Synchronize devices",
                     "description": "Calibrate timing across all connected devices for accurate measurements."
                 },
-                "3": {
+                "5": {
                     "title": "Run sweep",
                     "description": "Trigger synchronized sweeps while monitoring headroom and clipping indicators."
                 },
-                "4": {
+                "6": {
                     "title": "Review impulse results",
                     "description": "Validate energy decay curves and analyze impulse response data."
                 }

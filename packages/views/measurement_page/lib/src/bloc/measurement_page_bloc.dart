@@ -30,6 +30,7 @@ class MeasurementPageBloc
     on<MeasurementDeviceDemoJoined>(_onDeviceJoined);
     on<MeasurementDeviceDemoLeft>(_onDeviceLeft);
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
+    on<MeasurementTimelineStepBack>(_onTimelineStepBack);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (envelope.isEvent && envelope.event == 'lobby.updated') {
@@ -84,6 +85,7 @@ class MeasurementPageBloc
           lastActionMessage: 'measurement_page.lobby.status_active',
           isHost: true,
           currentDeviceId: adminDeviceId, // In create, we are the admin
+          activeStepIndex: max(state.activeStepIndex, 1),
         ),
       );
     } catch (e) {
@@ -324,8 +326,23 @@ class MeasurementPageBloc
     MeasurementTimelineAdvanced event,
     Emitter<MeasurementPageState> emit,
   ) {
-    final nextIndex = (state.activeStepIndex + 1) % state.steps.length;
+    if (state.steps.isEmpty) {
+      return;
+    }
+    final lastIndex = state.steps.length - 1;
+    final nextIndex = min(state.activeStepIndex + 1, lastIndex);
     emit(state.copyWith(activeStepIndex: nextIndex));
+  }
+
+  void _onTimelineStepBack(
+    MeasurementTimelineStepBack event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    if (state.steps.isEmpty) {
+      return;
+    }
+    final prevIndex = max(state.activeStepIndex - 1, 0);
+    emit(state.copyWith(activeStepIndex: prevIndex));
   }
 
   String _generateRequestId() {

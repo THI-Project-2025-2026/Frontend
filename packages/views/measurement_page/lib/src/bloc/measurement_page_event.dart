@@ -73,3 +73,8 @@ class MeasurementDeviceDemoLeft extends MeasurementPageEvent {
 class MeasurementTimelineAdvanced extends MeasurementPageEvent {
   const MeasurementTimelineAdvanced();
 }
+
+/// Steps the measurement timeline back to the previous step.
+class MeasurementTimelineStepBack extends MeasurementPageEvent {
+  const MeasurementTimelineStepBack();
+}

@@ -18,6 +18,8 @@ dependencies:
     path: ../../core/ui
   common_helpers:
     path: ../../helpers/common
+  room_modeling:
+    path: ../../features/room_modeling
   backend_gateway:
     path: ../../services/backend_gateway
   get_it: ^7.7.0
