@@ -380,14 +380,10 @@ class RoomPainter extends CustomPainter {
     final halfWidth = width / 2;
     final halfHeight = height / 2;
 
-    final selectionPaint = Paint()
-      ..color = palette.selectionFill
-      ..style = PaintingStyle.fill;
-
     final borderPaint = Paint()
       ..color = palette.selectionBorder
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
 
     final rect = Rect.fromCenter(
@@ -395,7 +391,6 @@ class RoomPainter extends CustomPainter {
       width: width + 10,
       height: height + 10,
     );
-    canvas.drawRect(rect, selectionPaint);
     canvas.drawRect(rect, borderPaint);
 
     final isOpening = Furniture.isOpeningType(item.type);
@@ -509,11 +504,11 @@ class RoomPainter extends CustomPainter {
         canvas.drawRRect(backrestRRect, strokePaint);
         break;
       case FurnitureType.table:
-        canvas.drawOval(
+        canvas.drawRect(
           Rect.fromCenter(center: Offset.zero, width: width, height: height),
           fillPaint,
         );
-        canvas.drawOval(
+        canvas.drawRect(
           Rect.fromCenter(center: Offset.zero, width: width, height: height),
           strokePaint,
         );
@@ -573,14 +568,14 @@ class RoomPainter extends CustomPainter {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(center: Offset.zero, width: width, height: height),
-            Radius.circular(min(width, height) / 4),
+            const Radius.circular(8.0),
           ),
           fillPaint,
         );
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(center: Offset.zero, width: width, height: height),
-            Radius.circular(min(width, height) / 4),
+            const Radius.circular(8.0),
           ),
           strokePaint,
         );
@@ -588,7 +583,7 @@ class RoomPainter extends CustomPainter {
           RRect.fromRectAndRadius(
             Rect.fromCenter(
                 center: Offset.zero, width: width * 0.8, height: height * 0.8),
-            Radius.circular(min(width, height) / 5),
+            const Radius.circular(6.0),
           ),
           strokePaint,
         );
@@ -608,11 +603,14 @@ class RoomPainter extends CustomPainter {
           ),
           strokePaint,
         );
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset(0, height * 0.1),
-            width: width * 0.8,
-            height: height * 0.7,
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: Offset(0, height * 0.1),
+              width: width * 0.8,
+              height: height * 0.7,
+            ),
+            const Radius.circular(4.0),
           ),
           strokePaint,
         );
@@ -627,6 +625,105 @@ class RoomPainter extends CustomPainter {
           strokePaint,
         );
         canvas.drawCircle(Offset.zero, min(width, height) / 3, strokePaint);
+        break;
+      case FurnitureType.wardrobe:
+        // Wardrobe: rectangle with vertical door lines
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw door dividers
+        canvas.drawLine(Offset.zero, Offset(0, halfHeight), strokePaint);
+        canvas.drawLine(Offset.zero, Offset(0, -halfHeight), strokePaint);
+        break;
+      case FurnitureType.desk:
+        // Desk: rectangle with drawer indication
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw drawer lines
+        canvas.drawLine(
+          Offset(-halfWidth, height * 0.25),
+          Offset(halfWidth, height * 0.25),
+          strokePaint,
+        );
+        break;
+      case FurnitureType.shelf:
+        // Shelf: rectangle with horizontal lines
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw shelves
+        canvas.drawLine(
+          Offset(-halfWidth, 0),
+          Offset(halfWidth, 0),
+          strokePaint,
+        );
+        break;
+      case FurnitureType.stove:
+        // Stove: square with circles for burners
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw 4 burners
+        final burnerRadius = min(width, height) * 0.15;
+        final offset = min(width, height) * 0.25;
+        canvas.drawCircle(Offset(-offset, -offset), burnerRadius, strokePaint);
+        canvas.drawCircle(Offset(offset, -offset), burnerRadius, strokePaint);
+        canvas.drawCircle(Offset(-offset, offset), burnerRadius, strokePaint);
+        canvas.drawCircle(Offset(offset, offset), burnerRadius, strokePaint);
+        break;
+      case FurnitureType.fridge:
+        // Fridge: rectangle with horizontal line for freezer compartment
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        canvas.drawLine(
+          Offset(-halfWidth, -height * 0.25),
+          Offset(halfWidth, -height * 0.25),
+          strokePaint,
+        );
+        break;
+      case FurnitureType.shower:
+        // Shower: square with diagonal lines for tiles
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          fillPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: width, height: height),
+          strokePaint,
+        );
+        // Draw shower head indicator
+        canvas.drawCircle(
+          Offset(-halfWidth * 0.6, -halfHeight * 0.6),
+          min(width, height) * 0.1,
+          strokePaint,
+        );
         break;
     }
 

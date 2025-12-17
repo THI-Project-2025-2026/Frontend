@@ -11,6 +11,12 @@ enum FurnitureType {
   bathtub,
   toilet,
   sink,
+  wardrobe,
+  desk,
+  shelf,
+  stove,
+  fridge,
+  shower,
 }
 
 class Furniture extends Equatable {
@@ -24,6 +30,7 @@ class Furniture extends Equatable {
   final Size size;
   final String? attachedWallId; // For doors/windows
   final double? sillHeightMeters;
+  final double? heightMeters;
   final double? openingHeightMeters;
 
   static bool isOpeningType(FurnitureType type) {
@@ -37,6 +44,7 @@ class Furniture extends Equatable {
     required this.size,
     this.rotation = 0.0,
     this.attachedWallId,
+    this.heightMeters,
     this.sillHeightMeters,
     this.openingHeightMeters,
   });
@@ -48,6 +56,7 @@ class Furniture extends Equatable {
     double? rotation,
     Size? size,
     String? attachedWallId,
+    double? heightMeters,
     double? sillHeightMeters,
     double? openingHeightMeters,
   }) {
@@ -58,6 +67,7 @@ class Furniture extends Equatable {
       rotation: rotation ?? this.rotation,
       size: size ?? this.size,
       attachedWallId: attachedWallId ?? this.attachedWallId,
+      heightMeters: heightMeters ?? this.heightMeters,
       sillHeightMeters: sillHeightMeters ?? this.sillHeightMeters,
       openingHeightMeters: openingHeightMeters ?? this.openingHeightMeters,
     );
@@ -73,6 +83,7 @@ class Furniture extends Equatable {
         rotation,
         size,
         attachedWallId,
+        heightMeters,
         sillHeightMeters,
         openingHeightMeters,
       ];
@@ -98,6 +109,18 @@ class Furniture extends Equatable {
         return const Size(20, 35); // ~0.4m x 0.7m
       case FurnitureType.sink:
         return const Size(30, 25); // ~0.6m x 0.5m
+        case FurnitureType.wardrobe:
+          return const Size(100, 30); // ~2.0m x 0.6m
+        case FurnitureType.desk:
+          return const Size(60, 40); // ~1.2m x 0.8m
+        case FurnitureType.shelf:
+          return const Size(80, 20); // ~1.6m x 0.4m
+        case FurnitureType.stove:
+          return const Size(30, 30); // ~0.6m x 0.6m
+        case FurnitureType.fridge:
+          return const Size(30, 35); // ~0.6m x 0.7m
+        case FurnitureType.shower:
+          return const Size(45, 45); // ~0.9m x 0.9m
     }
   }
 }

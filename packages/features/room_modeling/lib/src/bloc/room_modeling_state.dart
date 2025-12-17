@@ -14,6 +14,12 @@ enum RoomModelingTool {
   bathtub,
   toilet,
   sink,
+  wardrobe,
+  desk,
+  shelf,
+  stove,
+  fridge,
+  shower,
 }
 
 enum RoomModelingStep {

@@ -7,7 +7,6 @@ import 'package:sonalyze_webview/sonalyze_webview.dart';
 import 'package:core_ui/core_ui.dart';
 import 'room_modeling_l10n.dart';
 import 'bloc/room_modeling_bloc.dart';
-import 'bloc/room_modeling_state.dart';
 import 'storage/room_plan_exporter.dart';
 
 class Room3DPreview extends StatefulWidget {
