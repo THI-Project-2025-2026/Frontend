@@ -725,6 +725,42 @@ class RoomPainter extends CustomPainter {
           strokePaint,
         );
         break;
+      case FurnitureType.speaker:
+        // Speaker: filled circle with wave arcs
+        final radius = min(width, height) * 0.35;
+        canvas.drawCircle(Offset.zero, radius, fillPaint);
+        canvas.drawCircle(Offset.zero, radius, strokePaint);
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius * 1.5),
+          -pi / 4,
+          pi / 2,
+          false,
+          strokePaint,
+        );
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius * 1.9),
+          -pi / 4,
+          pi / 2,
+          false,
+          strokePaint,
+        );
+        break;
+      case FurnitureType.microphone:
+        // Microphone: small circle with stem
+        final radius = min(width, height) * 0.35;
+        canvas.drawCircle(Offset.zero, radius, fillPaint);
+        canvas.drawCircle(Offset.zero, radius, strokePaint);
+        canvas.drawLine(
+          Offset(0, radius),
+          Offset(0, radius + height * 0.4),
+          strokePaint,
+        );
+        canvas.drawLine(
+          Offset(-radius * 0.6, radius + height * 0.35),
+          Offset(radius * 0.6, radius + height * 0.35),
+          strokePaint,
+        );
+        break;
     }
 
     canvas.restore();

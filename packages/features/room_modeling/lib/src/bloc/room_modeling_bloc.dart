@@ -49,7 +49,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onStepChanged(StepChanged event, Emitter<RoomModelingState> emit) {
-    if (event.step == RoomModelingStep.furnishing && !state.isRoomClosed) {
+    final requiresClosedRoom = event.step == RoomModelingStep.furnishing ||
+        event.step == RoomModelingStep.audio;
+    if (requiresClosedRoom && !state.isRoomClosed) {
       return;
     }
 
@@ -59,6 +61,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       // Default tool for furnishing could be anything, let's say door or just none/select
       // But we removed select. Let's default to door for now or keep previous if valid.
       newTool = RoomModelingTool.door;
+    } else if (event.step == RoomModelingStep.audio) {
+      newTool = RoomModelingTool.speaker;
     }
 
     emit(state.copyWith(
@@ -188,7 +192,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     CanvasPanStart event,
     Emitter<RoomModelingState> emit,
   ) {
-    if (state.currentStep == RoomModelingStep.furnishing) {
+    if (state.currentStep != RoomModelingStep.structure) {
       if (state.selectedFurnitureId != null) {
         final furniture = state.furniture.firstWhere(
           (f) => f.id == state.selectedFurnitureId,
@@ -853,6 +857,12 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case RoomModelingTool.shower:
         type = FurnitureType.shower;
         break;
+      case RoomModelingTool.speaker:
+        type = FurnitureType.speaker;
+        break;
+      case RoomModelingTool.microphone:
+        type = FurnitureType.microphone;
+        break;
       default:
         return;
     }
@@ -1206,6 +1216,10 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         return 1.8;
       case FurnitureType.shower:
         return 2.2;
+      case FurnitureType.speaker:
+        return 1.4;
+      case FurnitureType.microphone:
+        return 1.2;
     }
   }
 

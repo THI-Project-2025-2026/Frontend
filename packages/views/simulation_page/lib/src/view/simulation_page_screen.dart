@@ -136,12 +136,14 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
             final roomBloc = context.read<RoomModelingBloc>();
             if (state.activeStepIndex == 0) {
               roomBloc.add(const StepChanged(RoomModelingStep.structure));
-            } else if (state.activeStepIndex >= 1) {
+            } else if (state.activeStepIndex == 1) {
               roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+            } else {
+              roomBloc.add(const StepChanged(RoomModelingStep.audio));
             }
 
-            // Show simulation dialog when entering step 3 (index 2)
-            if (state.activeStepIndex == 2) {
+            // Show simulation dialog when entering step 4 (index 3)
+            if (state.activeStepIndex == 3) {
               _showSimulationDialog(context);
             }
           },
@@ -195,10 +197,10 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                       builder: (context, simulationState) {
                         // Hide tools panel in steps 3+ (simulation and results)
                         final hideToolsPanel =
-                            simulationState.activeStepIndex >= 2;
-                        // Only show metrics in step 4 (results)
+                            simulationState.activeStepIndex >= 3;
+                        // Only show metrics in step 5 (results)
                         final showMetrics =
-                            simulationState.activeStepIndex == 3;
+                            simulationState.activeStepIndex == 4;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -984,9 +986,20 @@ class _SimulationTimelineCard extends StatelessWidget {
         return BlocBuilder<RoomModelingBloc, RoomModelingState>(
           builder: (context, roomState) {
             // Can only advance from step 0 to step 1 if room is closed
+            final requiresDevices = simulationState.activeStepIndex == 2;
+            final hasSpeaker = roomState.furniture.any(
+              (f) => f.type == FurnitureType.speaker,
+            );
+            final hasMic = roomState.furniture.any(
+              (f) => f.type == FurnitureType.microphone,
+            );
+            final hasRequiredDevices = hasSpeaker && hasMic;
+
             final canAdvance =
                 simulationState.steps.isNotEmpty &&
-                (simulationState.activeStepIndex > 0 || roomState.isRoomClosed);
+                ((simulationState.activeStepIndex > 0 ||
+                        roomState.isRoomClosed) &&
+                    (!requiresDevices || hasRequiredDevices));
 
             return SonalyzeSurface(
               padding: const EdgeInsets.all(28),
@@ -1045,6 +1058,20 @@ class _SimulationTimelineCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Text(
                         _tr('simulation_page.timeline.close_room_hint'),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: warningColor),
+                      ),
+                    ),
+                  if (requiresDevices && !hasRequiredDevices)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Text(
+                        _tr(
+                          'simulation_page.timeline.place_devices_hint',
+                          fallback:
+                              'Place at least one speaker and one microphone to continue.',
+                        ),
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: warningColor),
@@ -1153,9 +1180,18 @@ class _SimulationTimelineStepTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_tr(descriptor.titleKey), style: titleStyle),
+                Text(
+                  _tr(descriptor.titleKey, fallback: descriptor.fallbackTitle),
+                  style: titleStyle,
+                ),
                 const SizedBox(height: 6),
-                Text(_tr(descriptor.descriptionKey), style: descriptionStyle),
+                Text(
+                  _tr(
+                    descriptor.descriptionKey,
+                    fallback: descriptor.fallbackDescription,
+                  ),
+                  style: descriptionStyle,
+                ),
               ],
             ),
           ),
@@ -1165,12 +1201,15 @@ class _SimulationTimelineStepTile extends StatelessWidget {
   }
 }
 
-String _tr(String keyPath) {
+String _tr(String keyPath, {String? fallback}) {
   final value = AppConstants.translation(keyPath);
-  if (value is String) {
+  if (value is String && value.isNotEmpty) {
     return value;
   }
-  return '';
+  if (fallback != null && fallback.isNotEmpty) {
+    return fallback;
+  }
+  return keyPath;
 }
 
 String _localizedOr(String keyPath, String fallback) {

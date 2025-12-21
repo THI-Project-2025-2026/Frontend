@@ -20,11 +20,14 @@ enum RoomModelingTool {
   stove,
   fridge,
   shower,
+  speaker,
+  microphone,
 }
 
 enum RoomModelingStep {
   structure,
   furnishing,
+  audio,
 }
 
 enum FurnitureInteraction {

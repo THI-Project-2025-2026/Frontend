@@ -51,8 +51,11 @@ class ToolsPanel extends StatelessWidget {
                     ),
                   ),
                 ),
-            ] else ...[
+            ] else if (state.currentStep == RoomModelingStep.furnishing) ...[
               _buildFurnitureMenu(context, state),
+              ..._buildSelectedFurnitureEditor(context, state),
+            ] else ...[
+              _buildAudioMenu(context, state),
               ..._buildSelectedFurnitureEditor(context, state),
             ],
             const SizedBox(height: 16),
@@ -193,6 +196,47 @@ class ToolsPanel extends StatelessWidget {
     );
   }
 
+  Widget _buildAudioMenu(BuildContext context, RoomModelingState state) {
+    return Expanded(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                RoomModelingL10n.text('tools.menu.audio'),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: RoomModelingColors.color('menu.header_text'),
+                    ),
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ToolItem(RoomModelingTool.speaker, Icons.speaker_group),
+                _ToolItem(RoomModelingTool.microphone, Icons.mic),
+              ].map((item) => _buildToolButton(context, state, item)).toList(),
+            ),
+            const SizedBox(height: 12),
+            Builder(builder: (context) {
+              final helper = RoomModelingL10n.text('tools.audio.helper');
+              final resolved = helper == 'tools.audio.helper'
+                  ? 'Place at least one speaker and one microphone to continue.'
+                  : helper;
+              return Text(
+                resolved,
+                style: Theme.of(context).textTheme.bodySmall,
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolCategory(
     BuildContext context,
     RoomModelingState state,
@@ -284,7 +328,14 @@ class ToolsPanel extends StatelessWidget {
     final key = 'tools.menu.items.${tool.name}';
     final label = RoomModelingL10n.text(key);
     if (label == key) {
-      return RoomModelingL10n.text('tools.menu.placeholder');
+      switch (tool) {
+        case RoomModelingTool.speaker:
+          return 'Speaker';
+        case RoomModelingTool.microphone:
+          return 'Microphone';
+        default:
+          return RoomModelingL10n.text('tools.menu.placeholder');
+      }
     }
     return label;
   }
@@ -432,7 +483,6 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
         );
   }
 
-
   void _handleVerticalHeightChanged(String value) {
     final sanitized = value.replaceAll(',', '.');
     final meters = double.tryParse(sanitized);
@@ -474,6 +524,10 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
         return 1.8;
       case FurnitureType.shower:
         return 2.2;
+      case FurnitureType.speaker:
+        return 1.4;
+      case FurnitureType.microphone:
+        return 1.2;
     }
   }
 

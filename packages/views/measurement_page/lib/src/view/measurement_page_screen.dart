@@ -47,6 +47,8 @@ class _MeasurementPageView extends StatelessWidget {
           roomBloc.add(const StepChanged(RoomModelingStep.structure));
         } else if (state.activeStepIndex == 2) {
           roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+        } else {
+          roomBloc.add(const StepChanged(RoomModelingStep.audio));
         }
       },
       child: Scaffold(
@@ -187,7 +189,7 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[];
 
-    final hideRoomModelingTools = state.activeStepIndex >= 3;
+    final hideRoomModelingTools = state.activeStepIndex >= 4;
 
     children.add(_LobbyCard(state: state));
 
@@ -739,73 +741,117 @@ class _TimelineCard extends StatelessWidget {
     final backColor = _themeColor('measurement_page.timeline_back');
     final onPrimary = _themeColor('app.on_primary');
 
-    return SonalyzeSurface(
-      padding: const EdgeInsets.all(28),
-      backgroundColor: panelColor.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<RoomModelingBloc, RoomModelingState>(
+      builder: (context, roomState) {
+        final atDeviceStep = state.activeStepIndex == 3;
+        final hasSpeaker = roomState.furniture.any(
+          (f) => f.type == FurnitureType.speaker,
+        );
+        final hasMic = roomState.furniture.any(
+          (f) => f.type == FurnitureType.microphone,
+        );
+        final hasRequiredAudio = hasSpeaker && hasMic;
+        final requiresClosedRoom = state.activeStepIndex <= 1;
+        final canAdvance =
+            state.steps.isNotEmpty &&
+            state.activeStepIndex < state.steps.length - 1 &&
+            (!requiresClosedRoom || roomState.isRoomClosed) &&
+            (!atDeviceStep || hasRequiredAudio);
+
+        return SonalyzeSurface(
+          padding: const EdgeInsets.all(28),
+          backgroundColor: panelColor.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _tr('measurement_page.timeline.title'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
               Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SonalyzeButton(
-                    onPressed: state.activeStepIndex > 0
-                        ? () => context.read<MeasurementPageBloc>().add(
-                            const MeasurementTimelineStepBack(),
-                          )
-                        : null,
-                    backgroundColor: backColor,
-                    foregroundColor: onPrimary,
-                    borderRadius: BorderRadius.circular(18),
-                    icon: const Icon(Icons.fast_rewind_outlined),
-                    child: Text(_tr('measurement_page.timeline.back')),
+                  Text(
+                    _tr('measurement_page.timeline.title'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  SonalyzeButton(
-                    onPressed:
-                        state.steps.isNotEmpty &&
-                            state.activeStepIndex < state.steps.length - 1
-                        ? () => context.read<MeasurementPageBloc>().add(
-                            const MeasurementTimelineAdvanced(),
-                          )
-                        : null,
-                    backgroundColor: activeColor,
-                    foregroundColor: onPrimary,
-                    borderRadius: BorderRadius.circular(18),
-                    icon: const Icon(Icons.fast_forward_outlined),
-                    child: Text(_tr('measurement_page.timeline.advance')),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SonalyzeButton(
+                        onPressed: state.activeStepIndex > 0
+                            ? () => context.read<MeasurementPageBloc>().add(
+                                const MeasurementTimelineStepBack(),
+                              )
+                            : null,
+                        backgroundColor: backColor,
+                        foregroundColor: onPrimary,
+                        borderRadius: BorderRadius.circular(18),
+                        icon: const Icon(Icons.fast_rewind_outlined),
+                        child: Text(_tr('measurement_page.timeline.back')),
+                      ),
+                      const SizedBox(width: 12),
+                      SonalyzeButton(
+                        onPressed: canAdvance
+                            ? () => context.read<MeasurementPageBloc>().add(
+                                const MeasurementTimelineAdvanced(),
+                              )
+                            : null,
+                        backgroundColor: activeColor,
+                        foregroundColor: onPrimary,
+                        borderRadius: BorderRadius.circular(18),
+                        icon: const Icon(Icons.fast_forward_outlined),
+                        child: Text(_tr('measurement_page.timeline.advance')),
+                      ),
+                    ],
                   ),
+                ],
+              ),
+              if (atDeviceStep && !hasRequiredAudio)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Text(
+                    _tr(
+                      'measurement_page.timeline.place_devices_hint',
+                      fallback:
+                          'Place at least one speaker and one microphone to continue.',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: inactiveColor),
+                  ),
+                ),
+              if (requiresClosedRoom && !roomState.isRoomClosed)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Text(
+                    _tr(
+                      'measurement_page.timeline.close_room_hint',
+                      fallback: 'Close the room outline before continuing.',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: inactiveColor),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Column(
+                children: [
+                  for (var i = 0; i < state.steps.length; i++)
+                    _TimelineStepTile(
+                      descriptor: state.steps[i],
+                      isActive: state.activeStepIndex == i,
+                      isComplete: i < state.activeStepIndex,
+                      isLast: i == state.steps.length - 1,
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Column(
-            children: [
-              for (var i = 0; i < state.steps.length; i++)
-                _TimelineStepTile(
-                  descriptor: state.steps[i],
-                  isActive: state.activeStepIndex == i,
-                  isComplete: i < state.activeStepIndex,
-                  isLast: i == state.steps.length - 1,
-                  activeColor: activeColor,
-                  inactiveColor: inactiveColor,
-                ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -889,9 +935,18 @@ class _TimelineStepTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_tr(descriptor.titleKey), style: titleStyle),
+                Text(
+                  _tr(descriptor.titleKey, fallback: descriptor.fallbackTitle),
+                  style: titleStyle,
+                ),
                 const SizedBox(height: 6),
-                Text(_tr(descriptor.descriptionKey), style: descriptionStyle),
+                Text(
+                  _tr(
+                    descriptor.descriptionKey,
+                    fallback: descriptor.fallbackDescription,
+                  ),
+                  style: descriptionStyle,
+                ),
               ],
             ),
           ),
@@ -988,12 +1043,15 @@ String _roleLabel(MeasurementDeviceRole role) {
   return _tr('measurement_page.roles.${role.name}');
 }
 
-String _tr(String keyPath) {
+String _tr(String keyPath, {String? fallback}) {
   final value = AppConstants.translation(keyPath);
   if (value is String && value.isNotEmpty) {
     return value;
   }
-  return '';
+  if (fallback != null && fallback.isNotEmpty) {
+    return fallback;
+  }
+  return keyPath;
 }
 
 String _localizedOrRaw(String keyOrText) {

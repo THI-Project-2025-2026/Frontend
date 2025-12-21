@@ -184,6 +184,7 @@
             "title": "Mess-Ablauf",
             "advance": "Nächster Schritt",
             "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um Geräte zu platzieren.",
             "steps": {
                 "0": {
                     "title": "Mess-Lobby erstellen",
@@ -196,6 +197,10 @@
                 "2": {
                     "title": "Raum einrichten",
                     "description": "Möbel und Öffnungen im modellierten Raum platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon im Raum hinzu, bevor du fortfährst."
                 },
                 "3": {
                     "title": "Geräterollen festlegen",
@@ -311,6 +316,10 @@
                 "1": {
                     "title": "Raum einrichten",
                     "description": "Möbel, Öffnungen und akustische Behandlungen platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon hinzu, bevor du die Simulation startest."
                 },
                 "2": {
                     "title": "Simulation starten",

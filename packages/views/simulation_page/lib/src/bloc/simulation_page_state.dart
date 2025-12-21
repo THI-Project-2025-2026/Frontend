@@ -12,11 +12,15 @@ class SimulationStepDescriptor {
     required this.index,
     required this.titleKey,
     required this.descriptionKey,
+    this.fallbackTitle,
+    this.fallbackDescription,
   });
 
   final int index;
   final String titleKey;
   final String descriptionKey;
+  final String? fallbackTitle;
+  final String? fallbackDescription;
 }
 
 /// Describes metadata for palette entries.
@@ -440,11 +444,19 @@ class SimulationPageState {
       ),
       SimulationStepDescriptor(
         index: 2,
+        titleKey: 'simulation_page.timeline.steps.devices.title',
+        descriptionKey: 'simulation_page.timeline.steps.devices.description',
+        fallbackTitle: 'Place speakers and microphones',
+        fallbackDescription:
+            'Add at least one speaker and one microphone before running the simulation.',
+      ),
+      SimulationStepDescriptor(
+        index: 3,
         titleKey: 'simulation_page.timeline.steps.2.title',
         descriptionKey: 'simulation_page.timeline.steps.2.description',
       ),
       SimulationStepDescriptor(
-        index: 3,
+        index: 4,
         titleKey: 'simulation_page.timeline.steps.3.title',
         descriptionKey: 'simulation_page.timeline.steps.3.description',
       ),

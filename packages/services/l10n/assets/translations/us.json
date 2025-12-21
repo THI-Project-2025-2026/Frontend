@@ -184,6 +184,7 @@
             "title": "Measurement timeline",
             "advance": "Next step",
             "back": "Previous step",
+            "close_room_hint": "Close the wall loop to place devices.",
             "steps": {
                 "0": {
                     "title": "Create measurement lobby",
@@ -196,6 +197,10 @@
                 "2": {
                     "title": "Furnish the room",
                     "description": "Place furniture and openings in the modeled space."
+                },
+                "devices": {
+                    "title": "Place speakers and microphones",
+                    "description": "Add at least one speaker and one microphone inside the room before proceeding."
                 },
                 "3": {
                     "title": "Set connected device roles",
@@ -311,6 +316,10 @@
                 "1": {
                     "title": "Furnish the room",
                     "description": "Place furniture, openings, and acoustic treatments in the space."
+                },
+                "devices": {
+                    "title": "Place speakers and microphones",
+                    "description": "Add at least one speaker and one microphone before running the simulation."
                 },
                 "2": {
                     "title": "Start simulation",

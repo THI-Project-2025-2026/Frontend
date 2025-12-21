@@ -9,11 +9,15 @@ class MeasurementStepDescriptor {
     required this.index,
     required this.titleKey,
     required this.descriptionKey,
+    this.fallbackTitle,
+    this.fallbackDescription,
   });
 
   final int index;
   final String titleKey;
   final String descriptionKey;
+  final String? fallbackTitle;
+  final String? fallbackDescription;
 }
 
 /// Representation of a connected device in the lobby.
@@ -157,21 +161,29 @@ class MeasurementPageState {
       ),
       MeasurementStepDescriptor(
         index: 3,
+        titleKey: 'measurement_page.timeline.steps.devices.title',
+        descriptionKey: 'measurement_page.timeline.steps.devices.description',
+        fallbackTitle: 'Place speakers and microphones',
+        fallbackDescription:
+            'Add at least one speaker and one microphone inside the room.',
+      ),
+      MeasurementStepDescriptor(
+        index: 4,
         titleKey: 'measurement_page.timeline.steps.3.title',
         descriptionKey: 'measurement_page.timeline.steps.3.description',
       ),
       MeasurementStepDescriptor(
-        index: 4,
+        index: 5,
         titleKey: 'measurement_page.timeline.steps.4.title',
         descriptionKey: 'measurement_page.timeline.steps.4.description',
       ),
       MeasurementStepDescriptor(
-        index: 5,
+        index: 6,
         titleKey: 'measurement_page.timeline.steps.5.title',
         descriptionKey: 'measurement_page.timeline.steps.5.description',
       ),
       MeasurementStepDescriptor(
-        index: 6,
+        index: 7,
         titleKey: 'measurement_page.timeline.steps.6.title',
         descriptionKey: 'measurement_page.timeline.steps.6.description',
       ),
