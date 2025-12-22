@@ -60,6 +60,7 @@ class RoomModelingState extends Equatable {
   final List<SnapGuideLine> snapGuides;
   final List<Offset>? roomPolygon;
   final double roomHeightMeters;
+  final Map<String, Color> deviceHighlights;
 
   const RoomModelingState({
     this.walls = const [],
@@ -79,6 +80,7 @@ class RoomModelingState extends Equatable {
     this.snapGuides = const [],
     this.roomPolygon,
     this.roomHeightMeters = defaultRoomHeightMeters,
+    this.deviceHighlights = const {},
   });
 
   RoomModelingState copyWith({
@@ -99,9 +101,11 @@ class RoomModelingState extends Equatable {
     List<SnapGuideLine>? snapGuides,
     List<Offset>? roomPolygon,
     double? roomHeightMeters,
+    Map<String, Color>? deviceHighlights,
     bool clearDrag = false,
     bool clearSelection = false,
     bool clearSnapGuide = false,
+    bool clearHighlights = false,
   }) {
     return RoomModelingState(
       walls: walls ?? this.walls,
@@ -133,6 +137,9 @@ class RoomModelingState extends Equatable {
           : (snapGuides ?? this.snapGuides),
       roomPolygon: roomPolygon ?? this.roomPolygon,
       roomHeightMeters: roomHeightMeters ?? this.roomHeightMeters,
+      deviceHighlights: clearHighlights
+          ? const {}
+          : (deviceHighlights ?? this.deviceHighlights),
     );
   }
 
@@ -155,6 +162,7 @@ class RoomModelingState extends Equatable {
         snapGuides,
         roomPolygon,
         roomHeightMeters,
+        deviceHighlights,
       ];
 }
 

@@ -30,10 +30,16 @@ class MeasurementDeviceRoleChanged extends MeasurementPageEvent {
   const MeasurementDeviceRoleChanged({
     required this.deviceId,
     required this.role,
+    this.roleSlotId,
+    this.roleLabel,
+    this.roleColor,
   });
 
   final String deviceId;
   final MeasurementDeviceRole role;
+  final String? roleSlotId;
+  final String? roleLabel;
+  final Color? roleColor;
 }
 
 /// Toggles ready state for a specific device in the lobby.

@@ -119,3 +119,12 @@ class RoomHeightChanged extends RoomModelingEvent {
 class ClearRoom extends RoomModelingEvent {
   const ClearRoom();
 }
+
+class DeviceHighlightsUpdated extends RoomModelingEvent {
+  final Map<String, Color> highlights;
+
+  const DeviceHighlightsUpdated(this.highlights);
+
+  @override
+  List<Object?> get props => [highlights];
+}

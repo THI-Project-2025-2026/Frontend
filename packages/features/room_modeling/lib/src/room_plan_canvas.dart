@@ -71,6 +71,7 @@ class RoomPlanCanvas extends StatelessWidget {
                     selectedFurnitureId: state.selectedFurnitureId,
                     snapGuides: state.snapGuides,
                     roomPolygon: state.roomPolygon,
+                    deviceHighlights: state.deviceHighlights,
                     palette: palette,
                   ),
                   size: canvasSize,
@@ -97,6 +98,7 @@ class _RoomPainter extends CustomPainter {
   final _RoomCanvasPalette palette;
   final String metersSuffix;
   final String degreesSuffix;
+  final Map<String, Color> deviceHighlights;
 
   _RoomPainter({
     required this.walls,
@@ -109,6 +111,7 @@ class _RoomPainter extends CustomPainter {
     this.snapGuides = const [],
     this.roomPolygon,
     required this.palette,
+    this.deviceHighlights = const {},
   })  : metersSuffix = RoomModelingL10n.metersSuffix(),
         degreesSuffix = RoomModelingL10n.degreesSuffix();
 
@@ -449,13 +452,17 @@ class _RoomPainter extends CustomPainter {
     final halfWidth = width / 2;
     final halfHeight = height / 2;
 
+    final highlight = deviceHighlights[item.id];
+    final baseFill = highlight ?? palette.furnitureFill;
     final strokePaint = Paint()
-      ..color = palette.furnitureStroke
+      ..color = highlight != null
+          ? highlight.withOpacity(0.9)
+          : palette.furnitureStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
     final fillPaint = Paint()
-      ..color = palette.furnitureFill
+      ..color = baseFill.withOpacity(highlight != null ? 0.28 : 1.0)
       ..style = PaintingStyle.fill;
 
     switch (item.type) {
@@ -788,7 +795,8 @@ class _RoomPainter extends CustomPainter {
         oldDelegate.selectedWallId != selectedWallId ||
         oldDelegate.selectedFurnitureId != selectedFurnitureId ||
         oldDelegate.snapGuides != snapGuides ||
-        oldDelegate.roomPolygon != roomPolygon;
+        oldDelegate.roomPolygon != roomPolygon ||
+        oldDelegate.deviceHighlights != deviceHighlights;
   }
 }
 

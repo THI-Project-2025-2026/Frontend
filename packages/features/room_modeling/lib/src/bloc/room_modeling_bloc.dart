@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -30,6 +31,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<CanvasPanEnd>(_onCanvasPanEnd);
     on<CanvasTap>(_onCanvasTap);
     on<ClearRoom>(_onClearRoom);
+    on<DeviceHighlightsUpdated>(_onDeviceHighlightsUpdated);
   }
 
   @override
@@ -966,6 +968,16 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
   void _onClearRoom(ClearRoom event, Emitter<RoomModelingState> emit) {
     emit(const RoomModelingState());
+  }
+
+  void _onDeviceHighlightsUpdated(
+    DeviceHighlightsUpdated event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    if (mapEquals(state.deviceHighlights, event.highlights)) {
+      return;
+    }
+    emit(state.copyWith(deviceHighlights: event.highlights));
   }
 
   List<Furniture> _repositionAttachedOpenings(

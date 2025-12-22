@@ -30,6 +30,9 @@ class MeasurementDevice {
     required this.isReady,
     required this.latencyMs,
     required this.batteryLevel,
+    this.roleSlotId,
+    this.roleLabel,
+    this.roleColor,
   });
 
   final String id;
@@ -39,6 +42,9 @@ class MeasurementDevice {
   final bool isReady;
   final int latencyMs;
   final double batteryLevel;
+  final String? roleSlotId;
+  final String? roleLabel;
+  final Color? roleColor;
 
   MeasurementDevice copyWith({
     String? id,
@@ -48,6 +54,9 @@ class MeasurementDevice {
     bool? isReady,
     int? latencyMs,
     double? batteryLevel,
+    String? roleSlotId,
+    String? roleLabel,
+    Color? roleColor,
   }) {
     return MeasurementDevice(
       id: id ?? this.id,
@@ -57,6 +66,9 @@ class MeasurementDevice {
       isReady: isReady ?? this.isReady,
       latencyMs: latencyMs ?? this.latencyMs,
       batteryLevel: batteryLevel ?? this.batteryLevel,
+      roleSlotId: roleSlotId ?? this.roleSlotId,
+      roleLabel: roleLabel ?? this.roleLabel,
+      roleColor: roleColor ?? this.roleColor,
     );
   }
 }
@@ -198,6 +210,9 @@ class MeasurementPageState {
         isReady: false,
         latencyMs: 0,
         batteryLevel: 1.0,
+        roleSlotId: null,
+        roleLabel: null,
+        roleColor: null,
       ),
     ];
 

@@ -1,5 +1,6 @@
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,6 +14,7 @@ class MeasurementPageScreen extends StatelessWidget {
   const MeasurementPageScreen({super.key});
 
   static const String routeName = '/measurement';
+  static const int _roleAssignmentStepIndex = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,189 @@ class MeasurementPageScreen extends StatelessWidget {
   }
 }
 
+class _AudioRoleSlot {
+  const _AudioRoleSlot({
+    required this.id,
+    required this.label,
+    required this.role,
+    required this.furnitureId,
+    required this.color,
+  });
+
+  final String id;
+  final String label;
+  final MeasurementDeviceRole role;
+  final String furnitureId;
+  final Color color;
+}
+
+class _RoleColorDot extends StatelessWidget {
+  const _RoleColorDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+List<_AudioRoleSlot> _buildAudioRoleSlots(RoomModelingState roomState) {
+  final slots = <_AudioRoleSlot>[];
+  var speakerIndex = 1;
+  var microphoneIndex = 1;
+
+  for (final furniture in roomState.furniture) {
+    if (furniture.type == FurnitureType.speaker) {
+      slots.add(
+        _AudioRoleSlot(
+          id: 'speaker-$speakerIndex',
+          label:
+              '${_baseRoleLabel(MeasurementDeviceRole.loudspeaker)} $speakerIndex',
+          role: MeasurementDeviceRole.loudspeaker,
+          furnitureId: furniture.id,
+          color: _roleColorFor(
+            MeasurementDeviceRole.loudspeaker,
+            speakerIndex - 1,
+          ),
+        ),
+      );
+      speakerIndex++;
+    } else if (furniture.type == FurnitureType.microphone) {
+      slots.add(
+        _AudioRoleSlot(
+          id: 'microphone-$microphoneIndex',
+          label:
+              '${_baseRoleLabel(MeasurementDeviceRole.microphone)} $microphoneIndex',
+          role: MeasurementDeviceRole.microphone,
+          furnitureId: furniture.id,
+          color: _roleColorFor(
+            MeasurementDeviceRole.microphone,
+            microphoneIndex - 1,
+          ),
+        ),
+      );
+      microphoneIndex++;
+    }
+  }
+
+  return slots;
+}
+
+bool _roleAssignmentsComplete(
+  List<MeasurementDevice> devices,
+  List<_AudioRoleSlot> slots,
+) {
+  if (slots.isEmpty) {
+    return false;
+  }
+
+  final assigned = <String>{};
+  for (final device in devices) {
+    final slotId = device.roleSlotId;
+    if (slotId == null) continue;
+    assigned.add(slotId);
+  }
+
+  if (assigned.length != slots.length) {
+    return false;
+  }
+
+  return slots.every((slot) => assigned.contains(slot.id));
+}
+
+Set<String> _assignedSlotIds(
+  List<MeasurementDevice> devices,
+  String currentId,
+) {
+  final result = <String>{};
+  for (final device in devices) {
+    if (device.id == currentId) continue;
+    final slotId = device.roleSlotId;
+    if (slotId != null) {
+      result.add(slotId);
+    }
+  }
+  return result;
+}
+
+_AudioRoleSlot? _slotForId(String? id, List<_AudioRoleSlot> slots) {
+  if (id == null) return null;
+  for (final slot in slots) {
+    if (slot.id == id) return slot;
+  }
+  return null;
+}
+
+Color _roleColorFor(MeasurementDeviceRole role, int index) {
+  final palette = role == MeasurementDeviceRole.loudspeaker
+      ? _speakerColors
+      : _microphoneColors;
+  return palette[index % palette.length];
+}
+
+String _baseRoleLabel(MeasurementDeviceRole role) {
+  switch (role) {
+    case MeasurementDeviceRole.loudspeaker:
+      return _tr(
+        'measurement_page.roles.loudspeaker_label',
+        fallback: 'Speaker',
+      );
+    case MeasurementDeviceRole.microphone:
+      return _tr(
+        'measurement_page.roles.microphone_label',
+        fallback: 'Microphone',
+      );
+    case MeasurementDeviceRole.none:
+      return _tr('measurement_page.roles.none', fallback: 'None');
+  }
+}
+
+void _syncRoleHighlights(
+  BuildContext context,
+  MeasurementPageState measurementState,
+  RoomModelingState roomState,
+) {
+  final slots = _buildAudioRoleSlots(roomState);
+  final lookup = {for (final slot in slots) slot.id: slot};
+  final highlights = <String, Color>{};
+
+  for (final device in measurementState.devices) {
+    final slotId = device.roleSlotId;
+    if (slotId == null) continue;
+    final slot = lookup[slotId];
+    if (slot == null) continue;
+    highlights[slot.furnitureId] = slot.color;
+  }
+
+  final roomBloc = context.read<RoomModelingBloc>();
+  if (!mapEquals(roomBloc.state.deviceHighlights, highlights)) {
+    roomBloc.add(DeviceHighlightsUpdated(highlights));
+  }
+}
+
+const List<Color> _speakerColors = [
+  Color(0xFF6C8EF5),
+  Color(0xFF4EC4B0),
+  Color(0xFFEF6C9D),
+  Color(0xFF8B7FFB),
+  Color(0xFF3CBCC3),
+  Color(0xFFF6B76C),
+];
+
+const List<Color> _microphoneColors = [
+  Color(0xFFF59E0B),
+  Color(0xFF36B37E),
+  Color(0xFF3AA0F3),
+  Color(0xFFD97757),
+  Color(0xFF7C73E6),
+  Color(0xFFF470A7),
+];
+
 class _MeasurementPageView extends StatelessWidget {
   const _MeasurementPageView();
 
@@ -38,19 +223,45 @@ class _MeasurementPageView extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = _themeColors('measurement_page.background_gradient');
 
-    return BlocListener<MeasurementPageBloc, MeasurementPageState>(
-      listenWhen: (previous, current) =>
-          previous.activeStepIndex != current.activeStepIndex,
-      listener: (context, state) {
-        final roomBloc = context.read<RoomModelingBloc>();
-        if (state.activeStepIndex <= 1) {
-          roomBloc.add(const StepChanged(RoomModelingStep.structure));
-        } else if (state.activeStepIndex == 2) {
-          roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
-        } else {
-          roomBloc.add(const StepChanged(RoomModelingStep.audio));
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<MeasurementPageBloc, MeasurementPageState>(
+          listenWhen: (previous, current) =>
+              previous.activeStepIndex != current.activeStepIndex,
+          listener: (context, state) {
+            final roomBloc = context.read<RoomModelingBloc>();
+            if (state.activeStepIndex <= 1) {
+              roomBloc.add(const StepChanged(RoomModelingStep.structure));
+            } else if (state.activeStepIndex == 2) {
+              roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+            } else {
+              roomBloc.add(const StepChanged(RoomModelingStep.audio));
+            }
+          },
+        ),
+        BlocListener<MeasurementPageBloc, MeasurementPageState>(
+          listenWhen: (previous, current) =>
+              previous.devices != current.devices,
+          listener: (context, state) {
+            _syncRoleHighlights(
+              context,
+              state,
+              context.read<RoomModelingBloc>().state,
+            );
+          },
+        ),
+        BlocListener<RoomModelingBloc, RoomModelingState>(
+          listenWhen: (previous, current) =>
+              previous.furniture != current.furniture,
+          listener: (context, state) {
+            _syncRoleHighlights(
+              context,
+              context.read<MeasurementPageBloc>().state,
+              state,
+            );
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: _themeColor('app.background'),
         body: Container(
@@ -197,6 +408,12 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 28),
+        BlocBuilder<RoomModelingBloc, RoomModelingState>(
+          builder: (context, roomState) {
+            return _DeviceListCard(state: state, roomState: roomState);
+          },
+        ),
+        const SizedBox(height: 28),
         SizedBox(
           height: 600,
           child: RoomModelingWidget(
@@ -205,8 +422,6 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
             readOnly: hideRoomModelingTools,
           ),
         ),
-        const SizedBox(height: 28),
-        _DeviceListCard(state: state),
         const SizedBox(height: 28),
         _TimelineCard(state: state),
       ],
@@ -416,18 +631,20 @@ class _LobbyField extends StatelessWidget {
 }
 
 class _DeviceListCard extends StatelessWidget {
-  const _DeviceListCard({required this.state});
+  const _DeviceListCard({required this.state, required this.roomState});
 
   final MeasurementPageState state;
+  final RoomModelingState roomState;
 
   @override
   Widget build(BuildContext context) {
     final panelColor = _themeColor('measurement_page.panel_background');
     final borderColor = _themeColor('measurement_page.panel_border');
     final accent = _themeColor('measurement_page.accent');
-    final waitColor = _themeColor('measurement_page.ready_badge_waiting');
-    final readyColor = _themeColor('measurement_page.ready_badge_ready');
     final onPrimary = _themeColor('app.on_primary');
+    final slots = _buildAudioRoleSlots(roomState);
+    final canEditRoles =
+        state.activeStepIndex == MeasurementPageScreen._roleAssignmentStepIndex;
 
     final remoteDevices = state.devices
         .where((device) => !device.isLocal)
@@ -530,7 +747,9 @@ class _DeviceListCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     child: _DeviceDataRow(
                       device: device,
-                      readinessColor: device.isReady ? readyColor : waitColor,
+                      slots: slots,
+                      takenSlots: _assignedSlotIds(state.devices, device.id),
+                      canEditRoles: canEditRoles,
                     ),
                   ),
               ],
@@ -564,27 +783,9 @@ class _DeviceHeaderRow extends StatelessWidget {
           ),
         ),
         Expanded(
+          flex: 4,
           child: Text(
             _tr('measurement_page.devices.headers.role'),
-            style: style,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            _tr('measurement_page.devices.headers.latency'),
-            style: style,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            _tr('measurement_page.devices.headers.battery'),
-            style: style,
-          ),
-        ),
-        SizedBox(
-          width: 90,
-          child: Text(
-            _tr('measurement_page.devices.headers.ready'),
             style: style,
           ),
         ),
@@ -594,10 +795,17 @@ class _DeviceHeaderRow extends StatelessWidget {
 }
 
 class _DeviceDataRow extends StatelessWidget {
-  const _DeviceDataRow({required this.device, required this.readinessColor});
+  const _DeviceDataRow({
+    required this.device,
+    required this.slots,
+    required this.takenSlots,
+    required this.canEditRoles,
+  });
 
   final MeasurementDevice device;
-  final Color readinessColor;
+  final List<_AudioRoleSlot> slots;
+  final Set<String> takenSlots;
+  final bool canEditRoles;
 
   @override
   Widget build(BuildContext context) {
@@ -605,6 +813,14 @@ class _DeviceDataRow extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final onBackground = Theme.of(context).colorScheme.onSurface;
     final accent = _themeColor('measurement_page.accent');
+    final selectedSlot = _slotForId(device.roleSlotId, slots);
+    final availableSlots = slots
+        .where(
+          (slot) =>
+              slot.id == device.roleSlotId || !takenSlots.contains(slot.id),
+        )
+        .toList(growable: false);
+    final dropdownChoices = <_AudioRoleSlot?>[null, ...availableSlots];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -633,13 +849,13 @@ class _DeviceDataRow extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: readinessColor.withValues(alpha: 0.2),
+                    color: accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     _tr('measurement_page.devices.local_badge'),
                     style: textTheme.labelSmall?.copyWith(
-                      color: readinessColor,
+                      color: accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -659,8 +875,10 @@ class _DeviceDataRow extends StatelessWidget {
                 border: Border.all(color: accent.withValues(alpha: 0.25)),
               ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<MeasurementDeviceRole>(
-                  value: device.role,
+                child: DropdownButton<_AudioRoleSlot?>(
+                  value: dropdownChoices.contains(selectedSlot)
+                      ? selectedSlot
+                      : null,
                   isExpanded: true,
                   isDense: false,
                   icon: Icon(
@@ -675,53 +893,61 @@ class _DeviceDataRow extends StatelessWidget {
                     'measurement_page.panel_background',
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  items: MeasurementDeviceRole.values.map((role) {
-                    return DropdownMenuItem<MeasurementDeviceRole>(
-                      value: role,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(_roleLabel(role)),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (newRole) {
-                    if (newRole != null) {
-                      bloc.add(
-                        MeasurementDeviceRoleChanged(
-                          deviceId: device.id,
-                          role: newRole,
+                  items: dropdownChoices
+                      .map(
+                        (slot) => DropdownMenuItem<_AudioRoleSlot?>(
+                          value: slot,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: slot == null
+                                ? Text(_roleLabel(MeasurementDeviceRole.none))
+                                : Row(
+                                    children: [
+                                      _RoleColorDot(color: slot.color),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(slot.label)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) {
+                    return dropdownChoices.map((slot) {
+                      if (slot == null) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(_roleLabel(MeasurementDeviceRole.none)),
+                        );
+                      }
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          children: [
+                            _RoleColorDot(color: slot.color),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(slot.label)),
+                          ],
                         ),
                       );
-                    }
+                    }).toList();
                   },
+                  onChanged: canEditRoles
+                      ? (newSlot) {
+                          bloc.add(
+                            MeasurementDeviceRoleChanged(
+                              deviceId: device.id,
+                              role: newSlot?.role ?? MeasurementDeviceRole.none,
+                              roleSlotId: newSlot?.id,
+                              roleLabel: newSlot?.label,
+                              roleColor: newSlot?.color,
+                            ),
+                          );
+                        }
+                      : null,
                 ),
               ),
             ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            '${device.latencyMs} ms',
-            style: textTheme.bodyMedium?.copyWith(
-              color: onBackground.withValues(alpha: 0.75),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            '${(device.batteryLevel * 100).clamp(0, 100).round()}%',
-            style: textTheme.bodyMedium?.copyWith(
-              color: onBackground.withValues(alpha: 0.75),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 90,
-          child: Switch.adaptive(
-            value: device.isReady,
-            onChanged: (_) =>
-                bloc.add(MeasurementDeviceReadyToggled(device.id)),
-            activeThumbColor: readinessColor,
           ),
         ),
       ],
@@ -745,11 +971,19 @@ class _TimelineCard extends StatelessWidget {
     return BlocBuilder<RoomModelingBloc, RoomModelingState>(
       builder: (context, roomState) {
         final atDeviceStep = state.activeStepIndex == 3;
+        final atRoleStep =
+            state.activeStepIndex ==
+            MeasurementPageScreen._roleAssignmentStepIndex;
         final hasSpeaker = roomState.furniture.any(
           (f) => f.type == FurnitureType.speaker,
         );
         final hasMic = roomState.furniture.any(
           (f) => f.type == FurnitureType.microphone,
+        );
+        final roleSlots = _buildAudioRoleSlots(roomState);
+        final rolesComplete = _roleAssignmentsComplete(
+          state.devices,
+          roleSlots,
         );
         final hasRequiredAudio = hasSpeaker && hasMic;
         final requiresClosedRoom = state.activeStepIndex <= 1;
@@ -757,7 +991,8 @@ class _TimelineCard extends StatelessWidget {
             state.steps.isNotEmpty &&
             state.activeStepIndex < state.steps.length - 1 &&
             (!requiresClosedRoom || roomState.isRoomClosed) &&
-            (!atDeviceStep || hasRequiredAudio);
+            (!atDeviceStep || hasRequiredAudio) &&
+            (!atRoleStep || rolesComplete);
 
         return SonalyzeSurface(
           padding: const EdgeInsets.all(28),
@@ -816,6 +1051,20 @@ class _TimelineCard extends StatelessWidget {
                       'measurement_page.timeline.place_devices_hint',
                       fallback:
                           'Place at least one speaker and one microphone to continue.',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: inactiveColor),
+                  ),
+                ),
+              if (atRoleStep && !rolesComplete)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Text(
+                    _tr(
+                      'measurement_page.timeline.assign_roles_hint',
+                      fallback:
+                          'Assign every speaker and microphone slot to a connected device.',
                     ),
                     style: Theme.of(
                       context,
@@ -1041,7 +1290,10 @@ void _showQrCodeDialog(
 }
 
 String _roleLabel(MeasurementDeviceRole role) {
-  return _tr('measurement_page.roles.${role.name}');
+  return _tr(
+    'measurement_page.roles.${role.name}',
+    fallback: _baseRoleLabel(role),
+  );
 }
 
 String _tr(String keyPath, {String? fallback}) {

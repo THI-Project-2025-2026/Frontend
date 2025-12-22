@@ -237,7 +237,12 @@ class MeasurementPageBloc
     final devices = state.devices
         .map((device) {
           if (device.id == event.deviceId) {
-            return device.copyWith(role: event.role);
+            return device.copyWith(
+              role: event.role,
+              roleSlotId: event.roleSlotId,
+              roleLabel: event.roleLabel,
+              roleColor: event.roleColor,
+            );
           }
           return device;
         })
