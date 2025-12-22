@@ -88,6 +88,8 @@ class MeasurementPageState {
     required this.lastUpdated,
     this.isHost = false,
     this.currentDeviceId = '',
+    this.sharedRoomPlan,
+    this.sharedRoomPlanVersion = 0,
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
        steps = List<MeasurementStepDescriptor>.unmodifiable(steps);
 
@@ -103,6 +105,8 @@ class MeasurementPageState {
   final DateTime lastUpdated;
   final bool isHost;
   final String currentDeviceId;
+  final Map<String, dynamic>? sharedRoomPlan;
+  final int sharedRoomPlanVersion;
 
   MeasurementDevice? get localDevice {
     for (final device in devices) {
@@ -137,6 +141,8 @@ class MeasurementPageState {
     DateTime? lastUpdated,
     bool? isHost,
     String? currentDeviceId,
+    Map<String, dynamic>? sharedRoomPlan,
+    int? sharedRoomPlanVersion,
   }) {
     return MeasurementPageState(
       lobbyActive: lobbyActive ?? this.lobbyActive,
@@ -151,6 +157,9 @@ class MeasurementPageState {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isHost: isHost ?? this.isHost,
       currentDeviceId: currentDeviceId ?? this.currentDeviceId,
+      sharedRoomPlan: sharedRoomPlan ?? this.sharedRoomPlan,
+      sharedRoomPlanVersion:
+          sharedRoomPlanVersion ?? this.sharedRoomPlanVersion,
     );
   }
 
@@ -227,6 +236,8 @@ class MeasurementPageState {
       activeStepIndex: 0,
       lastActionMessage: 'measurement_page.lobby.status_idle',
       lastUpdated: DateTime.now(),
+      sharedRoomPlan: null,
+      sharedRoomPlanVersion: 0,
     );
   }
 }

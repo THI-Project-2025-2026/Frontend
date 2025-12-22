@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
 import 'package:room_modeling/room_modeling.dart';
+import 'package:uuid/uuid.dart';
 
 import '../bloc/measurement_page_bloc.dart';
 
@@ -32,6 +35,9 @@ class MeasurementPageScreen extends StatelessWidget {
     );
   }
 }
+
+final _roomSnapshotSender = _RoomSnapshotSender();
+final _roomSnapshotApplier = _RoomSnapshotApplier();
 
 class _AudioRoleSlot {
   const _AudioRoleSlot({
@@ -272,6 +278,10 @@ class _MeasurementPageView extends StatelessWidget {
             } else {
               roomBloc.add(const StepChanged(RoomModelingStep.audio));
             }
+            if (state.activeStepIndex ==
+                MeasurementPageScreen._roleAssignmentStepIndex) {
+              unawaited(_roomSnapshotSender.maybeSend(context, state));
+            }
           },
         ),
         BlocListener<MeasurementPageBloc, MeasurementPageState>(
@@ -283,6 +293,21 @@ class _MeasurementPageView extends StatelessWidget {
               state,
               context.read<RoomModelingBloc>().state,
             );
+          },
+        ),
+        BlocListener<MeasurementPageBloc, MeasurementPageState>(
+          listenWhen: (previous, current) =>
+              previous.sharedRoomPlanVersion != current.sharedRoomPlanVersion &&
+              current.sharedRoomPlan != null,
+          listener: (context, state) {
+            if (state.isHost) {
+              return;
+            }
+            final plan = state.sharedRoomPlan;
+            if (plan == null) {
+              return;
+            }
+            _roomSnapshotApplier.apply(context.read<RoomModelingBloc>(), plan);
           },
         ),
         BlocListener<RoomModelingBloc, RoomModelingState>(
@@ -435,7 +460,11 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[];
 
-    final hideRoomModelingTools = state.activeStepIndex >= 4;
+    final isGuestViewer = state.lobbyActive && !state.isHost;
+    final hideRoomModelingTools =
+        state.activeStepIndex >=
+            MeasurementPageScreen._roleAssignmentStepIndex ||
+        isGuestViewer;
 
     children.add(_LobbyCard(state: state));
 
@@ -462,7 +491,7 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
       ],
     );
 
-    if (state.lobbyActive && !state.isHost) {
+    if (isGuestViewer) {
       children.add(IgnorePointer(child: Opacity(opacity: 0.5, child: content)));
     } else {
       children.add(content);
@@ -1369,4 +1398,53 @@ void _showJoinLobbyDialog(
       );
     },
   );
+}
+
+class _RoomSnapshotSender {
+  _RoomSnapshotSender()
+    : _repository = GetIt.I<GatewayConnectionRepository>(),
+      _exporter = RoomPlanExporter(),
+      _uuid = const Uuid();
+
+  final GatewayConnectionRepository _repository;
+  final RoomPlanExporter _exporter;
+  final Uuid _uuid;
+
+  Future<void> maybeSend(
+    BuildContext context,
+    MeasurementPageState state,
+  ) async {
+    if (!state.isHost || !state.lobbyActive || state.lobbyId.isEmpty) {
+      return;
+    }
+    final roomBloc = context.read<RoomModelingBloc>();
+    final snapshot = _exporter.export(roomBloc.state);
+    final payload = {
+      'event': 'lobby.room_snapshot',
+      'request_id': _uuid.v4(),
+      'data': {'lobby_id': state.lobbyId, 'room': snapshot},
+    };
+    try {
+      await _repository.sendJson(payload);
+    } catch (error, stackTrace) {
+      debugPrint('Room snapshot sync failed: $error');
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stackTrace),
+      );
+    }
+  }
+}
+
+class _RoomSnapshotApplier {
+  _RoomSnapshotApplier() : _importer = RoomPlanImporter();
+
+  final RoomPlanImporter _importer;
+
+  void apply(RoomModelingBloc bloc, Map<String, dynamic> plan) {
+    final result = _importer.tryImport(plan);
+    if (result == null) {
+      return;
+    }
+    bloc.add(RoomPlanImported(result));
+  }
 }

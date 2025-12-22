@@ -29,10 +29,36 @@ class MeasurementPageBloc
     on<MeasurementDeviceReadyToggled>(_onDeviceReadyToggled);
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
     on<MeasurementTimelineStepBack>(_onTimelineStepBack);
+    on<MeasurementRoomPlanReceived>(_onRoomPlanReceived);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
-      if (envelope.isEvent && envelope.event == 'lobby.updated') {
+      if (!envelope.isEvent) {
+        return;
+      }
+      if (envelope.event == 'lobby.updated') {
         add(const MeasurementLobbyRefreshed());
+        return;
+      }
+      if (envelope.event == 'lobby.room_snapshot') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        final lobbyId = data['lobby_id'] as String?;
+        final room = data['room'];
+        if (lobbyId == null || lobbyId.isEmpty) {
+          return;
+        }
+        if (lobbyId != state.lobbyId) {
+          return;
+        }
+        if (room is Map<String, dynamic>) {
+          add(
+            MeasurementRoomPlanReceived(
+              roomJson: Map<String, dynamic>.from(room),
+            ),
+          );
+        }
       }
     });
   }
@@ -327,6 +353,18 @@ class MeasurementPageBloc
     }
     final prevIndex = math.max(state.activeStepIndex - 1, 0);
     emit(state.copyWith(activeStepIndex: prevIndex));
+  }
+
+  void _onRoomPlanReceived(
+    MeasurementRoomPlanReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        sharedRoomPlan: event.roomJson,
+        sharedRoomPlanVersion: state.sharedRoomPlanVersion + 1,
+      ),
+    );
   }
 
   String _generateRequestId() {

@@ -32,6 +32,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<CanvasTap>(_onCanvasTap);
     on<ClearRoom>(_onClearRoom);
     on<DeviceHighlightsUpdated>(_onDeviceHighlightsUpdated);
+    on<RoomPlanImported>(_onRoomPlanImported);
   }
 
   @override
@@ -978,6 +979,25 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       return;
     }
     emit(state.copyWith(deviceHighlights: event.highlights));
+  }
+
+  void _onRoomPlanImported(
+    RoomPlanImported event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        walls: event.plan.walls,
+        furniture: event.plan.furniture,
+        roomHeightMeters: event.plan.roomHeightMeters,
+        roomPolygon: event.plan.roomPolygon,
+        isRoomClosed: event.plan.isRoomClosed,
+        clearSelection: true,
+        clearDrag: true,
+        clearSnapGuide: true,
+        clearHighlights: true,
+      ),
+    );
   }
 
   List<Furniture> _repositionAttachedOpenings(

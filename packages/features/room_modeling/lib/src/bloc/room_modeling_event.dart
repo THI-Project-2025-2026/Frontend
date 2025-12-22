@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'room_modeling_state.dart';
+import '../storage/room_plan_importer.dart';
 
 abstract class RoomModelingEvent extends Equatable {
   const RoomModelingEvent();
@@ -127,4 +128,13 @@ class DeviceHighlightsUpdated extends RoomModelingEvent {
 
   @override
   List<Object?> get props => [highlights];
+}
+
+class RoomPlanImported extends RoomModelingEvent {
+  final RoomPlanImportResult plan;
+
+  const RoomPlanImported(this.plan);
+
+  @override
+  List<Object?> get props => [plan];
 }

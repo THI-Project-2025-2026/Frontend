@@ -70,3 +70,12 @@ class MeasurementTimelineAdvanced extends MeasurementPageEvent {
 class MeasurementTimelineStepBack extends MeasurementPageEvent {
   const MeasurementTimelineStepBack();
 }
+
+class MeasurementRoomPlanReceived extends MeasurementPageEvent {
+  const MeasurementRoomPlanReceived({required this.roomJson});
+
+  final Map<String, dynamic> roomJson;
+
+  @override
+  List<Object?> get props => [roomJson];
+}
