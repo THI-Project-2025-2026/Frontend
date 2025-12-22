@@ -188,17 +188,39 @@ class MeasurementPageBloc
         (e) => _mapRoleToBackend(e) == roleStr,
         orElse: () => MeasurementDeviceRole.none,
       );
+      final existing = _findExistingDevice(deviceId);
+      MeasurementDevice? roleSource;
+      if (existing != null &&
+          existing.roleSlotId != null &&
+          existing.role == role &&
+          role != MeasurementDeviceRole.none) {
+        roleSource = existing;
+      }
+      final slotId = p['role_slot_id'] as String?;
+      final slotLabel = p['role_slot_label'] as String?;
 
       return MeasurementDevice(
         id: deviceId,
-        name: 'Device ${deviceId.substring(0, 4)}', // Placeholder name
+        name: existing?.name ?? 'Device ${deviceId.substring(0, 4)}',
         role: role,
         isLocal: deviceId == state.currentDeviceId,
-        isReady: false, // Not in backend model yet
-        latencyMs: 0,
-        batteryLevel: 1.0,
+        isReady: existing?.isReady ?? false,
+        latencyMs: existing?.latencyMs ?? 0,
+        batteryLevel: existing?.batteryLevel ?? 1.0,
+        roleSlotId: slotId ?? roleSource?.roleSlotId,
+        roleLabel: slotLabel ?? roleSource?.roleLabel,
+        roleColor: roleSource?.roleColor,
       );
     }).toList();
+  }
+
+  MeasurementDevice? _findExistingDevice(String deviceId) {
+    for (final device in state.devices) {
+      if (device.id == deviceId) {
+        return device;
+      }
+    }
+    return null;
   }
 
   String _mapRoleToBackend(MeasurementDeviceRole role) {
@@ -259,6 +281,8 @@ class MeasurementPageBloc
           'lobby_id': state.lobbyId,
           'target_device_id': event.deviceId,
           'role': _mapRoleToBackend(event.role),
+          'role_slot_id': event.roleSlotId,
+          'role_slot_label': event.roleLabel,
         },
       });
     } catch (e) {

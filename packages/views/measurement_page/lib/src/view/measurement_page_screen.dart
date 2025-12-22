@@ -905,9 +905,17 @@ class _DeviceDataRow extends StatelessWidget {
                   selectedItemBuilder: (context) {
                     return dropdownChoices.map((slot) {
                       if (slot == null) {
+                        final customLabel =
+                            device.role != MeasurementDeviceRole.none
+                            ? device.roleLabel
+                            : null;
                         return Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(_roleLabel(MeasurementDeviceRole.none)),
+                          child: Text(
+                            customLabel?.isNotEmpty == true
+                                ? customLabel!
+                                : _roleLabel(MeasurementDeviceRole.none),
+                          ),
                         );
                       }
                       return Align(
