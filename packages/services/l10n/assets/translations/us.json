@@ -297,7 +297,8 @@
             "ideal": "Ideal"
         },
         "results": {
-            "title": "Simulation results"
+            "title": "Simulation results",
+            "warnings": "Warnings"
         },
         "progress": {
             "title": "Running simulation",
@@ -308,6 +309,7 @@
             "advance": "Next step",
             "back": "Previous step",
             "close_room_hint": "Close the wall loop to proceed to the next step.",
+            "place_devices_hint": "Place at least one speaker and one microphone to continue.",
             "steps": {
                 "0": {
                     "title": "Construct wall structure",
@@ -339,6 +341,9 @@
                 "structure": "Structure",
                 "furnishing": "Furnishing"
             },
+            "audio": {
+                "helper": "Place at least one speaker and one microphone to continue."
+            },
             "close_room_hint": "Close the wall loop to unlock furnishings.",
             "construction_title": "Wall construction",
             "construction_helper": "Tap the canvas to draw walls. Close the loop to finalize the footprint.",
@@ -350,6 +355,7 @@
                 "openings": "Openings",
                 "furniture": "Furniture",
                 "bath_kitchen": "Bath & kitchen",
+                "audio": "Audio",
                 "placeholder": "Select item",
                 "items": {
                     "door": "Door",
@@ -366,7 +372,9 @@
                         "shelf": "Shelf",
                         "stove": "Stove",
                         "fridge": "Fridge",
-                        "shower": "Shower"
+                        "shower": "Shower",
+                        "speaker": "Speaker",
+                        "microphone": "Microphone"
                 }
             }
         },

@@ -9,7 +9,9 @@ import 'models/wall.dart';
 import 'room_modeling_l10n.dart';
 
 class RoomPlanCanvas extends StatelessWidget {
-  const RoomPlanCanvas({super.key});
+  const RoomPlanCanvas({super.key, this.enabled = true});
+
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -28,28 +30,38 @@ class RoomPlanCanvas extends StatelessWidget {
             final canvasSize = Size(width, height);
 
             return GestureDetector(
-              onPanStart: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasPanStart(details.localPosition, canvasSize),
-                    );
-              },
-              onPanUpdate: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasPanUpdate(details.localPosition, canvasSize),
-                    );
-              },
-              onPanEnd: (details) {
-                context.read<RoomModelingBloc>().add(const CanvasPanEnd());
-              },
-              onTapUp: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasTap(details.localPosition, canvasSize),
-                    );
-              },
+              onPanStart: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasPanStart(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
+              onPanUpdate: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasPanUpdate(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
+              onPanEnd: enabled
+                  ? (details) {
+                      context
+                          .read<RoomModelingBloc>()
+                          .add(const CanvasPanEnd());
+                    }
+                  : null,
+              onTapUp: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasTap(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
               child: Container(
                 color: palette.background,
                 child: CustomPaint(
-                  painter: RoomPainter(
+                  painter: _RoomPainter(
                     walls: state.walls,
                     tempWall: state.tempWall,
                     dragCurrent: state.dragCurrent,
@@ -72,7 +84,7 @@ class RoomPlanCanvas extends StatelessWidget {
   }
 }
 
-class RoomPainter extends CustomPainter {
+class _RoomPainter extends CustomPainter {
   final List<Wall> walls;
   final List<Furniture> furniture;
   final Wall? tempWall;
@@ -86,7 +98,7 @@ class RoomPainter extends CustomPainter {
   final String metersSuffix;
   final String degreesSuffix;
 
-  RoomPainter({
+  _RoomPainter({
     required this.walls,
     this.furniture = const [],
     this.tempWall,
@@ -767,7 +779,7 @@ class RoomPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant RoomPainter oldDelegate) {
+  bool shouldRepaint(covariant _RoomPainter oldDelegate) {
     return oldDelegate.walls != walls ||
         oldDelegate.furniture != furniture ||
         oldDelegate.tempWall != tempWall ||

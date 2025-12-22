@@ -366,6 +366,7 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
 
   bool get _isOpening => widget.furniture.isOpening;
   bool get _isWindow => widget.furniture.type == FurnitureType.window;
+  bool get _isDevice => widget.furniture.isDevice;
 
   @override
   void initState() {
@@ -573,15 +574,16 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: 12),
-          _buildNumberField(
-            context,
-            label: RoomModelingL10n.text('editor.length'),
-            controller: _widthController,
-            onChanged: _handleWidthChanged,
-            suffixText: RoomModelingL10n.metersSuffix(),
-            textInputAction:
-                _isOpening ? TextInputAction.done : TextInputAction.next,
-          ),
+          if (!_isDevice)
+            _buildNumberField(
+              context,
+              label: RoomModelingL10n.text('editor.length'),
+              controller: _widthController,
+              onChanged: _handleWidthChanged,
+              suffixText: RoomModelingL10n.metersSuffix(),
+              textInputAction:
+                  _isOpening ? TextInputAction.done : TextInputAction.next,
+            ),
           if (_isOpening) ...[
             const SizedBox(height: 8),
             Text(
@@ -609,24 +611,36 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
               ),
             ],
           ] else ...[
-            const SizedBox(height: 8),
-            _buildNumberField(
-              context,
-              label: RoomModelingL10n.text('editor.width'),
-              controller: _heightController,
-              onChanged: _handleHeightChanged,
-              suffixText: RoomModelingL10n.metersSuffix(),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            _buildNumberField(
-              context,
-              label: RoomModelingL10n.text('editor.height'),
-              controller: _verticalHeightController,
-              onChanged: _handleVerticalHeightChanged,
-              suffixText: RoomModelingL10n.metersSuffix(),
-              textInputAction: TextInputAction.done,
-            ),
+            if (!_isDevice) ...[
+              const SizedBox(height: 8),
+              _buildNumberField(
+                context,
+                label: RoomModelingL10n.text('editor.width'),
+                controller: _heightController,
+                onChanged: _handleHeightChanged,
+                suffixText: RoomModelingL10n.metersSuffix(),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 8),
+              _buildNumberField(
+                context,
+                label: RoomModelingL10n.text('editor.height'),
+                controller: _verticalHeightController,
+                onChanged: _handleVerticalHeightChanged,
+                suffixText: RoomModelingL10n.metersSuffix(),
+                textInputAction: TextInputAction.done,
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              _buildNumberField(
+                context,
+                label: RoomModelingL10n.text('editor.height'),
+                controller: _verticalHeightController,
+                onChanged: _handleVerticalHeightChanged,
+                suffixText: RoomModelingL10n.metersSuffix(),
+                textInputAction: TextInputAction.done,
+              ),
+            ],
           ],
         ],
       ),

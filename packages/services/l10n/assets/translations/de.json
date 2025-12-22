@@ -297,7 +297,8 @@
             "ideal": "Ideal"
         },
         "results": {
-            "title": "Simulationsergebnisse"
+            "title": "Simulationsergebnisse",
+            "warnings": "Warnungen"
         },
         "progress": {
             "title": "Simulation läuft",
@@ -308,6 +309,7 @@
             "advance": "Nächster Schritt",
             "back": "Vorheriger Schritt",
             "close_room_hint": "Schließe den Wandverlauf, um zum nächsten Schritt zu gelangen.",
+            "place_devices_hint": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren.",
             "steps": {
                 "0": {
                     "title": "Wandstruktur konstruieren",
@@ -339,6 +341,9 @@
                 "structure": "Struktur",
                 "furnishing": "Einrichtung"
             },
+            "audio": {
+                "helper": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren."
+            },
             "close_room_hint": "Schließe den Wandverlauf, um Einrichtungsobjekte freizuschalten.",
             "construction_title": "Wandkonstruktion",
             "construction_helper": "Tippe auf die Fläche, um Wände zu ziehen. Schließe den Verlauf, um den Grundriss zu fixieren.",
@@ -350,6 +355,7 @@
                 "openings": "Öffnungen",
                 "furniture": "Möbel",
                 "bath_kitchen": "Bad & Küche",
+                "audio": "Audio",
                 "placeholder": "Objekt wählen",
                 "items": {
                     "door": "Tür",
@@ -366,7 +372,9 @@
                         "shelf": "Regal",
                         "stove": "Herd",
                         "fridge": "Kühlschrank",
-                        "shower": "Dusche"
+                        "shower": "Dusche",
+                        "speaker": "Lautsprecher",
+                        "microphone": "Mikrofon"
                 }
             }
         },

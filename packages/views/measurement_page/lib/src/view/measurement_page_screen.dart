@@ -202,6 +202,7 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
           child: RoomModelingWidget(
             bloc: context.read<RoomModelingBloc>(),
             hideToolsPanel: hideRoomModelingTools,
+            readOnly: hideRoomModelingTools,
           ),
         ),
         const SizedBox(height: 28),

@@ -212,6 +212,7 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                               child: RoomModelingWidget(
                                 bloc: context.read<RoomModelingBloc>(),
                                 hideToolsPanel: hideToolsPanel,
+                                readOnly: simulationState.activeStepIndex >= 3,
                               ),
                             ),
                             SizedBox(height: isWide ? 32 : 24),

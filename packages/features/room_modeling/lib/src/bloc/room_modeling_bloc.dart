@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -138,8 +137,6 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final oldDepthM = target.size.height / pixelsPerMeter;
     final oldHeightM =
         target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
-    final fid = target.id;
-    final ftype = target.type;
 
     if (event.size != null) {
       target = target.copyWith(
@@ -174,13 +171,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final newHeightM =
         target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
 
-    void _maybeLog(String label, double oldVal, double newVal) {
+    void maybeLog(String label, double oldVal, double newVal) {
       // console logging removed
     }
 
-    _maybeLog('width', oldWidthM, newWidthM);
-    _maybeLog('depth', oldDepthM, newDepthM);
-    _maybeLog('height', oldHeightM, newHeightM);
+    maybeLog('width', oldWidthM, newWidthM);
+    maybeLog('depth', oldDepthM, newDepthM);
+    maybeLog('height', oldHeightM, newHeightM);
 
     final updatedFurniture = [...state.furniture];
     updatedFurniture[index] = target;
@@ -1455,17 +1452,20 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final halfWidth = furniture.size.width / 2;
     final halfHeight = furniture.size.height / 2;
 
+    final allowTransformHandles = !furniture.isOpening && !furniture.isDevice;
+
     // Check rotate handle (top center + 30px up)
     // In local coords, this is (0, -halfHeight - 30)
     // Allow some hit radius
-    if (!furniture.isOpening &&
+    if (allowTransformHandles &&
         (localPoint - Offset(0, -halfHeight - 30)).distance < 15.0) {
       return FurnitureInteraction.rotate;
     }
 
     // Check resize handle (bottom right)
     // In local coords, this is (halfWidth, halfHeight)
-    if ((localPoint - Offset(halfWidth, halfHeight)).distance < 15.0) {
+    if (allowTransformHandles &&
+        (localPoint - Offset(halfWidth, halfHeight)).distance < 15.0) {
       return FurnitureInteraction.resize;
     }
 
