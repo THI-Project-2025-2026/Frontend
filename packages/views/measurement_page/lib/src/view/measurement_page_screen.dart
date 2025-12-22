@@ -64,6 +64,41 @@ class _RoleColorDot extends StatelessWidget {
   }
 }
 
+const double _roleColumnMinWidth = 220;
+const double _roleColumnMaxWidth = 420;
+
+class _RoleColumn extends StatelessWidget {
+  const _RoleColumn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      fit: FlexFit.loose,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double availableWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : _roleColumnMaxWidth;
+          double maxWidth = availableWidth;
+          if (maxWidth > _roleColumnMaxWidth) {
+            maxWidth = _roleColumnMaxWidth;
+          }
+          double minWidth = maxWidth;
+          if (minWidth > _roleColumnMinWidth) {
+            minWidth = _roleColumnMinWidth;
+          }
+          return ConstrainedBox(
+            constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
+            child: SizedBox(width: double.infinity, child: child),
+          );
+        },
+      ),
+    );
+  }
+}
+
 List<_AudioRoleSlot> _buildAudioRoleSlots(RoomModelingState roomState) {
   final slots = <_AudioRoleSlot>[];
   var speakerIndex = 1;
@@ -641,15 +676,9 @@ class _DeviceListCard extends StatelessWidget {
     final panelColor = _themeColor('measurement_page.panel_background');
     final borderColor = _themeColor('measurement_page.panel_border');
     final accent = _themeColor('measurement_page.accent');
-    final onPrimary = _themeColor('app.on_primary');
     final slots = _buildAudioRoleSlots(roomState);
     final canEditRoles =
         state.activeStepIndex == MeasurementPageScreen._roleAssignmentStepIndex;
-
-    final remoteDevices = state.devices
-        .where((device) => !device.isLocal)
-        .toList();
-    final lastRemoteId = remoteDevices.isEmpty ? null : remoteDevices.last.id;
 
     return SonalyzeSurface(
       padding: const EdgeInsets.all(28),
@@ -658,53 +687,12 @@ class _DeviceListCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _tr('measurement_page.devices.title'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Wrap(
-                spacing: 12,
-                children: [
-                  SonalyzeButton(
-                    onPressed: state.lobbyActive
-                        ? () {
-                            final alias =
-                                'Remote kit ${remoteDevices.length + 1}';
-                            context.read<MeasurementPageBloc>().add(
-                              MeasurementDeviceDemoJoined(alias: alias),
-                            );
-                          }
-                        : null,
-                    backgroundColor: accent,
-                    foregroundColor: onPrimary,
-                    borderRadius: BorderRadius.circular(18),
-                    icon: const Icon(Icons.add_circle_outline),
-                    child: Text(_tr('measurement_page.devices.demo_join')),
-                  ),
-                  SonalyzeButton(
-                    onPressed: lastRemoteId == null
-                        ? null
-                        : () {
-                            context.read<MeasurementPageBloc>().add(
-                              MeasurementDeviceDemoLeft(deviceId: lastRemoteId),
-                            );
-                          },
-                    variant: SonalyzeButtonVariant.outlined,
-                    foregroundColor: accent,
-                    borderColor: accent.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(18),
-                    icon: const Icon(Icons.remove_circle_outline),
-                    child: Text(_tr('measurement_page.devices.demo_leave')),
-                  ),
-                ],
-              ),
-            ],
+          Text(
+            _tr('measurement_page.devices.title'),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -782,11 +770,13 @@ class _DeviceHeaderRow extends StatelessWidget {
             style: style,
           ),
         ),
-        Expanded(
-          flex: 4,
-          child: Text(
-            _tr('measurement_page.devices.headers.role'),
-            style: style,
+        _RoleColumn(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Text(
+              _tr('measurement_page.devices.headers.role'),
+              style: style,
+            ),
           ),
         ),
       ],
@@ -864,7 +854,7 @@ class _DeviceDataRow extends StatelessWidget {
             ],
           ),
         ),
-        Expanded(
+        _RoleColumn(
           child: Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Container(
@@ -1308,8 +1298,11 @@ String _tr(String keyPath, {String? fallback}) {
 }
 
 String _localizedOrRaw(String keyOrText) {
-  final value = _tr(keyOrText);
-  return value.isNotEmpty ? value : keyOrText;
+  if (keyOrText.contains('.')) {
+    final value = _tr(keyOrText);
+    return value.isNotEmpty ? value : keyOrText;
+  }
+  return keyOrText;
 }
 
 Color _themeColor(String keyPath) {

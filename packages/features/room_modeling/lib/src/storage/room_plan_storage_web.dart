@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 import 'room_plan_storage.dart';
 
@@ -11,7 +11,7 @@ class _WebRoomPlanStorage implements RoomPlanStorage {
   @override
   Future<void> save(Map<String, dynamic> json) async {
     try {
-      html.window.localStorage[_key] = jsonEncode(json);
+      web.window.localStorage.setItem(_key, jsonEncode(json));
     } catch (_) {
       // Ignore storage failures in web localStorage
     }

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,8 +27,6 @@ class MeasurementPageBloc
     on<MeasurementLobbyLinkCopied>(_onLobbyLinkCopied);
     on<MeasurementDeviceRoleChanged>(_onDeviceRoleChanged);
     on<MeasurementDeviceReadyToggled>(_onDeviceReadyToggled);
-    on<MeasurementDeviceDemoJoined>(_onDeviceJoined);
-    on<MeasurementDeviceDemoLeft>(_onDeviceLeft);
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
     on<MeasurementTimelineStepBack>(_onTimelineStepBack);
 
@@ -85,7 +83,7 @@ class MeasurementPageBloc
           lastActionMessage: 'measurement_page.lobby.status_active',
           isHost: true,
           currentDeviceId: adminDeviceId, // In create, we are the admin
-          activeStepIndex: max(state.activeStepIndex, 1),
+          activeStepIndex: math.max(state.activeStepIndex, 1),
         ),
       );
     } catch (e) {
@@ -284,49 +282,6 @@ class MeasurementPageBloc
     emit(state.copyWith(devices: devices));
   }
 
-  void _onDeviceJoined(
-    MeasurementDeviceDemoJoined event,
-    Emitter<MeasurementPageState> emit,
-  ) {
-    if (!state.lobbyActive) {
-      return;
-    }
-    final random = Random();
-    final role = MeasurementDeviceRole
-        .values[random.nextInt(MeasurementDeviceRole.values.length)];
-    final device = MeasurementDevice(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      name: event.alias,
-      role: role,
-      isLocal: false,
-      isReady: random.nextBool(),
-      latencyMs: 14 + random.nextInt(26),
-      batteryLevel: 0.6 + random.nextDouble() * 0.35,
-    );
-    final updated = List<MeasurementDevice>.from(state.devices)..add(device);
-    emit(
-      state.copyWith(
-        devices: updated,
-        lastActionMessage: 'measurement_page.lobby.device_joined',
-      ),
-    );
-  }
-
-  void _onDeviceLeft(
-    MeasurementDeviceDemoLeft event,
-    Emitter<MeasurementPageState> emit,
-  ) {
-    final updated = state.devices
-        .where((device) => device.id != event.deviceId)
-        .toList(growable: false);
-    emit(
-      state.copyWith(
-        devices: updated,
-        lastActionMessage: 'measurement_page.lobby.device_left',
-      ),
-    );
-  }
-
   void _onTimelineAdvanced(
     MeasurementTimelineAdvanced event,
     Emitter<MeasurementPageState> emit,
@@ -335,7 +290,7 @@ class MeasurementPageBloc
       return;
     }
     final lastIndex = state.steps.length - 1;
-    final nextIndex = min(state.activeStepIndex + 1, lastIndex);
+    final nextIndex = math.min(state.activeStepIndex + 1, lastIndex);
     emit(state.copyWith(activeStepIndex: nextIndex));
   }
 
@@ -346,7 +301,7 @@ class MeasurementPageBloc
     if (state.steps.isEmpty) {
       return;
     }
-    final prevIndex = max(state.activeStepIndex - 1, 0);
+    final prevIndex = math.max(state.activeStepIndex - 1, 0);
     emit(state.copyWith(activeStepIndex: prevIndex));
   }
 

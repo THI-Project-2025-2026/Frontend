@@ -456,13 +456,15 @@ class _RoomPainter extends CustomPainter {
     final baseFill = highlight ?? palette.furnitureFill;
     final strokePaint = Paint()
       ..color = highlight != null
-          ? highlight.withOpacity(0.9)
+          ? highlight.withValues(alpha: 0.9)
           : palette.furnitureStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
     final fillPaint = Paint()
-      ..color = baseFill.withOpacity(highlight != null ? 0.28 : 1.0)
+      ..color = baseFill.withValues(
+        alpha: highlight != null ? 0.28 : 1.0,
+      )
       ..style = PaintingStyle.fill;
 
     switch (item.type) {

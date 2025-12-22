@@ -135,6 +135,8 @@
         "roles": {
             "title": "Your device role",
             "helper": "Select whether this device acts as a microphone or loudspeaker during the measurement.",
+            "loudspeaker_label": "Loudspeaker",
+            "microphone_label": "Microphone",
             "none": "None",
             "microphone": "Microphone",
             "loudspeaker": "Loudspeaker",
@@ -185,6 +187,7 @@
             "advance": "Next step",
             "back": "Previous step",
             "close_room_hint": "Close the wall loop to place devices.",
+            "assign_roles_hint": "Assign every speaker and microphone slot to a connected device.",
             "steps": {
                 "0": {
                     "title": "Create measurement lobby",

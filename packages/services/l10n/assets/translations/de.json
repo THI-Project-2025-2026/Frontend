@@ -135,6 +135,8 @@
         "roles": {
             "title": "Rolle dieses Geräts",
             "helper": "Wähle, ob dieses Gerät während der Messung als Mikrofon oder Lautsprecher fungiert.",
+            "loudspeaker_label": "Lautsprecher",
+            "microphone_label": "Mikrofon",
             "none": "Keine",
             "microphone": "Mikrofon",
             "loudspeaker": "Lautsprecher",
@@ -185,6 +187,7 @@
             "advance": "Nächster Schritt",
             "back": "Vorheriger Schritt",
             "close_room_hint": "Schließe den Wandverlauf, um Geräte zu platzieren.",
+            "assign_roles_hint": "Weise jedem Lautsprecher- und Mikrofon-Slot ein verbundenes Gerät zu.",
             "steps": {
                 "0": {
                     "title": "Mess-Lobby erstellen",

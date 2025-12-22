@@ -61,20 +61,6 @@ class MeasurementLobbyRefreshed extends MeasurementPageEvent {
   const MeasurementLobbyRefreshed();
 }
 
-/// Adds a demo remote device into the lobby.
-class MeasurementDeviceDemoJoined extends MeasurementPageEvent {
-  const MeasurementDeviceDemoJoined({required this.alias});
-
-  final String alias;
-}
-
-/// Removes a device from the lobby (demo control).
-class MeasurementDeviceDemoLeft extends MeasurementPageEvent {
-  const MeasurementDeviceDemoLeft({required this.deviceId});
-
-  final String deviceId;
-}
-
 /// Advances the measurement timeline to the next step.
 class MeasurementTimelineAdvanced extends MeasurementPageEvent {
   const MeasurementTimelineAdvanced();
