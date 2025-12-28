@@ -75,7 +75,25 @@ class MeasurementRoomPlanReceived extends MeasurementPageEvent {
   const MeasurementRoomPlanReceived({required this.roomJson});
 
   final Map<String, dynamic> roomJson;
+}
 
-  @override
-  List<Object?> get props => [roomJson];
+/// Request to start the measurement sweep.
+///
+/// This will create a measurement job and session, then start coordinating
+/// between speakers and microphones. Synchronization happens automatically
+/// at the beginning of each sweep.
+class MeasurementSweepStartRequested extends MeasurementPageEvent {
+  const MeasurementSweepStartRequested();
+}
+
+/// Cancels the ongoing measurement sweep.
+class MeasurementSweepCancelled extends MeasurementPageEvent {
+  const MeasurementSweepCancelled();
+}
+
+/// Internal event to mark a job as created.
+class MeasurementJobCreated extends MeasurementPageEvent {
+  const MeasurementJobCreated({required this.jobId});
+
+  final String jobId;
 }

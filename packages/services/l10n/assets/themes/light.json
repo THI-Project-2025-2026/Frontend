@@ -55,6 +55,7 @@
         "panel_background": "#FFFFFF",
         "panel_border": "#CBD5F5",
         "accent": "#2563EB",
+        "error": "#DC2626",
         "role_chip_background": "#DBEAFE",
         "role_chip_selected": "#1E3A8A",
         "telemetry_background": "#FFFFFF",

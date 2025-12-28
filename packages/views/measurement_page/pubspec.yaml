@@ -22,7 +22,12 @@ dependencies:
     path: ../../features/room_modeling
   backend_gateway:
     path: ../../services/backend_gateway
+  measurement_session:
+    path: ../../services/measurement_session
+  recording_service:
+    path: ../../services/recording
   get_it: ^7.7.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

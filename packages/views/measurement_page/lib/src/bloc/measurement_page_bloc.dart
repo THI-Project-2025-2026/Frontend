@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:measurement_session/measurement_session.dart';
 
 part 'measurement_page_event.dart';
 part 'measurement_page_state.dart';
@@ -16,8 +17,12 @@ class MeasurementPageBloc
   MeasurementPageBloc({
     required GatewayConnectionRepository repository,
     required GatewayConnectionBloc gatewayBloc,
+    required String measurementServiceUrl,
+    required String localDeviceId,
   }) : _repository = repository,
        _gatewayBloc = gatewayBloc,
+       _measurementServiceUrl = measurementServiceUrl,
+       _localDeviceId = localDeviceId,
        super(MeasurementPageState.initial()) {
     on<MeasurementLobbyCreated>(_onLobbyCreated);
     on<MeasurementLobbyJoined>(_onLobbyJoined);
@@ -30,6 +35,9 @@ class MeasurementPageBloc
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
     on<MeasurementTimelineStepBack>(_onTimelineStepBack);
     on<MeasurementRoomPlanReceived>(_onRoomPlanReceived);
+    on<MeasurementSweepStartRequested>(_onSweepStartRequested);
+    on<MeasurementSweepCancelled>(_onSweepCancelled);
+    on<MeasurementJobCreated>(_onJobCreated);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -65,11 +73,17 @@ class MeasurementPageBloc
 
   final GatewayConnectionRepository _repository;
   final GatewayConnectionBloc _gatewayBloc;
+  final String _measurementServiceUrl;
+  final String _localDeviceId;
   StreamSubscription? _gatewaySubscription;
+  MeasurementSessionBloc? _sessionBloc;
+  StreamSubscription? _sessionSubscription;
 
   @override
-  Future<void> close() {
-    _gatewaySubscription?.cancel();
+  Future<void> close() async {
+    await _gatewaySubscription?.cancel();
+    await _sessionSubscription?.cancel();
+    await _sessionBloc?.close();
     return super.close();
   }
 
@@ -376,4 +390,215 @@ class MeasurementPageBloc
         .firstWhere((e) => e.requestId == requestId)
         .timeout(const Duration(seconds: 10));
   }
+
+  /// Starts the sweep measurement process.
+  ///
+  /// Flow:
+  /// 1. Create a measurement job on the server
+  /// 2. Create a measurement session with speaker/microphone assignments
+  /// 3. Start the measurement session (server coordinates sync)
+  /// 4. Each speaker plays the audio while microphones record
+  /// 5. Recordings are uploaded and analyzed
+  Future<void> _onSweepStartRequested(
+    MeasurementSweepStartRequested event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    debugPrint('[MeasurementPageBloc] _onSweepStartRequested called');
+    debugPrint(
+      '[MeasurementPageBloc] lobbyActive=${state.lobbyActive}, lobbyId=${state.lobbyId}',
+    );
+
+    if (!state.lobbyActive || state.lobbyId.isEmpty) {
+      debugPrint('[MeasurementPageBloc] ERROR: No active lobby');
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.failed,
+          sweepError: 'No active lobby',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(sweepStatus: SweepStatus.creatingJob, sweepError: null),
+    );
+
+    try {
+      // Step 1: Create measurement job
+      final requestId = _generateRequestId();
+      final responseFuture = _waitForResponse(requestId);
+
+      final payload = {
+        'event': 'measurement.create_job',
+        'request_id': requestId,
+        'data': {
+          'map': state.sharedRoomPlan ?? {},
+          'meta': {'lobby_id': state.lobbyId, 'lobby_code': state.lobbyCode},
+        },
+      };
+      debugPrint(
+        '[MeasurementPageBloc] Sending measurement.create_job: $payload',
+      );
+
+      await _repository.sendJson(payload);
+
+      debugPrint('[MeasurementPageBloc] Waiting for response...');
+      final response = await responseFuture;
+      debugPrint(
+        '[MeasurementPageBloc] Received response: data=${response.data}, error=${response.error}',
+      );
+
+      if (response.error != null) {
+        throw Exception('Failed to create job: ${response.error}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final jobId = data['job_id'] as String;
+      debugPrint('[MeasurementPageBloc] Job created with ID: $jobId');
+      add(MeasurementJobCreated(jobId: jobId));
+    } catch (e, stackTrace) {
+      debugPrint('[MeasurementPageBloc] ERROR in _onSweepStartRequested: $e');
+      debugPrint('[MeasurementPageBloc] Stack trace: $stackTrace');
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.failed,
+          sweepError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onJobCreated(
+    MeasurementJobCreated event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    debugPrint('[MeasurementPageBloc] _onJobCreated: jobId=${event.jobId}');
+
+    emit(
+      state.copyWith(
+        jobId: event.jobId,
+        sweepStatus: SweepStatus.creatingSession,
+      ),
+    );
+
+    try {
+      // Build speaker and microphone lists from device assignments
+      final speakers = <SpeakerInfo>[];
+      final microphones = <MicrophoneInfo>[];
+
+      debugPrint(
+        '[MeasurementPageBloc] Building speaker/mic lists from ${state.devices.length} devices',
+      );
+      for (final device in state.devices) {
+        debugPrint(
+          '[MeasurementPageBloc] Device: id=${device.id}, role=${device.role}, slotId=${device.roleSlotId}',
+        );
+        if (device.role == MeasurementDeviceRole.loudspeaker &&
+            device.roleSlotId != null) {
+          speakers.add(
+            SpeakerInfo(
+              deviceId: device.id,
+              slotId: device.roleSlotId!,
+              slotLabel: device.roleLabel,
+            ),
+          );
+        } else if (device.role == MeasurementDeviceRole.microphone &&
+            device.roleSlotId != null) {
+          microphones.add(
+            MicrophoneInfo(
+              deviceId: device.id,
+              slotId: device.roleSlotId!,
+              slotLabel: device.roleLabel,
+            ),
+          );
+        }
+      }
+
+      debugPrint(
+        '[MeasurementPageBloc] Found ${speakers.length} speakers, ${microphones.length} microphones',
+      );
+
+      if (speakers.isEmpty || microphones.isEmpty) {
+        throw Exception('At least one speaker and one microphone are required');
+      }
+
+      // Create and configure the measurement session BLoC
+      debugPrint(
+        '[MeasurementPageBloc] Creating MeasurementSessionBloc with url=$_measurementServiceUrl, deviceId=$_localDeviceId',
+      );
+      _sessionBloc = MeasurementSessionBloc(
+        repository: _repository,
+        gatewayBloc: _gatewayBloc,
+        measurementServiceUrl: _measurementServiceUrl,
+        localDeviceId: _localDeviceId,
+      );
+
+      // Listen to session status changes
+      _sessionSubscription = _sessionBloc!.stream.listen((sessionState) {
+        debugPrint(
+          '[MeasurementPageBloc] Session state changed: status=${sessionState.status}, phase=${sessionState.phase}, error=${sessionState.error}',
+        );
+        if (sessionState.status == MeasurementSessionStatus.completed) {
+          add(const MeasurementTimelineAdvanced());
+          emit(state.copyWith(sweepStatus: SweepStatus.completed));
+        } else if (sessionState.status == MeasurementSessionStatus.error ||
+            sessionState.status == MeasurementSessionStatus.cancelled) {
+          emit(
+            state.copyWith(
+              sweepStatus: SweepStatus.failed,
+              sweepError: sessionState.error,
+            ),
+          );
+        }
+      });
+
+      // Create the measurement session
+      debugPrint(
+        '[MeasurementPageBloc] Adding MeasurementSessionCreated event',
+      );
+      _sessionBloc!.add(
+        MeasurementSessionCreated(
+          jobId: event.jobId,
+          lobbyId: state.lobbyId,
+          speakers: speakers,
+          microphones: microphones,
+        ),
+      );
+
+      // Wait for session creation then start
+      debugPrint('[MeasurementPageBloc] Waiting 500ms for session creation...');
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      emit(state.copyWith(sweepStatus: SweepStatus.running));
+
+      // Start the first speaker measurement
+      debugPrint('[MeasurementPageBloc] Starting first speaker measurement');
+      _sessionBloc!.add(const MeasurementSessionStartSpeaker());
+    } catch (e, stackTrace) {
+      debugPrint('[MeasurementPageBloc] ERROR in _onJobCreated: $e');
+      debugPrint('[MeasurementPageBloc] Stack trace: $stackTrace');
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.failed,
+          sweepError: e.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSweepCancelled(
+    MeasurementSweepCancelled event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    _sessionBloc?.add(const MeasurementSessionCancelled());
+    await _sessionSubscription?.cancel();
+    await _sessionBloc?.close();
+    _sessionBloc = null;
+    _sessionSubscription = null;
+
+    emit(state.copyWith(sweepStatus: SweepStatus.idle, sweepError: null));
+  }
+
+  /// Get the current measurement session BLoC for UI access.
+  MeasurementSessionBloc? get sessionBloc => _sessionBloc;
 }

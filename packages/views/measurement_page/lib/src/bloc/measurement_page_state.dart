@@ -3,6 +3,27 @@ part of 'measurement_page_bloc.dart';
 /// Roles a device can take within a collaborative measurement session.
 enum MeasurementDeviceRole { none, microphone, loudspeaker }
 
+/// Status of the sweep measurement process.
+enum SweepStatus {
+  /// No sweep in progress.
+  idle,
+
+  /// Creating job on the server.
+  creatingJob,
+
+  /// Sweep session is being created.
+  creatingSession,
+
+  /// Sweep is in progress (synchronized playback and recording).
+  running,
+
+  /// Sweep completed successfully.
+  completed,
+
+  /// Sweep failed or was cancelled.
+  failed,
+}
+
 /// Metadata for the measurement step timeline.
 class MeasurementStepDescriptor {
   const MeasurementStepDescriptor({
@@ -90,6 +111,9 @@ class MeasurementPageState {
     this.currentDeviceId = '',
     this.sharedRoomPlan,
     this.sharedRoomPlanVersion = 0,
+    this.sweepStatus = SweepStatus.idle,
+    this.jobId,
+    this.sweepError,
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
        steps = List<MeasurementStepDescriptor>.unmodifiable(steps);
 
@@ -107,6 +131,9 @@ class MeasurementPageState {
   final String currentDeviceId;
   final Map<String, dynamic>? sharedRoomPlan;
   final int sharedRoomPlanVersion;
+  final SweepStatus sweepStatus;
+  final String? jobId;
+  final String? sweepError;
 
   MeasurementDevice? get localDevice {
     for (final device in devices) {
@@ -119,6 +146,19 @@ class MeasurementPageState {
     }
     return devices.first;
   }
+
+  /// Get all devices with the speaker role.
+  List<MeasurementDevice> get speakers => devices
+      .where((d) => d.role == MeasurementDeviceRole.loudspeaker)
+      .toList();
+
+  /// Get all devices with the microphone role.
+  List<MeasurementDevice> get microphones =>
+      devices.where((d) => d.role == MeasurementDeviceRole.microphone).toList();
+
+  /// Check if there are enough devices to start measurement.
+  bool get canStartMeasurement =>
+      speakers.isNotEmpty && microphones.isNotEmpty && lobbyActive;
 
   MeasurementStepDescriptor? get activeStep {
     if (steps.isEmpty) {
@@ -143,6 +183,9 @@ class MeasurementPageState {
     String? currentDeviceId,
     Map<String, dynamic>? sharedRoomPlan,
     int? sharedRoomPlanVersion,
+    SweepStatus? sweepStatus,
+    String? jobId,
+    String? sweepError,
   }) {
     return MeasurementPageState(
       lobbyActive: lobbyActive ?? this.lobbyActive,
@@ -160,6 +203,9 @@ class MeasurementPageState {
       sharedRoomPlan: sharedRoomPlan ?? this.sharedRoomPlan,
       sharedRoomPlanVersion:
           sharedRoomPlanVersion ?? this.sharedRoomPlanVersion,
+      sweepStatus: sweepStatus ?? this.sweepStatus,
+      jobId: jobId ?? this.jobId,
+      sweepError: sweepError ?? this.sweepError,
     );
   }
 
@@ -193,18 +239,15 @@ class MeasurementPageState {
         titleKey: 'measurement_page.timeline.steps.3.title',
         descriptionKey: 'measurement_page.timeline.steps.3.description',
       ),
+      // Note: Step 4 (synchronize devices) removed - synchronization happens
+      // automatically at the beginning of the sweep step.
       MeasurementStepDescriptor(
         index: 5,
-        titleKey: 'measurement_page.timeline.steps.4.title',
-        descriptionKey: 'measurement_page.timeline.steps.4.description',
-      ),
-      MeasurementStepDescriptor(
-        index: 6,
         titleKey: 'measurement_page.timeline.steps.5.title',
         descriptionKey: 'measurement_page.timeline.steps.5.description',
       ),
       MeasurementStepDescriptor(
-        index: 7,
+        index: 6,
         titleKey: 'measurement_page.timeline.steps.6.title',
         descriptionKey: 'measurement_page.timeline.steps.6.description',
       ),

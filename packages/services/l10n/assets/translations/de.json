@@ -209,13 +209,9 @@
                     "title": "Geräterollen festlegen",
                     "description": "Mikrofon- und Lautsprecherrollen für alle verbundenen Geräte zuweisen."
                 },
-                "4": {
-                    "title": "Geräte synchronisieren",
-                    "description": "Timing aller verbundenen Geräte für präzise Messungen kalibrieren."
-                },
                 "5": {
                     "title": "Sweep starten",
-                    "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
+                    "description": "Wiedergabe und Aufnahme koordinieren. Lautsprecher spielen das Messsignal ab, während Mikrofone aufnehmen. Die Synchronisation erfolgt automatisch."
                 },
                 "6": {
                     "title": "Impulsergebnisse prüfen",

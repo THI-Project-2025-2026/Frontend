@@ -209,13 +209,9 @@
                     "title": "Set connected device roles",
                     "description": "Assign microphone and loudspeaker roles for all connected devices."
                 },
-                "4": {
-                    "title": "Synchronize devices",
-                    "description": "Calibrate timing across all connected devices for accurate measurements."
-                },
                 "5": {
                     "title": "Run sweep",
-                    "description": "Trigger synchronized sweeps while monitoring headroom and clipping indicators."
+                    "description": "Coordinate playback and recording. Speakers play the measurement signal while microphones record. Synchronization happens automatically."
                 },
                 "6": {
                     "title": "Review impulse results",
