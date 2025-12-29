@@ -25,7 +25,7 @@ class MeasurementPageScreen extends StatelessWidget {
     final repository = GetIt.I<GatewayConnectionRepository>();
     final gatewayBloc = GetIt.I<GatewayConnectionBloc>();
     // TODO: Get these from configuration or environment
-    const measurementServiceUrl = 'http://localhost:8002';
+    const measurementServiceUrl = 'http://192.168.3.9:8002';
     final localDeviceId = DateTime.now().microsecondsSinceEpoch.toString();
 
     return MultiBlocProvider(
