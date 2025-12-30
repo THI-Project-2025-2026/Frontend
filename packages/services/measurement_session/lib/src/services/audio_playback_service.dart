@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -77,6 +79,27 @@ class AudioPlaybackService {
 
     if (response.statusCode != 200) {
       throw Exception('Failed to download audio: ${response.statusCode}');
+    }
+
+    // Validate Hash
+    final receivedHash = response.headers['x-audio-hash'];
+    final bytes = response.bodyBytes;
+    final calculatedHash = sha256.convert(bytes).toString();
+
+    debugPrint('[AudioPlaybackService] Audio Validation:');
+    debugPrint('  File size: ${bytes.length} bytes');
+    debugPrint('  Received Hash: $receivedHash');
+    debugPrint('  Calculated Hash: $calculatedHash');
+
+    if (receivedHash != null && receivedHash != calculatedHash) {
+      debugPrint('  Result: INVALID HASH');
+      throw Exception(
+        'Audio hash validation failed. Received: $receivedHash, Calculated: $calculatedHash',
+      );
+    } else if (receivedHash == null) {
+      debugPrint('  Result: NO HASH RECEIVED (Skipping validation)');
+    } else {
+      debugPrint('  Result: VALID');
     }
 
     // Store audio bytes
