@@ -526,10 +526,14 @@ class MeasurementSessionBloc
 
     debugPrint('Starting playback: session=${event.sessionId}');
 
-    emit(state.copyWith(phase: MeasurementPhase.playing));
+    emit(
+      state.copyWith(
+        phase: MeasurementPhase.playing,
+        status: MeasurementSessionStatus.measuring,
+      ),
+    );
 
     try {
-      // For the speaker, we start playback
       await _playbackService.play();
 
       // Playback finished

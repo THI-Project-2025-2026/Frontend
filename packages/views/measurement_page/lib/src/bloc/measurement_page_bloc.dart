@@ -420,7 +420,11 @@ class MeasurementPageBloc
     }
 
     emit(
-      state.copyWith(sweepStatus: SweepStatus.creatingJob, sweepError: null),
+      state.copyWith(
+        sweepStatus: SweepStatus.creatingJob,
+        sweepError: null,
+        playbackPhase: PlaybackPhase.idle,
+      ),
     );
 
     try {
@@ -538,6 +542,12 @@ class MeasurementPageBloc
         debugPrint(
           '[MeasurementPageBloc] Session state changed: status=${sessionState.status}, phase=${sessionState.phase}, error=${sessionState.error}',
         );
+        if (sessionState.phase == MeasurementPhase.playing) {
+          emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
+        } else if (sessionState.phase != MeasurementPhase.playing &&
+            state.playbackPhase != PlaybackPhase.idle) {
+          emit(state.copyWith(playbackPhase: PlaybackPhase.idle));
+        }
         if (sessionState.status == MeasurementSessionStatus.completed) {
           add(const MeasurementTimelineAdvanced());
           emit(state.copyWith(sweepStatus: SweepStatus.completed));
@@ -547,6 +557,7 @@ class MeasurementPageBloc
             state.copyWith(
               sweepStatus: SweepStatus.failed,
               sweepError: sessionState.error,
+              playbackPhase: PlaybackPhase.idle,
             ),
           );
         }
@@ -596,7 +607,13 @@ class MeasurementPageBloc
     _sessionBloc = null;
     _sessionSubscription = null;
 
-    emit(state.copyWith(sweepStatus: SweepStatus.idle, sweepError: null));
+    emit(
+      state.copyWith(
+        sweepStatus: SweepStatus.idle,
+        sweepError: null,
+        playbackPhase: PlaybackPhase.idle,
+      ),
+    );
   }
 
   /// Get the current measurement session BLoC for UI access.

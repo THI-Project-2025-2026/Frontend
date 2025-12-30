@@ -19,6 +19,7 @@ class AudioPlaybackService {
   AudioPlaybackService();
 
   final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _demoPlayer = AudioPlayer();
   String? _cachedAudioPath;
   Uint8List? _cachedAudioBytes;
   String? _audioUrl; // Store URL for web playback
@@ -153,6 +154,41 @@ class AudioPlaybackService {
     debugPrint('[AudioPlaybackService] Audio duration: $duration');
   }
 
+  /// Play the bundled demo sample before the real measurement audio.
+  Future<void> playDemoSample({String assetPath = 'audio/sample.wav'}) async {
+    debugPrint('[AudioPlaybackService] playDemoSample() called');
+
+    final completer = Completer<void>();
+    late StreamSubscription<PlayerState> subscription;
+
+    try {
+      await _demoPlayer.stop();
+      await _demoPlayer.setReleaseMode(ReleaseMode.stop);
+      await _demoPlayer.setVolume(1.0);
+      await _demoPlayer.setSourceAsset(assetPath);
+
+      subscription = _demoPlayer.onPlayerStateChanged.listen((state) {
+        debugPrint('[AudioPlaybackService] Demo player state: $state');
+        if (state == PlayerState.completed || state == PlayerState.stopped) {
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+          subscription.cancel();
+        }
+      });
+
+      await _demoPlayer.resume();
+      await completer.future;
+      debugPrint('[AudioPlaybackService] Demo playback finished');
+    } catch (e, stackTrace) {
+      debugPrint('[AudioPlaybackService] Demo playback failed: $e');
+      debugPrint('[AudioPlaybackService] Stack trace: $stackTrace');
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+  }
+
   /// Play the measurement audio.
   ///
   /// Returns a Future that completes when playback is finished.
@@ -241,6 +277,7 @@ class AudioPlaybackService {
   /// Release resources.
   Future<void> dispose() async {
     await _player.dispose();
+    await _demoPlayer.dispose();
 
     // Clear cached bytes and URL
     _cachedAudioBytes = null;

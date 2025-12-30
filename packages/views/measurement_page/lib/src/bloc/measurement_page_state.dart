@@ -41,6 +41,9 @@ class MeasurementStepDescriptor {
   final String? fallbackDescription;
 }
 
+/// Playback phases within the sweep dialog.
+enum PlaybackPhase { idle, measurementPlaying }
+
 /// Representation of a connected device in the lobby.
 class MeasurementDevice {
   const MeasurementDevice({
@@ -114,6 +117,7 @@ class MeasurementPageState {
     this.sweepStatus = SweepStatus.idle,
     this.jobId,
     this.sweepError,
+    this.playbackPhase = PlaybackPhase.idle,
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
        steps = List<MeasurementStepDescriptor>.unmodifiable(steps);
 
@@ -134,6 +138,7 @@ class MeasurementPageState {
   final SweepStatus sweepStatus;
   final String? jobId;
   final String? sweepError;
+  final PlaybackPhase playbackPhase;
 
   MeasurementDevice? get localDevice {
     for (final device in devices) {
@@ -186,6 +191,7 @@ class MeasurementPageState {
     SweepStatus? sweepStatus,
     String? jobId,
     String? sweepError,
+    PlaybackPhase? playbackPhase,
   }) {
     return MeasurementPageState(
       lobbyActive: lobbyActive ?? this.lobbyActive,
@@ -206,6 +212,7 @@ class MeasurementPageState {
       sweepStatus: sweepStatus ?? this.sweepStatus,
       jobId: jobId ?? this.jobId,
       sweepError: sweepError ?? this.sweepError,
+      playbackPhase: playbackPhase ?? this.playbackPhase,
     );
   }
 
@@ -281,6 +288,7 @@ class MeasurementPageState {
       lastUpdated: DateTime.now(),
       sharedRoomPlan: null,
       sharedRoomPlanVersion: 0,
+      playbackPhase: PlaybackPhase.idle,
     );
   }
 }

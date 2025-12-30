@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -1070,6 +1071,8 @@ class _TimelineCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _DemoAudioButton(disabled: sweepInProgress),
+                      const SizedBox(width: 12),
                       SonalyzeButton(
                         onPressed: state.activeStepIndex > 0 && !sweepInProgress
                             ? () => context.read<MeasurementPageBloc>().add(
@@ -1158,6 +1161,89 @@ class _TimelineCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _DemoAudioButton extends StatefulWidget {
+  const _DemoAudioButton({required this.disabled});
+
+  final bool disabled;
+
+  @override
+  State<_DemoAudioButton> createState() => _DemoAudioButtonState();
+}
+
+class _DemoAudioButtonState extends State<_DemoAudioButton> {
+  late final AudioPlayer _player;
+  bool _isLoading = false;
+  PlayerState _playerState = PlayerState.stopped;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _player.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _playerState = state;
+      });
+    });
+  }
+
+  Future<void> _playDemo() async {
+    if (_isLoading || _playerState == PlayerState.playing) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _player.stop();
+      await _player.setReleaseMode(ReleaseMode.stop);
+      await _player.setVolume(1.0);
+      await _player.setSourceAsset('audio/sample.wav');
+      await _player.resume();
+    } catch (error, stackTrace) {
+      debugPrint('Demo audio playback failed: $error');
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stackTrace),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _themeColor('measurement_page.timeline_active');
+    final onPrimary = _themeColor('app.on_primary');
+    final isBusy =
+        _isLoading || _playerState == PlayerState.playing || widget.disabled;
+    final label = _tr(
+      'measurement_page.timeline.demo_button',
+      fallback: 'Play demo audio',
+    );
+
+    return SonalyzeButton(
+      onPressed: isBusy ? null : _playDemo,
+      backgroundColor: accent,
+      foregroundColor: onPrimary,
+      borderRadius: BorderRadius.circular(18),
+      icon: const Icon(Icons.music_note),
+      child: Text(label),
     );
   }
 }
@@ -1527,7 +1613,8 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<MeasurementPageBloc, MeasurementPageState>(
       listener: (context, state) {
-        if (state.sweepStatus == SweepStatus.running) {
+        if (state.sweepStatus == SweepStatus.running &&
+            state.playbackPhase == PlaybackPhase.measurementPlaying) {
           _startTimer();
         }
         if (state.sweepStatus == SweepStatus.completed) {
@@ -1560,9 +1647,11 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
             state.sweepStatus == SweepStatus.running ||
             state.sweepStatus == SweepStatus.completed;
 
-        final isPlaying = state.sweepStatus == SweepStatus.running;
         final isCompleted = state.sweepStatus == SweepStatus.completed;
         final isFailed = state.sweepStatus == SweepStatus.failed;
+        final isPlayingMeasurement =
+            state.playbackPhase == PlaybackPhase.measurementPlaying &&
+            state.sweepStatus == SweepStatus.running;
 
         return Dialog(
           backgroundColor: _themeColor('measurement_page.panel_background'),
@@ -1603,8 +1692,8 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                 _ProgressStep(
                   label: 'Playing audiofile',
                   isCompleted: isCompleted,
-                  isActive: isPlaying,
-                  trailing: isPlaying || isCompleted
+                  isActive: isPlayingMeasurement,
+                  trailing: isPlayingMeasurement || isCompleted
                       ? Text(
                           '${_secondsElapsed}s / ${_totalDurationSeconds}s',
                           style: Theme.of(context).textTheme.bodySmall
