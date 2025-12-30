@@ -92,6 +92,30 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
         await _initializeLastModifiedTimes();
       }
       log('Active theme set to: ${event.themeName}', name: 'JsonHotReloadBloc');
+
+      // Reload the theme immediately
+      try {
+        final themePaths = L10nAssetPaths.theme(event.themeName);
+        await AppConstants.theme.importJson(
+          themePaths.file,
+          assetPath: themePaths.asset,
+        );
+
+        emit(
+          ThemeReloaded(themeName: event.themeName, timestamp: DateTime.now()),
+        );
+      } catch (e) {
+        log(
+          'Error reloading theme after set active: $e',
+          name: 'JsonHotReloadBloc',
+        );
+        emit(
+          JsonHotReloadError(
+            message: 'Failed to reload theme: $e',
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
     }
   }
 
@@ -120,6 +144,33 @@ class JsonHotReloadBloc extends Bloc<JsonHotReloadEvent, JsonHotReloadState> {
         'Active language set to: ${event.languageCode}',
         name: 'JsonHotReloadBloc',
       );
+
+      // Reload the language immediately
+      try {
+        final translationPaths = L10nAssetPaths.translation(event.languageCode);
+        await AppConstants.translation.importJson(
+          translationPaths.file,
+          assetPath: translationPaths.asset,
+        );
+
+        emit(
+          TranslationReloaded(
+            languageCode: event.languageCode,
+            timestamp: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        log(
+          'Error reloading language after set active: $e',
+          name: 'JsonHotReloadBloc',
+        );
+        emit(
+          JsonHotReloadError(
+            message: 'Failed to reload language: $e',
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
     }
   }
 
