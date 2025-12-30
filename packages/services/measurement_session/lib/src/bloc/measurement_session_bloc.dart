@@ -3,25 +3,29 @@ import 'dart:async';
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:recording_service/recording_service.dart';
 
 import '../models/measurement_session_models.dart';
 import '../services/audio_playback_service.dart';
 import '../services/measurement_audio_service.dart';
+import '../services/measurement_debug_logger.dart';
 
 part 'measurement_session_event.dart';
 part 'measurement_session_state.dart';
 
-/// BLoC for coordinating measurement sessions.
+/// BLoC for coordinating measurement sessions using the new 11-step protocol:
 ///
-/// Handles the synchronization protocol between speaker and microphone clients:
-/// 1. Create session and notify clients to prepare
-/// 2. Wait for all clients to signal ready
-/// 3. Signal speaker to start playback
-/// 4. Handle speaker finished signal
-/// 5. Collect recordings from microphones
-/// 6. Repeat for each speaker
+/// 1. Lobby creator tells backend measurements should start
+/// 2. Server tells all clients that measurement will start now
+/// 3. All clients send a ready signal
+/// 4. Speaker requests the audiofile + hash
+/// 5. Backend sends speaker audiofile (.wav) with hash for verification
+/// 6. Speaker tells backend it received working audiofile, ready to start
+/// 7. Backend tells all microphones to start recording now
+/// 8. Microphones start recording and confirm to backend
+/// 9. Backend tells loudspeaker to start playing audiofile
+/// 10. Speaker plays, when finished tells backend
+/// 11. Backend tells microphones to stop, they send recordings to backend
 class MeasurementSessionBloc
     extends Bloc<MeasurementSessionEvent, MeasurementSessionState> {
   MeasurementSessionBloc({
@@ -37,9 +41,20 @@ class MeasurementSessionBloc
        _recordingService = recordingService ?? createRecordingService(),
        _audioService = MeasurementAudioService(baseUrl: measurementServiceUrl),
        _playbackService = AudioPlaybackService(),
+       _log = MeasurementDebugLogger.instance,
        super(const MeasurementSessionState()) {
+    _log.info(
+      _tag,
+      'MeasurementSessionBloc initialized',
+      data: {
+        'measurementServiceUrl': measurementServiceUrl,
+        'localDeviceId': localDeviceId,
+      },
+    );
+
     // Event handlers
     on<MeasurementSessionCreated>(_onSessionCreated);
+    on<MeasurementSessionJoined>(_onSessionJoined);
     on<MeasurementSessionStartSpeaker>(_onStartSpeaker);
     on<MeasurementSessionClientReady>(_onClientReady);
     on<MeasurementSessionSpeakerFinished>(_onSpeakerFinished);
@@ -47,17 +62,29 @@ class MeasurementSessionBloc
     on<MeasurementSessionCancelled>(_onSessionCancelled);
     on<MeasurementSessionReset>(_onSessionReset);
 
-    // Internal events from gateway
+    // Internal events from gateway - new protocol
+    on<_MeasurementStartNotification>(_onMeasurementStartNotification);
+    on<_MeasurementRequestAudio>(_onRequestAudio);
+    on<_MeasurementAudioReady>(_onAudioReady);
+    on<_MeasurementStartRecordingCommand>(_onStartRecordingCommand);
+    on<_MeasurementRecordingStarted>(_onRecordingStarted);
+    on<_MeasurementStartPlaybackCommand>(_onStartPlaybackCommand);
+    on<_MeasurementStopRecordingCommand>(_onStopRecordingCommand);
+    on<_MeasurementSessionComplete>(_onSessionComplete);
+
+    // Legacy events for backward compatibility
     on<_MeasurementPrepareRecording>(_onPrepareRecording);
     on<_MeasurementPreparePlayback>(_onPreparePlayback);
     on<_MeasurementStartPlayback>(_onStartPlayback);
     on<_MeasurementStartRecording>(_onStartRecording);
     on<_MeasurementStopRecording>(_onStopRecording);
-    on<_MeasurementSessionComplete>(_onSessionComplete);
 
     // Subscribe to gateway events
     _gatewaySubscription = _gatewayBloc.envelopes.listen(_handleGatewayEvent);
+    _log.debug(_tag, 'Subscribed to gateway events');
   }
+
+  static const String _tag = 'SessionBloc';
 
   final GatewayConnectionRepository _repository;
   final GatewayConnectionBloc _gatewayBloc;
@@ -66,6 +93,7 @@ class MeasurementSessionBloc
   final RecordingService _recordingService;
   final MeasurementAudioService _audioService;
   final AudioPlaybackService _playbackService;
+  final MeasurementDebugLogger _log;
   StreamSubscription<GatewayEnvelope>? _gatewaySubscription;
 
   String? _currentRecordingPath;
@@ -74,16 +102,70 @@ class MeasurementSessionBloc
     if (!envelope.isEvent) return;
 
     final data = envelope.data as Map<String, dynamic>? ?? {};
-    debugPrint(
-      '[MeasurementSessionBloc] Received gateway event: ${envelope.event}',
-    );
-    debugPrint('[MeasurementSessionBloc] Event data: $data');
+    _log.debug(_tag, 'Received gateway event: ${envelope.event}', data: data);
 
     switch (envelope.event) {
-      case 'measurement.prepare_recording':
-        debugPrint(
-          '[MeasurementSessionBloc] Processing prepare_recording event',
+      // New protocol events
+      case 'measurement.start_measurement':
+        _log.info(_tag, 'Step 2: Server notified measurement will start');
+        add(
+          _MeasurementStartNotification(
+            sessionId: data['session_id'] as String,
+            jobId: data['job_id'] as String? ?? state.sessionInfo?.jobId ?? '',
+          ),
         );
+        break;
+
+      case 'measurement.request_audio':
+        _log.info(_tag, 'Step 4: Server requesting speaker to get audio');
+        add(
+          _MeasurementRequestAudio(
+            sessionId: data['session_id'] as String,
+            audioEndpoint:
+                data['audio_url'] as String? ??
+                data['audio_endpoint'] as String? ??
+                '',
+            expectedHash: data['expected_hash'] as String?,
+          ),
+        );
+        break;
+
+      case 'measurement.start_recording':
+        _log.info(_tag, 'Step 7: Server commanding microphones to record');
+        add(
+          _MeasurementStartRecordingCommand(
+            sessionId: data['session_id'] as String,
+            jobId: state.sessionInfo?.jobId ?? '',
+            speakerSlotId: data['speaker_slot_id'] as String,
+          ),
+        );
+        break;
+
+      case 'measurement.start_playback':
+        _log.info(_tag, 'Step 9: Server commanding speaker to play');
+        add(
+          _MeasurementStartPlaybackCommand(
+            sessionId: data['session_id'] as String,
+            speakerSlotId: data['speaker_slot_id'] as String? ?? '',
+          ),
+        );
+        break;
+
+      case 'measurement.stop_recording':
+        _log.info(_tag, 'Step 10: Server commanding microphones to stop');
+        add(
+          _MeasurementStopRecordingCommand(
+            sessionId: data['session_id'] as String,
+            jobId: data['job_id'] as String? ?? state.sessionInfo?.jobId ?? '',
+            speakerSlotId: data['speaker_slot_id'] as String,
+            uploadEndpoint: data['upload_endpoint'] as String,
+          ),
+        );
+        break;
+
+      // Legacy protocol events (backward compatibility)
+      case 'measurement.prepare_recording':
+        _log.info(_tag, 'Legacy: prepare_recording event');
         add(
           _MeasurementPrepareRecording(
             sessionId: data['session_id'] as String,
@@ -96,12 +178,7 @@ class MeasurementSessionBloc
         break;
 
       case 'measurement.prepare_playback':
-        debugPrint(
-          '[MeasurementSessionBloc] Processing prepare_playback event',
-        );
-        debugPrint(
-          '[MeasurementSessionBloc] audio_file_endpoint: ${data['audio_file_endpoint']}',
-        );
+        _log.info(_tag, 'Legacy: prepare_playback event');
         add(
           _MeasurementPreparePlayback(
             sessionId: data['session_id'] as String,
@@ -112,40 +189,8 @@ class MeasurementSessionBloc
         );
         break;
 
-      case 'measurement.start_playback':
-        debugPrint('[MeasurementSessionBloc] Processing start_playback event');
-        // This event goes to both speakers AND microphones
-        // Speaker starts playing, microphones start recording
-        add(
-          _MeasurementStartPlayback(
-            sessionId: data['session_id'] as String,
-            speakerSlotId: data['speaker_slot_id'] as String,
-          ),
-        );
-        add(
-          _MeasurementStartRecording(
-            sessionId: data['session_id'] as String,
-            speakerSlotId: data['speaker_slot_id'] as String,
-          ),
-        );
-        break;
-
-      case 'measurement.stop_recording':
-        debugPrint('[MeasurementSessionBloc] Processing stop_recording event');
-        add(
-          _MeasurementStopRecording(
-            sessionId: data['session_id'] as String,
-            jobId: data['job_id'] as String,
-            speakerSlotId: data['speaker_slot_id'] as String,
-            uploadEndpoint: data['upload_endpoint'] as String,
-          ),
-        );
-        break;
-
       case 'measurement.session_complete':
-        debugPrint(
-          '[MeasurementSessionBloc] Processing session_complete event',
-        );
+        _log.info(_tag, 'Session complete event');
         add(
           _MeasurementSessionComplete(
             sessionId: data['session_id'] as String,
@@ -156,15 +201,43 @@ class MeasurementSessionBloc
         );
         break;
 
+      case 'measurement.speaker_complete':
+        _log.info(
+          _tag,
+          'Speaker measurement complete',
+          data: {
+            'completedSlotId': data['completed_speaker_slot_id'],
+            'remainingSpeakers': data['remaining_speakers'],
+          },
+        );
+        // TODO: Handle next speaker if remaining_speakers > 0
+        break;
+
       case 'measurement.session_cancelled':
-        debugPrint(
-          '[MeasurementSessionBloc] Processing session_cancelled event',
+        _log.warning(
+          _tag,
+          'Session cancelled by server',
+          data: {'reason': data['reason']},
         );
         add(const MeasurementSessionCancelled());
         break;
 
+      case 'measurement.error':
+        _log.error(
+          _tag,
+          'Error event from server',
+          data: {
+            'errorDeviceId': data['error_device_id'],
+            'errorMessage': data['error_message'],
+            'errorCode': data['error_code'],
+          },
+        );
+        // For now, cancel the session on errors
+        add(const MeasurementSessionCancelled());
+        break;
+
       default:
-        debugPrint('[MeasurementSessionBloc] Unknown event: ${envelope.event}');
+        _log.debug(_tag, 'Unhandled event: ${envelope.event}');
     }
   }
 
@@ -172,14 +245,15 @@ class MeasurementSessionBloc
     MeasurementSessionCreated event,
     Emitter<MeasurementSessionState> emit,
   ) async {
-    debugPrint(
-      '[MeasurementSessionBloc] _onSessionCreated: jobId=${event.jobId}, lobbyId=${event.lobbyId}',
-    );
-    debugPrint(
-      '[MeasurementSessionBloc] speakers=${event.speakers.map((s) => s.deviceId).toList()}',
-    );
-    debugPrint(
-      '[MeasurementSessionBloc] microphones=${event.microphones.map((m) => m.deviceId).toList()}',
+    _log.info(
+      _tag,
+      'Creating measurement session',
+      data: {
+        'jobId': event.jobId,
+        'lobbyId': event.lobbyId,
+        'speakerCount': event.speakers.length,
+        'microphoneCount': event.microphones.length,
+      },
     );
 
     emit(
@@ -216,19 +290,19 @@ class MeasurementSessionBloc
               .toList(),
         },
       };
-      debugPrint('[MeasurementSessionBloc] Sending create_session: $payload');
 
+      _log.debug(_tag, 'Sending create_session request', data: payload);
       await _repository.sendJson(payload);
 
-      debugPrint(
-        '[MeasurementSessionBloc] Waiting for create_session response...',
-      );
+      _log.debug(_tag, 'Waiting for create_session response...');
       final response = await responseFuture;
-      debugPrint(
-        '[MeasurementSessionBloc] Received response: data=${response.data}, error=${response.error}',
-      );
 
       if (response.error != null) {
+        _log.error(
+          _tag,
+          'Failed to create session',
+          data: {'error': response.error},
+        );
         throw Exception('Failed to create session: ${response.error}');
       }
 
@@ -239,12 +313,17 @@ class MeasurementSessionBloc
         lobbyId: event.lobbyId,
         speakers: event.speakers,
         microphones: event.microphones,
-        audioDurationSeconds: (data['audio_duration_seconds'] as num)
-            .toDouble(),
+        audioDurationSeconds:
+            (data['audio_duration_seconds'] as num?)?.toDouble() ?? 15.0,
       );
 
-      debugPrint(
-        '[MeasurementSessionBloc] Session created: sessionId=${sessionInfo.sessionId}, audioDuration=${sessionInfo.audioDurationSeconds}s',
+      _log.info(
+        _tag,
+        'Session created successfully',
+        data: {
+          'sessionId': sessionInfo.sessionId,
+          'audioDuration': sessionInfo.audioDurationSeconds,
+        },
       );
 
       emit(
@@ -254,8 +333,12 @@ class MeasurementSessionBloc
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('[MeasurementSessionBloc] ERROR in _onSessionCreated: $e');
-      debugPrint('[MeasurementSessionBloc] Stack trace: $stackTrace');
+      _log.error(
+        _tag,
+        'Error creating session',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -265,24 +348,74 @@ class MeasurementSessionBloc
     }
   }
 
+  /// Handler for non-admin devices joining an existing measurement session.
+  /// This is called when a microphone device receives measurement.start_measurement.
+  Future<void> _onSessionJoined(
+    MeasurementSessionJoined event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Joining existing measurement session as microphone',
+      data: {
+        'sessionId': event.sessionId,
+        'jobId': event.jobId,
+        'speakerSlotId': event.speakerSlotId,
+        'localDeviceId': _localDeviceId,
+      },
+    );
+
+    // Create minimal session info for microphone device
+    final sessionInfo = MeasurementSessionInfo(
+      sessionId: event.sessionId,
+      jobId: event.jobId,
+      lobbyId: '', // Not needed for microphone
+      speakers: [], // Not needed for microphone
+      microphones: [
+        MicrophoneInfo(
+          deviceId: _localDeviceId,
+          slotId: '', // Will be filled later if needed
+          slotLabel: '',
+        ),
+      ],
+      audioDurationSeconds: 15.0, // Default
+    );
+
+    emit(
+      state.copyWith(
+        status: MeasurementSessionStatus.created,
+        sessionInfo: sessionInfo,
+        phase: MeasurementPhase.waitingReady,
+        isLocalReady: false,
+      ),
+    );
+
+    // Step 3: Immediately send ready signal as microphone
+    _log.info(_tag, 'Step 3: Microphone sending ready signal');
+    add(const MeasurementSessionClientReady());
+  }
+
+  /// Step 1: Lobby creator initiates measurement start
   Future<void> _onStartSpeaker(
     MeasurementSessionStartSpeaker event,
     Emitter<MeasurementSessionState> emit,
   ) async {
     final session = state.sessionInfo;
-    debugPrint(
-      '[MeasurementSessionBloc] _onStartSpeaker called, sessionInfo=$session',
-    );
-
     if (session == null) {
-      debugPrint('[MeasurementSessionBloc] ERROR: No session info available');
+      _log.error(_tag, 'Cannot start speaker - no session info');
       return;
     }
+
+    _log.info(
+      _tag,
+      'Step 1: Initiating measurement start',
+      data: {'sessionId': session.sessionId},
+    );
 
     emit(
       state.copyWith(
         status: MeasurementSessionStatus.preparingMeasurement,
-        phase: MeasurementPhase.preparing,
+        phase: MeasurementPhase.initiating,
       ),
     );
 
@@ -290,34 +423,35 @@ class MeasurementSessionBloc
       final requestId = _generateRequestId();
       final responseFuture = _waitForResponse(requestId);
 
+      // Event name matches backend handler: measurement.start_speaker
       final payload = {
         'event': 'measurement.start_speaker',
         'request_id': requestId,
         'data': {'session_id': session.sessionId},
       };
-      debugPrint('[MeasurementSessionBloc] Sending start_speaker: $payload');
 
+      _log.debug(_tag, 'Sending start_speaker request', data: payload);
       await _repository.sendJson(payload);
 
-      debugPrint(
-        '[MeasurementSessionBloc] Waiting for start_speaker response...',
-      );
       final response = await responseFuture;
-      debugPrint(
-        '[MeasurementSessionBloc] Received response: data=${response.data}, error=${response.error}',
-      );
-
       if (response.error != null) {
-        throw Exception('Failed to start speaker: ${response.error}');
+        _log.error(
+          _tag,
+          'Failed to start measurement',
+          data: {'error': response.error},
+        );
+        throw Exception('Failed to start measurement: ${response.error}');
       }
 
-      debugPrint(
-        '[MeasurementSessionBloc] Start speaker succeeded, now waiting for ready signals',
-      );
-      emit(state.copyWith(phase: MeasurementPhase.waitingReady));
+      _log.info(_tag, 'Measurement start initiated, waiting for notifications');
+      emit(state.copyWith(phase: MeasurementPhase.notifyingClients));
     } catch (e, stackTrace) {
-      debugPrint('[MeasurementSessionBloc] ERROR in _onStartSpeaker: $e');
-      debugPrint('[MeasurementSessionBloc] Stack trace: $stackTrace');
+      _log.error(
+        _tag,
+        'Error starting measurement',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -328,27 +462,281 @@ class MeasurementSessionBloc
     }
   }
 
+  /// Step 2: Server notifies all clients measurement will start
+  Future<void> _onMeasurementStartNotification(
+    _MeasurementStartNotification event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Step 2: Received start notification',
+      data: {'sessionId': event.sessionId},
+    );
+
+    emit(
+      state.copyWith(phase: MeasurementPhase.waitingReady, isLocalReady: false),
+    );
+
+    // Step 3: Send ready signal
+    _log.info(_tag, 'Step 3: Sending ready signal');
+    add(const MeasurementSessionClientReady());
+  }
+
+  /// Step 3: Client sends ready signal
   Future<void> _onClientReady(
     MeasurementSessionClientReady event,
     Emitter<MeasurementSessionState> emit,
   ) async {
     final session = state.sessionInfo;
+    if (session == null) {
+      _log.error(_tag, 'Cannot send ready - no session info');
+      return;
+    }
+
+    _log.info(_tag, 'Step 3: Sending client ready signal');
+
+    try {
+      final requestId = _generateRequestId();
+      // Event name matches backend handler: measurement.ready (also accepts measurement.client_ready)
+      await _repository.sendJson({
+        'event': 'measurement.ready',
+        'request_id': requestId,
+        'data': {'session_id': session.sessionId, 'device_id': _localDeviceId},
+      });
+
+      _log.debug(_tag, 'Ready signal sent');
+      emit(state.copyWith(isLocalReady: true));
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to send ready signal',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Step 4: Speaker receives request to download audio
+  Future<void> _onRequestAudio(
+    _MeasurementRequestAudio event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Step 4: Speaker requested to get audio',
+      data: {
+        'sessionId': event.sessionId,
+        'audioEndpoint': event.audioEndpoint,
+        'expectedHash': event.expectedHash,
+      },
+    );
+
+    emit(
+      state.copyWith(
+        localRole: LocalMeasurementRole.speaker,
+        phase: MeasurementPhase.requestingAudio,
+      ),
+    );
+
+    try {
+      // Step 5: Download and verify audio
+      _log.info(_tag, 'Step 5: Downloading audio file');
+      emit(state.copyWith(phase: MeasurementPhase.downloadingAudio));
+
+      final audioPath = await _playbackService.downloadMeasurementAudio(
+        baseUrl: _measurementServiceUrl,
+        sessionId: event.sessionId,
+      );
+
+      _log.info(_tag, 'Audio downloaded', data: {'path': audioPath});
+
+      // Prepare the player
+      await _playbackService.prepare();
+      _log.debug(_tag, 'Audio player prepared');
+
+      // Step 6: Notify server that audio is ready
+      _log.info(_tag, 'Step 6: Confirming audio ready to server');
+      add(_MeasurementAudioReady(sessionId: event.sessionId));
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to download/prepare audio',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(
+        state.copyWith(
+          status: MeasurementSessionStatus.error,
+          phase: MeasurementPhase.failed,
+          error: e.toString(),
+        ),
+      );
+    }
+  }
+
+  /// Step 6: Speaker confirms audio is ready
+  Future<void> _onAudioReady(
+    _MeasurementAudioReady event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    final session = state.sessionInfo;
     if (session == null) return;
+
+    _log.info(_tag, 'Step 6: Sending audio ready confirmation');
+
+    emit(state.copyWith(phase: MeasurementPhase.speakerConfirmed));
 
     try {
       final requestId = _generateRequestId();
       await _repository.sendJson({
-        'event': 'measurement.client_ready',
+        'event': 'measurement.speaker_audio_ready',
         'request_id': requestId,
-        'data': {'session_id': session.sessionId},
+        'data': {'session_id': event.sessionId, 'device_id': _localDeviceId},
       });
-
-      emit(state.copyWith(isLocalReady: true));
-    } catch (e) {
-      debugPrint('Failed to send client ready: $e');
+      _log.debug(_tag, 'Audio ready confirmation sent');
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to send audio ready',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
+  /// Step 7: Server commands microphones to start recording
+  Future<void> _onStartRecordingCommand(
+    _MeasurementStartRecordingCommand event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Step 7: Received start recording command',
+      data: {
+        'sessionId': event.sessionId,
+        'speakerSlotId': event.speakerSlotId,
+      },
+    );
+
+    emit(
+      state.copyWith(
+        localRole: LocalMeasurementRole.microphone,
+        phase: MeasurementPhase.startingRecording,
+      ),
+    );
+
+    try {
+      // Check permission
+      final hasPermission = await _recordingService.hasPermission();
+      if (!hasPermission) {
+        _log.warning(_tag, 'No microphone permission, requesting...');
+        await _recordingService.requestPermission();
+      }
+
+      // Prepare recording path
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      _currentRecordingPath =
+          '/tmp/recording_${event.sessionId}_$timestamp.wav';
+
+      _log.debug(
+        _tag,
+        'Starting recording',
+        data: {'path': _currentRecordingPath},
+      );
+      await _recordingService.start(filePath: _currentRecordingPath!);
+
+      // Step 8: Confirm recording started
+      _log.info(_tag, 'Step 8: Recording started, confirming to server');
+      add(_MeasurementRecordingStarted(sessionId: event.sessionId));
+
+      emit(state.copyWith(phase: MeasurementPhase.recording));
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to start recording',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(
+        state.copyWith(
+          status: MeasurementSessionStatus.error,
+          phase: MeasurementPhase.failed,
+          error: e.toString(),
+        ),
+      );
+    }
+  }
+
+  /// Step 8: Microphone confirms recording started
+  Future<void> _onRecordingStarted(
+    _MeasurementRecordingStarted event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(_tag, 'Step 8: Sending recording started confirmation');
+
+    try {
+      final requestId = _generateRequestId();
+      await _repository.sendJson({
+        'event': 'measurement.recording_started',
+        'request_id': requestId,
+        'data': {'session_id': event.sessionId, 'device_id': _localDeviceId},
+      });
+      _log.debug(_tag, 'Recording started confirmation sent');
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to confirm recording started',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Step 9: Server commands speaker to start playback
+  Future<void> _onStartPlaybackCommand(
+    _MeasurementStartPlaybackCommand event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    if (state.localRole != LocalMeasurementRole.speaker) {
+      _log.debug(_tag, 'Ignoring playback command - not a speaker');
+      return;
+    }
+
+    _log.info(
+      _tag,
+      'Step 9: Starting audio playback',
+      data: {
+        'sessionId': event.sessionId,
+        'speakerSlotId': event.speakerSlotId,
+      },
+    );
+
+    emit(
+      state.copyWith(
+        phase: MeasurementPhase.playing,
+        status: MeasurementSessionStatus.measuring,
+      ),
+    );
+
+    try {
+      await _playbackService.play();
+      _log.info(_tag, 'Playback completed');
+
+      // Step 10: Notify server playback finished
+      add(const MeasurementSessionSpeakerFinished());
+    } catch (e, stackTrace) {
+      _log.error(_tag, 'Playback failed', error: e, stackTrace: stackTrace);
+      emit(
+        state.copyWith(
+          status: MeasurementSessionStatus.error,
+          phase: MeasurementPhase.failed,
+          error: e.toString(),
+        ),
+      );
+    }
+  }
+
+  /// Step 10: Speaker finished playback
   Future<void> _onSpeakerFinished(
     MeasurementSessionSpeakerFinished event,
     Emitter<MeasurementSessionState> emit,
@@ -356,17 +744,85 @@ class MeasurementSessionBloc
     final session = state.sessionInfo;
     if (session == null) return;
 
+    _log.info(_tag, 'Step 10: Speaker finished playback, notifying server');
+
+    emit(state.copyWith(phase: MeasurementPhase.playbackComplete));
+
     try {
       final requestId = _generateRequestId();
+      // Event name matches backend handler: measurement.playback_complete
       await _repository.sendJson({
-        'event': 'measurement.speaker_finished',
+        'event': 'measurement.playback_complete',
         'request_id': requestId,
         'data': {'session_id': session.sessionId},
       });
+      _log.debug(_tag, 'Playback complete notification sent');
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to send playback complete',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
-      emit(state.copyWith(phase: MeasurementPhase.recordingComplete));
-    } catch (e) {
-      debugPrint('Failed to send speaker finished: $e');
+  /// Step 10 (microphone side): Server commands to stop recording
+  Future<void> _onStopRecordingCommand(
+    _MeasurementStopRecordingCommand event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    if (state.localRole != LocalMeasurementRole.microphone) {
+      _log.debug(_tag, 'Ignoring stop recording command - not a microphone');
+      return;
+    }
+
+    _log.info(
+      _tag,
+      'Step 10: Stopping recording',
+      data: {'sessionId': event.sessionId},
+    );
+
+    emit(state.copyWith(phase: MeasurementPhase.uploadingRecordings));
+
+    try {
+      final recordingPath = await _recordingService.stop();
+      if (recordingPath == null) {
+        throw Exception('Recording failed - no file produced');
+      }
+
+      _log.info(_tag, 'Recording stopped', data: {'path': recordingPath});
+
+      // Step 11: Upload recording
+      _log.info(_tag, 'Step 11: Uploading recording');
+      final uploadName =
+          'recording_${_localDeviceId}_${event.speakerSlotId}.wav';
+
+      await _audioService.uploadRecording(
+        jobId: event.jobId,
+        uploadName: uploadName,
+        filePath: recordingPath,
+      );
+
+      _log.info(_tag, 'Recording uploaded', data: {'uploadName': uploadName});
+
+      // Notify server
+      add(MeasurementSessionRecordingUploaded(uploadName: uploadName));
+      emit(state.copyWith(phase: MeasurementPhase.processing));
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to stop/upload recording',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(
+        state.copyWith(
+          status: MeasurementSessionStatus.error,
+          phase: MeasurementPhase.failed,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -376,6 +832,12 @@ class MeasurementSessionBloc
   ) async {
     final session = state.sessionInfo;
     if (session == null) return;
+
+    _log.info(
+      _tag,
+      'Recording uploaded, notifying server',
+      data: {'uploadName': event.uploadName},
+    );
 
     try {
       final requestId = _generateRequestId();
@@ -387,8 +849,13 @@ class MeasurementSessionBloc
           'upload_name': event.uploadName,
         },
       });
-    } catch (e) {
-      debugPrint('Failed to send recording uploaded: $e');
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Failed to notify upload',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -396,7 +863,8 @@ class MeasurementSessionBloc
     MeasurementSessionCancelled event,
     Emitter<MeasurementSessionState> emit,
   ) async {
-    // Stop any ongoing playback or recording
+    _log.warning(_tag, 'Session cancelled');
+
     await _playbackService.stop();
     if (await _recordingService.isRecording()) {
       await _recordingService.cancel();
@@ -416,6 +884,8 @@ class MeasurementSessionBloc
     MeasurementSessionReset event,
     Emitter<MeasurementSessionState> emit,
   ) async {
+    _log.info(_tag, 'Session reset');
+
     await _playbackService.stop();
     if (await _recordingService.isRecording()) {
       await _recordingService.cancel();
@@ -424,40 +894,66 @@ class MeasurementSessionBloc
     emit(const MeasurementSessionState());
   }
 
+  Future<void> _onSessionComplete(
+    _MeasurementSessionComplete event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Session complete',
+      data: {
+        'sessionId': event.sessionId,
+        'completedSpeakers': event.completedSpeakers,
+      },
+    );
+
+    emit(
+      state.copyWith(
+        status: MeasurementSessionStatus.completed,
+        phase: MeasurementPhase.completed,
+        localRole: LocalMeasurementRole.none,
+      ),
+    );
+  }
+
   // ============================================================
-  // Internal event handlers (from gateway)
+  // Legacy event handlers (for backward compatibility)
   // ============================================================
 
   Future<void> _onPrepareRecording(
     _MeasurementPrepareRecording event,
     Emitter<MeasurementSessionState> emit,
   ) async {
-    debugPrint('Preparing for recording: session=${event.sessionId}');
+    _log.info(_tag, 'Legacy: Preparing for recording');
 
     emit(
       state.copyWith(
         status: MeasurementSessionStatus.preparingMeasurement,
-        phase: MeasurementPhase.preparing,
+        phase: MeasurementPhase.waitingReady,
         localRole: LocalMeasurementRole.microphone,
         isLocalReady: false,
       ),
     );
 
     try {
-      // Ensure we have microphone permission
       final hasPermission = await _recordingService.hasPermission();
       if (!hasPermission) {
+        _log.warning(_tag, 'No microphone permission');
         throw Exception('Microphone permission denied');
       }
 
-      // Prepare recording path
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       _currentRecordingPath =
           '/tmp/recording_${event.sessionId}_$timestamp.wav';
 
-      // Signal ready
       add(const MeasurementSessionClientReady());
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Prepare recording failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -472,42 +968,39 @@ class MeasurementSessionBloc
     _MeasurementPreparePlayback event,
     Emitter<MeasurementSessionState> emit,
   ) async {
-    debugPrint(
-      '[MeasurementSessionBloc] _onPreparePlayback: session=${event.sessionId}, endpoint=${event.audioFileEndpoint}',
-    );
-    debugPrint(
-      '[MeasurementSessionBloc] measurementServiceUrl=$_measurementServiceUrl',
+    _log.info(
+      _tag,
+      'Legacy: Preparing for playback',
+      data: {'audioFileEndpoint': event.audioFileEndpoint},
     );
 
     emit(
       state.copyWith(
         status: MeasurementSessionStatus.preparingMeasurement,
-        phase: MeasurementPhase.preparing,
+        phase: MeasurementPhase.downloadingAudio,
         localRole: LocalMeasurementRole.speaker,
         isLocalReady: false,
       ),
     );
 
     try {
-      // Download the measurement audio
-      debugPrint('[MeasurementSessionBloc] Downloading measurement audio...');
       final audioPath = await _playbackService.downloadMeasurementAudio(
         baseUrl: _measurementServiceUrl,
         sessionId: event.sessionId,
       );
-      debugPrint('[MeasurementSessionBloc] Audio downloaded to: $audioPath');
+      _log.debug(_tag, 'Audio downloaded to: $audioPath');
 
-      // Prepare the player
-      debugPrint('[MeasurementSessionBloc] Preparing audio player...');
       await _playbackService.prepare();
-      debugPrint('[MeasurementSessionBloc] Audio player prepared successfully');
+      _log.debug(_tag, 'Audio player prepared');
 
-      // Signal ready
-      debugPrint('[MeasurementSessionBloc] Signaling client ready');
       add(const MeasurementSessionClientReady());
     } catch (e, stackTrace) {
-      debugPrint('[MeasurementSessionBloc] ERROR in _onPreparePlayback: $e');
-      debugPrint('[MeasurementSessionBloc] Stack trace: $stackTrace');
+      _log.error(
+        _tag,
+        'Prepare playback failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -524,7 +1017,7 @@ class MeasurementSessionBloc
   ) async {
     if (state.localRole != LocalMeasurementRole.speaker) return;
 
-    debugPrint('Starting playback: session=${event.sessionId}');
+    _log.info(_tag, 'Legacy: Starting playback');
 
     emit(
       state.copyWith(
@@ -535,10 +1028,9 @@ class MeasurementSessionBloc
 
     try {
       await _playbackService.play();
-
-      // Playback finished
       add(const MeasurementSessionSpeakerFinished());
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(_tag, 'Playback failed', error: e, stackTrace: stackTrace);
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -555,18 +1047,23 @@ class MeasurementSessionBloc
   ) async {
     if (state.localRole != LocalMeasurementRole.microphone) return;
 
-    debugPrint('Starting recording: session=${event.sessionId}');
+    _log.info(_tag, 'Legacy: Starting recording');
 
-    emit(state.copyWith(phase: MeasurementPhase.playing));
+    emit(state.copyWith(phase: MeasurementPhase.recording));
 
     try {
-      // Start recording with the prepared path
       if (_currentRecordingPath == null) {
         throw Exception('Recording path not prepared');
       }
       await _recordingService.start(filePath: _currentRecordingPath!);
-      debugPrint('Recording started at: $_currentRecordingPath');
-    } catch (e) {
+      _log.debug(_tag, 'Recording started');
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Recording start failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -583,33 +1080,34 @@ class MeasurementSessionBloc
   ) async {
     if (state.localRole != LocalMeasurementRole.microphone) return;
 
-    debugPrint('Stopping recording and uploading: session=${event.sessionId}');
+    _log.info(_tag, 'Legacy: Stopping recording');
 
-    emit(state.copyWith(phase: MeasurementPhase.recordingComplete));
+    emit(state.copyWith(phase: MeasurementPhase.uploadingRecordings));
 
     try {
-      // Stop the recording
       final recordingPath = await _recordingService.stop();
       if (recordingPath == null) {
         throw Exception('Recording failed - no file produced');
       }
 
-      // Generate upload name
       final uploadName =
           'recording_${_localDeviceId}_${event.speakerSlotId}.wav';
 
-      // Upload the recording
       await _audioService.uploadRecording(
         jobId: event.jobId,
         uploadName: uploadName,
         filePath: recordingPath,
       );
 
-      // Notify server
       add(MeasurementSessionRecordingUploaded(uploadName: uploadName));
-
       emit(state.copyWith(phase: MeasurementPhase.processing));
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        _tag,
+        'Stop recording failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: MeasurementSessionStatus.error,
@@ -618,21 +1116,6 @@ class MeasurementSessionBloc
         ),
       );
     }
-  }
-
-  Future<void> _onSessionComplete(
-    _MeasurementSessionComplete event,
-    Emitter<MeasurementSessionState> emit,
-  ) async {
-    debugPrint('Session complete: ${event.completedSpeakers}');
-
-    emit(
-      state.copyWith(
-        status: MeasurementSessionStatus.completed,
-        phase: MeasurementPhase.completed,
-        localRole: LocalMeasurementRole.none,
-      ),
-    );
   }
 
   String _generateRequestId() {
@@ -647,6 +1130,7 @@ class MeasurementSessionBloc
 
   @override
   Future<void> close() async {
+    _log.info(_tag, 'Closing MeasurementSessionBloc');
     await _gatewaySubscription?.cancel();
     await _playbackService.dispose();
     await _recordingService.dispose();

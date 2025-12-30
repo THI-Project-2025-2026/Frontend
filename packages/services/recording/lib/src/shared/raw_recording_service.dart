@@ -27,6 +27,13 @@ abstract class RawRecordingService implements RecordingService {
   Future<bool> hasPermission() => _recorder.hasPermission();
 
   @override
+  Future<bool> requestPermission() async {
+    // The record package's hasPermission() actually requests permission
+    // if not already granted on most platforms
+    return _recorder.hasPermission();
+  }
+
+  @override
   Future<void> start({required String filePath}) async {
     if (filePath.isEmpty) {
       throw ArgumentError.value(filePath, 'filePath', 'must not be empty');

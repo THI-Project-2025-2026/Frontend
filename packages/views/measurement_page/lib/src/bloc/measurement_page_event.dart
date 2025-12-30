@@ -97,3 +97,19 @@ class MeasurementJobCreated extends MeasurementPageEvent {
 
   final String jobId;
 }
+
+/// Internal event when this device receives a measurement start notification.
+/// This is used for non-admin devices to join an ongoing measurement.
+class _MeasurementStartReceived extends MeasurementPageEvent {
+  const _MeasurementStartReceived({
+    required this.sessionId,
+    required this.jobId,
+    required this.speakerDeviceId,
+    required this.speakerSlotId,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final String speakerDeviceId;
+  final String speakerSlotId;
+}

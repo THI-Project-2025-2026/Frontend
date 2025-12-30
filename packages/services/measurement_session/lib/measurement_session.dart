@@ -6,9 +6,11 @@
 /// - Audio playback (speaker role)
 /// - Audio recording (microphone role)
 /// - Backend event coordination
+/// - Debug logging for troubleshooting
 library;
 
 export 'src/bloc/measurement_session_bloc.dart';
 export 'src/models/measurement_session_models.dart';
 export 'src/services/audio_playback_service.dart';
 export 'src/services/measurement_audio_service.dart';
+export 'src/services/measurement_debug_logger.dart';

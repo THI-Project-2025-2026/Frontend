@@ -38,6 +38,7 @@ class MeasurementPageBloc
     on<MeasurementSweepStartRequested>(_onSweepStartRequested);
     on<MeasurementSweepCancelled>(_onSweepCancelled);
     on<MeasurementJobCreated>(_onJobCreated);
+    on<_MeasurementStartReceived>(_onMeasurementStartReceived);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -64,6 +65,24 @@ class MeasurementPageBloc
           add(
             MeasurementRoomPlanReceived(
               roomJson: Map<String, dynamic>.from(room),
+            ),
+          );
+        }
+      }
+      // Handle measurement start notification for non-admin devices
+      if (envelope.event == 'measurement.start_measurement') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        // Only handle if we don't already have a session bloc running
+        if (_sessionBloc == null) {
+          add(
+            _MeasurementStartReceived(
+              sessionId: data['session_id'] as String? ?? '',
+              jobId: data['job_id'] as String? ?? '',
+              speakerDeviceId: data['speaker_device_id'] as String? ?? '',
+              speakerSlotId: data['current_speaker_slot_id'] as String? ?? '',
             ),
           );
         }
@@ -597,15 +616,132 @@ class MeasurementPageBloc
     }
   }
 
+  /// Handles measurement start notification for non-admin (microphone) devices.
+  ///
+  /// When the admin starts a measurement, all devices receive a
+  /// measurement.start_measurement event. Non-admin devices create their
+  /// own MeasurementSessionBloc to participate in the measurement.
+  Future<void> _onMeasurementStartReceived(
+    _MeasurementStartReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    debugPrint(
+      '[MeasurementPageBloc] _onMeasurementStartReceived: '
+      'sessionId=${event.sessionId}, jobId=${event.jobId}, '
+      'speakerDeviceId=${event.speakerDeviceId}, speakerSlotId=${event.speakerSlotId}',
+    );
+
+    // Skip if we already have a session bloc (we're the admin)
+    if (_sessionBloc != null) {
+      debugPrint('[MeasurementPageBloc] Already have session bloc, skipping');
+      return;
+    }
+
+    // Skip if this device is the speaker being measured
+    if (event.speakerDeviceId == _localDeviceId) {
+      debugPrint(
+        '[MeasurementPageBloc] We are the speaker device, session will be '
+        'managed by admin on this device',
+      );
+      return;
+    }
+
+    // Check if this device is a microphone (should participate in recording)
+    final localDevice = state.devices.firstWhere(
+      (d) => d.id == _localDeviceId,
+      orElse: () => MeasurementDevice(
+        id: _localDeviceId,
+        name: 'Local',
+        role: MeasurementDeviceRole.none,
+        isLocal: true,
+        isReady: false,
+        latencyMs: 0,
+        batteryLevel: 1.0,
+      ),
+    );
+
+    debugPrint(
+      '[MeasurementPageBloc] Local device role: ${localDevice.role}, '
+      'slotId: ${localDevice.roleSlotId}',
+    );
+
+    if (localDevice.role != MeasurementDeviceRole.microphone) {
+      debugPrint(
+        '[MeasurementPageBloc] We are not a microphone, skipping measurement',
+      );
+      return;
+    }
+
+    // Create session bloc for this microphone device
+    debugPrint(
+      '[MeasurementPageBloc] Creating MeasurementSessionBloc for microphone device',
+    );
+
+    emit(state.copyWith(jobId: event.jobId, sweepStatus: SweepStatus.running));
+
+    _sessionBloc = MeasurementSessionBloc(
+      repository: _repository,
+      gatewayBloc: _gatewayBloc,
+      measurementServiceUrl: _measurementServiceUrl,
+      localDeviceId: _localDeviceId,
+    );
+
+    // Listen to session status changes
+    _sessionSubscription = _sessionBloc!.stream.listen((sessionState) {
+      debugPrint(
+        '[MeasurementPageBloc] [Microphone] Session state changed: '
+        'status=${sessionState.status}, phase=${sessionState.phase}, '
+        'error=${sessionState.error}',
+      );
+      if (sessionState.phase == MeasurementPhase.playing) {
+        emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
+      } else if (sessionState.phase != MeasurementPhase.playing &&
+          state.playbackPhase != PlaybackPhase.idle) {
+        emit(state.copyWith(playbackPhase: PlaybackPhase.idle));
+      }
+      if (sessionState.status == MeasurementSessionStatus.completed) {
+        emit(state.copyWith(sweepStatus: SweepStatus.completed));
+        // Clean up after completion
+        _cleanupSessionBloc();
+      } else if (sessionState.status == MeasurementSessionStatus.error ||
+          sessionState.status == MeasurementSessionStatus.cancelled) {
+        emit(
+          state.copyWith(
+            sweepStatus: SweepStatus.failed,
+            sweepError: sessionState.error,
+            playbackPhase: PlaybackPhase.idle,
+          ),
+        );
+        _cleanupSessionBloc();
+      }
+    });
+
+    // Join the existing session as a microphone
+    debugPrint(
+      '[MeasurementPageBloc] Joining measurement session as microphone',
+    );
+    _sessionBloc!.add(
+      MeasurementSessionJoined(
+        sessionId: event.sessionId,
+        jobId: event.jobId,
+        speakerSlotId: event.speakerSlotId,
+      ),
+    );
+  }
+
+  void _cleanupSessionBloc() {
+    _sessionSubscription?.cancel();
+    _sessionBloc?.close();
+    _sessionBloc = null;
+    _sessionSubscription = null;
+  }
+
   Future<void> _onSweepCancelled(
     MeasurementSweepCancelled event,
     Emitter<MeasurementPageState> emit,
   ) async {
     _sessionBloc?.add(const MeasurementSessionCancelled());
-    await _sessionSubscription?.cancel();
-    await _sessionBloc?.close();
-    _sessionBloc = null;
-    _sessionSubscription = null;
+    _cleanupSessionBloc();
 
     emit(
       state.copyWith(

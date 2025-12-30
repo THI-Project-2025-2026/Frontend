@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
+import 'package:measurement_session/measurement_session.dart';
+import 'package:recording_service/recording_service.dart';
 import 'package:room_modeling/room_modeling.dart';
 import 'package:uuid/uuid.dart';
 
@@ -25,9 +27,12 @@ class MeasurementPageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repository = GetIt.I<GatewayConnectionRepository>();
     final gatewayBloc = GetIt.I<GatewayConnectionBloc>();
-    // TODO: Get these from configuration or environment
+    final gatewayConfig = GetIt.I<GatewayConfig>();
+    // TODO: Get measurementServiceUrl from configuration or environment
     const measurementServiceUrl = 'http://192.168.3.9:8002';
-    final localDeviceId = DateTime.now().microsecondsSinceEpoch.toString();
+    // Use the actual device ID from gateway config - this is the same ID
+    // the backend uses to identify this device
+    final localDeviceId = gatewayConfig.deviceId;
 
     return MultiBlocProvider(
       providers: [
@@ -267,8 +272,53 @@ const List<Color> _microphoneColors = [
   Color(0xFFF470A7),
 ];
 
-class _MeasurementPageView extends StatelessWidget {
+class _MeasurementPageView extends StatefulWidget {
   const _MeasurementPageView();
+
+  @override
+  State<_MeasurementPageView> createState() => _MeasurementPageViewState();
+}
+
+class _MeasurementPageViewState extends State<_MeasurementPageView> {
+  @override
+  void initState() {
+    super.initState();
+    // Request all necessary permissions when the page opens
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    final log = MeasurementDebugLogger.instance;
+    log.info('MeasurementPage', 'Requesting permissions on page open');
+
+    try {
+      final recordingService = createRecordingService();
+      final hasPermission = await recordingService.hasPermission();
+
+      if (!hasPermission) {
+        log.info(
+          'MeasurementPage',
+          'Microphone permission not granted, requesting...',
+        );
+        await recordingService.requestPermission();
+        final granted = await recordingService.hasPermission();
+        if (granted) {
+          log.info('MeasurementPage', 'Microphone permission granted');
+        } else {
+          log.warning('MeasurementPage', 'Microphone permission denied');
+        }
+      } else {
+        log.info('MeasurementPage', 'Microphone permission already granted');
+      }
+    } catch (e, stackTrace) {
+      log.error(
+        'MeasurementPage',
+        'Error requesting permissions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1565,6 +1615,13 @@ class _RoomSnapshotApplier {
 }
 
 void _showSweepProgressDialog(BuildContext context) {
+  // Clear previous logs when starting a new sweep
+  MeasurementDebugLogger.instance.clear();
+  MeasurementDebugLogger.instance.info(
+    'SweepDialog',
+    'Starting new measurement sweep',
+  );
+
   showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -1587,12 +1644,42 @@ class _SweepProgressDialog extends StatefulWidget {
 class _SweepProgressDialogState extends State<_SweepProgressDialog> {
   Timer? _timer;
   int _secondsElapsed = 0;
+  bool _showDebugLog = false;
+  final ScrollController _logScrollController = ScrollController();
+  List<MeasurementLogEntry> _logEntries = [];
+  StreamSubscription<MeasurementLogEntry>? _logSubscription;
+
   // Total duration of the audio file (approx 15s based on backend)
   static const int _totalDurationSeconds = 15;
 
   @override
+  void initState() {
+    super.initState();
+    _logEntries = List.from(MeasurementDebugLogger.instance.entries);
+    _logSubscription = MeasurementDebugLogger.instance.stream.listen((entry) {
+      if (mounted) {
+        setState(() {
+          _logEntries = List.from(MeasurementDebugLogger.instance.entries);
+        });
+        // Auto-scroll to bottom when new log arrives
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_logScrollController.hasClients) {
+            _logScrollController.animateTo(
+              _logScrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
+    _logSubscription?.cancel();
+    _logScrollController.dispose();
     super.dispose();
   }
 
@@ -1609,18 +1696,47 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
     });
   }
 
+  Future<void> _copyLogs() async {
+    final logs = MeasurementDebugLogger.instance.exportLogs();
+    await Clipboard.setData(ClipboardData(text: logs));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _tr(
+              'measurement_page.sweep.logs_copied',
+              fallback: 'Debug logs copied to clipboard',
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MeasurementPageBloc, MeasurementPageState>(
       listener: (context, state) {
+        MeasurementDebugLogger.instance.debug(
+          'SweepDialog',
+          'State changed',
+          data: {
+            'sweepStatus': state.sweepStatus.toString(),
+            'playbackPhase': state.playbackPhase.toString(),
+          },
+        );
+
         if (state.sweepStatus == SweepStatus.running &&
             state.playbackPhase == PlaybackPhase.measurementPlaying) {
           _startTimer();
         }
         if (state.sweepStatus == SweepStatus.completed) {
           _timer?.cancel();
-          // Close dialog after a short delay or let user close it?
-          // User might want to see the "Completed" state.
+          MeasurementDebugLogger.instance.info(
+            'SweepDialog',
+            'Measurement completed successfully',
+          );
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
               Navigator.of(context).pop();
@@ -1629,6 +1745,11 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
         }
         if (state.sweepStatus == SweepStatus.failed) {
           _timer?.cancel();
+          MeasurementDebugLogger.instance.error(
+            'SweepDialog',
+            'Measurement failed',
+            data: {'error': state.sweepError},
+          );
         }
       },
       builder: (context, state) {
@@ -1658,87 +1779,376 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _tr(
-                    'measurement_page.sweep.dialog_title',
-                    fallback: 'Measurement in Progress',
-                  ),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 24),
-                _ProgressStep(
-                  label: 'Requesting audiofile',
-                  isCompleted: isCreatingJob,
-                  isActive: state.sweepStatus == SweepStatus.creatingJob,
-                ),
-                _ProgressStep(
-                  label: 'Received audiofile',
-                  isCompleted: isReceived,
-                  isActive: state.sweepStatus == SweepStatus.creatingSession,
-                ),
-                _ProgressStep(
-                  label: 'Verified audiofile integrity',
-                  isCompleted: isVerified,
-                  isActive: false, // Instant transition usually
-                ),
-                _ProgressStep(
-                  label: 'Playing audiofile',
-                  isCompleted: isCompleted,
-                  isActive: isPlayingMeasurement,
-                  trailing: isPlayingMeasurement || isCompleted
-                      ? Text(
-                          '${_secondsElapsed}s / ${_totalDurationSeconds}s',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontFamily: 'monospace'),
-                        )
-                      : null,
-                ),
-                if (isFailed) ...[
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _themeColor('app.error').withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: _showDebugLog ? 800 : 500,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with title and debug toggle
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: _themeColor('app.error'),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            state.sweepError ?? 'Unknown error',
-                            style: TextStyle(color: _themeColor('app.error')),
+                            _tr(
+                              'measurement_page.sweep.dialog_title',
+                              fallback: 'Measurement in Progress',
+                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: _copyLogs,
+                              icon: const Icon(Icons.copy),
+                              tooltip: _tr(
+                                'measurement_page.sweep.copy_logs',
+                                fallback: 'Copy debug logs',
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _showDebugLog = !_showDebugLog;
+                                });
+                              },
+                              icon: Icon(
+                                _showDebugLog
+                                    ? Icons.bug_report
+                                    : Icons.bug_report_outlined,
+                              ),
+                              tooltip: _tr(
+                                'measurement_page.sweep.toggle_debug',
+                                fallback: 'Toggle debug log',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(_tr('common.close', fallback: 'Close')),
+                    const SizedBox(height: 24),
+
+                    // Progress steps
+                    _ProgressStep(
+                      label: 'Step 1: Initiating measurement',
+                      isCompleted: isCreatingJob,
+                      isActive: state.sweepStatus == SweepStatus.creatingJob,
                     ),
-                  ),
-                ],
-              ],
+                    _ProgressStep(
+                      label: 'Step 2-3: Server notification & ready signals',
+                      isCompleted: isReceived,
+                      isActive:
+                          state.sweepStatus == SweepStatus.creatingSession,
+                    ),
+                    _ProgressStep(
+                      label: 'Step 4-6: Audio download & verification',
+                      isCompleted: isVerified,
+                      isActive: false,
+                    ),
+                    _ProgressStep(
+                      label: 'Step 7-8: Starting recording',
+                      isCompleted: isPlayingMeasurement || isCompleted,
+                      isActive:
+                          isVerified &&
+                          !isPlayingMeasurement &&
+                          !isCompleted &&
+                          !isFailed,
+                    ),
+                    _ProgressStep(
+                      label: 'Step 9: Playing audiofile',
+                      isCompleted: isCompleted,
+                      isActive: isPlayingMeasurement,
+                      trailing: isPlayingMeasurement || isCompleted
+                          ? Text(
+                              '${_secondsElapsed}s / ${_totalDurationSeconds}s',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(fontFamily: 'monospace'),
+                            )
+                          : null,
+                    ),
+                    _ProgressStep(
+                      label: 'Step 10-11: Uploading recordings',
+                      isCompleted: isCompleted,
+                      isActive: false,
+                    ),
+
+                    // Error display
+                    if (isFailed) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _themeColor(
+                            'app.error',
+                          ).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: _themeColor('app.error'),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                state.sweepError ?? 'Unknown error',
+                                style: TextStyle(
+                                  color: _themeColor('app.error'),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Debug log viewer
+                    if (_showDebugLog) ...[
+                      const SizedBox(height: 24),
+                      _DebugLogViewer(
+                        entries: _logEntries,
+                        scrollController: _logScrollController,
+                      ),
+                    ],
+
+                    // Action buttons
+                    if (isFailed || _showDebugLog) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (_showDebugLog)
+                            TextButton.icon(
+                              onPressed: _copyLogs,
+                              icon: const Icon(Icons.copy, size: 18),
+                              label: Text(
+                                _tr(
+                                  'measurement_page.sweep.copy_all_logs',
+                                  fallback: 'Copy All Logs',
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          if (isFailed)
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(
+                                _tr('common.close', fallback: 'Close'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Widget to display debug log entries.
+class _DebugLogViewer extends StatelessWidget {
+  const _DebugLogViewer({
+    required this.entries,
+    required this.scrollController,
+  });
+
+  final List<MeasurementLogEntry> entries;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _themeColor(
+            'measurement_page.panel_border',
+          ).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(7),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Debug Log (${entries.length} entries)',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.white70,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                _LogSummary(entries: entries),
+              ],
+            ),
+          ),
+          // Log content
+          Expanded(
+            child: entries.isEmpty
+                ? Center(
+                    child: Text(
+                      'No log entries yet...',
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(8),
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      return _LogEntryWidget(entry: entries[index]);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Displays a summary of log levels.
+class _LogSummary extends StatelessWidget {
+  const _LogSummary({required this.entries});
+
+  final List<MeasurementLogEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final errorCount = entries
+        .where((e) => e.level == MeasurementLogLevel.error)
+        .length;
+    final warningCount = entries
+        .where((e) => e.level == MeasurementLogLevel.warning)
+        .length;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (errorCount > 0) ...[
+          Icon(Icons.error, size: 14, color: Colors.red),
+          const SizedBox(width: 2),
+          Text(
+            '$errorCount',
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        if (warningCount > 0) ...[
+          Icon(Icons.warning, size: 14, color: Colors.orange),
+          const SizedBox(width: 2),
+          Text(
+            '$warningCount',
+            style: const TextStyle(
+              color: Colors.orange,
+              fontSize: 12,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Individual log entry display.
+class _LogEntryWidget extends StatelessWidget {
+  const _LogEntryWidget({required this.entry});
+
+  final MeasurementLogEntry entry;
+
+  Color get _levelColor {
+    switch (entry.level) {
+      case MeasurementLogLevel.debug:
+        return Colors.grey;
+      case MeasurementLogLevel.info:
+        return Colors.lightBlue;
+      case MeasurementLogLevel.warning:
+        return Colors.orange;
+      case MeasurementLogLevel.error:
+        return Colors.red;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 11,
+            height: 1.4,
+          ),
+          children: [
+            TextSpan(
+              text: '[${entry.formattedTimestamp}] ',
+              style: const TextStyle(color: Colors.white54),
+            ),
+            TextSpan(
+              text: '[${entry.levelName}] ',
+              style: TextStyle(color: _levelColor, fontWeight: FontWeight.bold),
+            ),
+            TextSpan(
+              text: '[${entry.source}] ',
+              style: const TextStyle(color: Colors.cyan),
+            ),
+            TextSpan(
+              text: entry.message,
+              style: TextStyle(
+                color: entry.level == MeasurementLogLevel.error
+                    ? Colors.red[200]
+                    : Colors.white,
+              ),
+            ),
+            if (entry.data != null && entry.data!.isNotEmpty)
+              TextSpan(
+                text: '\n     Data: ${entry.data}',
+                style: const TextStyle(color: Colors.white60, fontSize: 10),
+              ),
+            if (entry.error != null)
+              TextSpan(
+                text: '\n     Error: ${entry.error}',
+                style: TextStyle(color: Colors.red[300], fontSize: 10),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,20 +1,56 @@
 import 'package:equatable/equatable.dart';
 
 /// The phase of a measurement cycle for a single speaker.
+/// These phases follow the new 11-step protocol:
+/// 1. initiating - Lobby creator tells backend to start
+/// 2. notifyingClients - Server tells all clients measurement will start
+/// 3. waitingReady - Waiting for all clients to send ready signal
+/// 4. requestingAudio - Speaker requests audio file + hash
+/// 5. downloadingAudio - Speaker downloading and verifying audio
+/// 6. speakerConfirmed - Speaker tells backend it has working audiofile
+/// 7. startingRecording - Backend tells microphones to start recording
+/// 8. recording - Microphones recording, confirmed to backend
+/// 9. playing - Backend told speaker to play, speaker is playing
+/// 10. playbackComplete - Speaker finished, backend tells mics to stop
+/// 11. uploadingRecordings - Microphones sending recordings to backend
 enum MeasurementPhase {
   /// No measurement in progress.
   idle,
 
-  /// Preparing for measurement (downloading audio, etc.).
-  preparing,
+  /// Step 1: Lobby creator initiated measurement start.
+  initiating,
 
-  /// Waiting for all clients to signal ready.
+  /// Step 2: Server notifying all clients that measurement will start.
+  notifyingClients,
+
+  /// Step 3: Waiting for all clients to send ready signal.
   waitingReady,
 
-  /// Speaker is playing the measurement signal.
+  /// Step 4: Speaker requesting audio file and hash from server.
+  requestingAudio,
+
+  /// Step 5: Speaker downloading and verifying audio file integrity.
+  downloadingAudio,
+
+  /// Step 6: Speaker confirmed it received working audiofile to backend.
+  speakerConfirmed,
+
+  /// Step 7: Backend telling microphones to start recording.
+  startingRecording,
+
+  /// Step 8: Microphones are recording, confirmed to backend.
+  recording,
+
+  /// Step 9: Speaker is playing the measurement signal.
   playing,
 
-  /// Recording is complete, waiting for uploads.
+  /// Step 10: Speaker finished playback, backend told mics to stop.
+  playbackComplete,
+
+  /// Step 11: Microphones uploading recordings to backend.
+  uploadingRecordings,
+
+  /// Recording is complete, waiting for uploads (legacy compatibility).
   recordingComplete,
 
   /// Processing recordings on the server.

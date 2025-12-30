@@ -56,13 +56,131 @@ class MeasurementSessionCancelled extends MeasurementSessionEvent {
   const MeasurementSessionCancelled();
 }
 
+/// Join an existing measurement session (for non-admin devices like microphones).
+class MeasurementSessionJoined extends MeasurementSessionEvent {
+  const MeasurementSessionJoined({
+    required this.sessionId,
+    required this.jobId,
+    required this.speakerSlotId,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final String speakerSlotId;
+
+  @override
+  List<Object?> get props => [sessionId, jobId, speakerSlotId];
+}
+
 /// Reset to initial state.
 class MeasurementSessionReset extends MeasurementSessionEvent {
   const MeasurementSessionReset();
 }
 
 // ============================================================
-// Internal events (received from gateway)
+// New protocol internal events (11-step algorithm)
+// ============================================================
+
+/// Step 2: Server notifies all clients that measurement will start.
+class _MeasurementStartNotification extends MeasurementSessionEvent {
+  const _MeasurementStartNotification({
+    required this.sessionId,
+    required this.jobId,
+  });
+
+  final String sessionId;
+  final String jobId;
+
+  @override
+  List<Object?> get props => [sessionId, jobId];
+}
+
+/// Step 4: Server tells speaker to request/download audio file.
+class _MeasurementRequestAudio extends MeasurementSessionEvent {
+  const _MeasurementRequestAudio({
+    required this.sessionId,
+    required this.audioEndpoint,
+    this.expectedHash,
+  });
+
+  final String sessionId;
+  final String audioEndpoint;
+  final String? expectedHash;
+
+  @override
+  List<Object?> get props => [sessionId, audioEndpoint, expectedHash];
+}
+
+/// Step 6: Speaker signals audio is downloaded and verified.
+class _MeasurementAudioReady extends MeasurementSessionEvent {
+  const _MeasurementAudioReady({required this.sessionId});
+
+  final String sessionId;
+
+  @override
+  List<Object?> get props => [sessionId];
+}
+
+/// Step 7: Server commands microphones to start recording.
+class _MeasurementStartRecordingCommand extends MeasurementSessionEvent {
+  const _MeasurementStartRecordingCommand({
+    required this.sessionId,
+    required this.jobId,
+    required this.speakerSlotId,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final String speakerSlotId;
+
+  @override
+  List<Object?> get props => [sessionId, jobId, speakerSlotId];
+}
+
+/// Step 8: Microphone confirms recording has started.
+class _MeasurementRecordingStarted extends MeasurementSessionEvent {
+  const _MeasurementRecordingStarted({required this.sessionId});
+
+  final String sessionId;
+
+  @override
+  List<Object?> get props => [sessionId];
+}
+
+/// Step 9: Server commands speaker to start playback.
+class _MeasurementStartPlaybackCommand extends MeasurementSessionEvent {
+  const _MeasurementStartPlaybackCommand({
+    required this.sessionId,
+    required this.speakerSlotId,
+  });
+
+  final String sessionId;
+  final String speakerSlotId;
+
+  @override
+  List<Object?> get props => [sessionId, speakerSlotId];
+}
+
+/// Step 10: Server commands microphones to stop recording and upload.
+class _MeasurementStopRecordingCommand extends MeasurementSessionEvent {
+  const _MeasurementStopRecordingCommand({
+    required this.sessionId,
+    required this.jobId,
+    required this.speakerSlotId,
+    required this.uploadEndpoint,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final String speakerSlotId;
+  final String uploadEndpoint;
+
+  @override
+  List<Object?> get props => [sessionId, jobId, speakerSlotId, uploadEndpoint];
+}
+
+// ============================================================
+// Legacy internal events (for backward compatibility)
 // ============================================================
 
 /// Server requests microphone to prepare for recording.

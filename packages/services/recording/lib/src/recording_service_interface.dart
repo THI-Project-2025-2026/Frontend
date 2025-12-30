@@ -5,6 +5,10 @@ abstract class RecordingService {
   /// Ensures microphone permission is granted by the OS.
   Future<bool> hasPermission();
 
+  /// Requests microphone permission from the OS.
+  /// Returns true if permission was granted.
+  Future<bool> requestPermission();
+
   /// Begins a new recording session writing raw audio into [filePath].
   Future<void> start({required String filePath});
 
