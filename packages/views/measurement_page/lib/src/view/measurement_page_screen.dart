@@ -330,6 +330,19 @@ class _MeasurementPageView extends StatelessWidget {
             );
           },
         ),
+        BlocListener<MeasurementPageBloc, MeasurementPageState>(
+          listenWhen: (previous, current) =>
+              previous.activeStepIndex != current.activeStepIndex &&
+              current.activeStepIndex == MeasurementPageScreen._sweepStepIndex,
+          listener: (context, state) {
+            if (state.sweepStatus == SweepStatus.idle) {
+              context.read<MeasurementPageBloc>().add(
+                const MeasurementSweepStartRequested(),
+              );
+            }
+            _showSweepProgressDialog(context);
+          },
+        ),
       ],
       child: Scaffold(
         backgroundColor: _themeColor('app.background'),
@@ -1127,12 +1140,6 @@ class _TimelineCard extends StatelessWidget {
                     ).textTheme.bodySmall?.copyWith(color: inactiveColor),
                   ),
                 ),
-              // Sweep controls when at sweep step
-              if (atSweepStep)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: _SweepControls(state: state),
-                ),
               const SizedBox(height: 20),
               Column(
                 children: [
@@ -1252,191 +1259,6 @@ class _TimelineStepTile extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Sweep controls widget for starting and monitoring the measurement sweep.
-class _SweepControls extends StatelessWidget {
-  const _SweepControls({required this.state});
-
-  final MeasurementPageState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeColor = _themeColor('measurement_page.timeline_active');
-    final errorColor = _themeColor('measurement_page.error');
-    final onPrimary = _themeColor('app.on_primary');
-    final panelColor = _themeColor('measurement_page.panel_background');
-    final bloc = context.read<MeasurementPageBloc>();
-
-    final isRunning =
-        state.sweepStatus == SweepStatus.running ||
-        state.sweepStatus == SweepStatus.creatingJob ||
-        state.sweepStatus == SweepStatus.creatingSession;
-    final isCompleted = state.sweepStatus == SweepStatus.completed;
-    final isFailed = state.sweepStatus == SweepStatus.failed;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: panelColor.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: activeColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isCompleted
-                    ? Icons.check_circle
-                    : isRunning
-                    ? Icons.sync
-                    : isFailed
-                    ? Icons.error
-                    : Icons.play_circle_outline,
-                color: isCompleted
-                    ? Colors.green
-                    : isRunning
-                    ? activeColor
-                    : isFailed
-                    ? errorColor
-                    : activeColor,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getSweepStatusTitle(),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _getSweepStatusDescription(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (state.sweepError != null && isFailed) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: errorColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                state.sweepError!,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: errorColor),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (!isRunning && !isCompleted)
-                SonalyzeButton(
-                  onPressed: () =>
-                      bloc.add(const MeasurementSweepStartRequested()),
-                  backgroundColor: activeColor,
-                  foregroundColor: onPrimary,
-                  borderRadius: BorderRadius.circular(12),
-                  icon: const Icon(Icons.play_arrow),
-                  child: const Text('Start Sweep'),
-                ),
-              if (isRunning) ...[
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(activeColor),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SonalyzeButton(
-                  onPressed: () => bloc.add(const MeasurementSweepCancelled()),
-                  variant: SonalyzeButtonVariant.outlined,
-                  foregroundColor: errorColor,
-                  borderColor: errorColor.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  icon: const Icon(Icons.stop),
-                  child: const Text('Cancel'),
-                ),
-              ],
-              if (isCompleted)
-                Row(
-                  children: [
-                    Icon(Icons.check, color: Colors.green, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sweep completed successfully',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getSweepStatusTitle() {
-    switch (state.sweepStatus) {
-      case SweepStatus.idle:
-        return 'Ready to start';
-      case SweepStatus.creatingJob:
-        return 'Creating measurement job...';
-      case SweepStatus.creatingSession:
-        return 'Setting up measurement session...';
-      case SweepStatus.running:
-        return 'Measurement in progress';
-      case SweepStatus.completed:
-        return 'Measurement complete';
-      case SweepStatus.failed:
-        return 'Measurement failed';
-    }
-  }
-
-  String _getSweepStatusDescription() {
-    switch (state.sweepStatus) {
-      case SweepStatus.idle:
-        return 'Press Start Sweep to begin the synchronized measurement. '
-            'Speakers will play test signals while microphones record.';
-      case SweepStatus.creatingJob:
-        return 'Preparing server-side resources for the measurement...';
-      case SweepStatus.creatingSession:
-        return 'Coordinating speakers and microphones...';
-      case SweepStatus.running:
-        return 'Speakers are playing test signals while microphones record. '
-            'Please wait for all measurements to complete.';
-      case SweepStatus.completed:
-        return 'All measurements have been recorded and uploaded. '
-            'Proceed to the next step to review results.';
-      case SweepStatus.failed:
-        return 'An error occurred during the measurement. '
-            'Please check the error details and try again.';
-    }
   }
 }
 
@@ -1653,5 +1475,238 @@ class _RoomSnapshotApplier {
       return;
     }
     bloc.add(RoomPlanImported(result));
+  }
+}
+
+void _showSweepProgressDialog(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return BlocProvider.value(
+        value: context.read<MeasurementPageBloc>(),
+        child: const _SweepProgressDialog(),
+      );
+    },
+  );
+}
+
+class _SweepProgressDialog extends StatefulWidget {
+  const _SweepProgressDialog();
+
+  @override
+  State<_SweepProgressDialog> createState() => _SweepProgressDialogState();
+}
+
+class _SweepProgressDialogState extends State<_SweepProgressDialog> {
+  Timer? _timer;
+  int _secondsElapsed = 0;
+  // Total duration of the audio file (approx 15s based on backend)
+  static const int _totalDurationSeconds = 15;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    if (_timer != null) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_secondsElapsed < _totalDurationSeconds) {
+          _secondsElapsed++;
+        } else {
+          timer.cancel();
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<MeasurementPageBloc, MeasurementPageState>(
+      listener: (context, state) {
+        if (state.sweepStatus == SweepStatus.running) {
+          _startTimer();
+        }
+        if (state.sweepStatus == SweepStatus.completed) {
+          _timer?.cancel();
+          // Close dialog after a short delay or let user close it?
+          // User might want to see the "Completed" state.
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        }
+        if (state.sweepStatus == SweepStatus.failed) {
+          _timer?.cancel();
+        }
+      },
+      builder: (context, state) {
+        final isCreatingJob =
+            state.sweepStatus == SweepStatus.creatingJob ||
+            state.sweepStatus == SweepStatus.creatingSession ||
+            state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.completed;
+
+        final isReceived =
+            state.sweepStatus == SweepStatus.creatingSession ||
+            state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.completed;
+
+        final isVerified =
+            state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.completed;
+
+        final isPlaying = state.sweepStatus == SweepStatus.running;
+        final isCompleted = state.sweepStatus == SweepStatus.completed;
+        final isFailed = state.sweepStatus == SweepStatus.failed;
+
+        return Dialog(
+          backgroundColor: _themeColor('measurement_page.panel_background'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _tr(
+                    'measurement_page.sweep.dialog_title',
+                    fallback: 'Measurement in Progress',
+                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 24),
+                _ProgressStep(
+                  label: 'Requesting audiofile',
+                  isCompleted: isCreatingJob,
+                  isActive: state.sweepStatus == SweepStatus.creatingJob,
+                ),
+                _ProgressStep(
+                  label: 'Received audiofile',
+                  isCompleted: isReceived,
+                  isActive: state.sweepStatus == SweepStatus.creatingSession,
+                ),
+                _ProgressStep(
+                  label: 'Verified audiofile integrity',
+                  isCompleted: isVerified,
+                  isActive: false, // Instant transition usually
+                ),
+                _ProgressStep(
+                  label: 'Playing audiofile',
+                  isCompleted: isCompleted,
+                  isActive: isPlaying,
+                  trailing: isPlaying || isCompleted
+                      ? Text(
+                          '${_secondsElapsed}s / ${_totalDurationSeconds}s',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontFamily: 'monospace'),
+                        )
+                      : null,
+                ),
+                if (isFailed) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _themeColor('app.error').withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: _themeColor('app.error'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            state.sweepError ?? 'Unknown error',
+                            style: TextStyle(color: _themeColor('app.error')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(_tr('common.close', fallback: 'Close')),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProgressStep extends StatelessWidget {
+  const _ProgressStep({
+    required this.label,
+    required this.isCompleted,
+    required this.isActive,
+    this.trailing,
+  });
+
+  final String label;
+  final bool isCompleted;
+  final bool isActive;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isCompleted
+        ? Colors.green
+        : isActive
+        ? _themeColor('measurement_page.accent')
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            isCompleted
+                ? Icons.check_circle
+                : isActive
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isCompleted || isActive
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                fontWeight: isCompleted || isActive
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (trailing != null) trailing!,
+        ],
+      ),
+    );
   }
 }
