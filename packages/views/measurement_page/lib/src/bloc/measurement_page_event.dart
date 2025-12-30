@@ -113,3 +113,12 @@ class _MeasurementStartReceived extends MeasurementPageEvent {
   final String speakerDeviceId;
   final String speakerSlotId;
 }
+
+/// Internal event when the session state changes.
+/// Used to propagate session bloc state to this bloc via events instead of
+/// direct emit calls in stream listeners.
+class _SessionStateChanged extends MeasurementPageEvent {
+  const _SessionStateChanged({required this.sessionState});
+
+  final MeasurementSessionState sessionState;
+}

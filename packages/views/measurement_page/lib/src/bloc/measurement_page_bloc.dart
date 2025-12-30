@@ -39,6 +39,7 @@ class MeasurementPageBloc
     on<MeasurementSweepCancelled>(_onSweepCancelled);
     on<MeasurementJobCreated>(_onJobCreated);
     on<_MeasurementStartReceived>(_onMeasurementStartReceived);
+    on<_SessionStateChanged>(_onSessionStateChanged);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -556,30 +557,12 @@ class MeasurementPageBloc
         localDeviceId: _localDeviceId,
       );
 
-      // Listen to session status changes
+      // Listen to session status changes - dispatch events instead of calling emit
       _sessionSubscription = _sessionBloc!.stream.listen((sessionState) {
         debugPrint(
           '[MeasurementPageBloc] Session state changed: status=${sessionState.status}, phase=${sessionState.phase}, error=${sessionState.error}',
         );
-        if (sessionState.phase == MeasurementPhase.playing) {
-          emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
-        } else if (sessionState.phase != MeasurementPhase.playing &&
-            state.playbackPhase != PlaybackPhase.idle) {
-          emit(state.copyWith(playbackPhase: PlaybackPhase.idle));
-        }
-        if (sessionState.status == MeasurementSessionStatus.completed) {
-          add(const MeasurementTimelineAdvanced());
-          emit(state.copyWith(sweepStatus: SweepStatus.completed));
-        } else if (sessionState.status == MeasurementSessionStatus.error ||
-            sessionState.status == MeasurementSessionStatus.cancelled) {
-          emit(
-            state.copyWith(
-              sweepStatus: SweepStatus.failed,
-              sweepError: sessionState.error,
-              playbackPhase: PlaybackPhase.idle,
-            ),
-          );
-        }
+        add(_SessionStateChanged(sessionState: sessionState));
       });
 
       // Create the measurement session
@@ -686,34 +669,14 @@ class MeasurementPageBloc
       localDeviceId: _localDeviceId,
     );
 
-    // Listen to session status changes
+    // Listen to session status changes - dispatch events instead of calling emit
     _sessionSubscription = _sessionBloc!.stream.listen((sessionState) {
       debugPrint(
         '[MeasurementPageBloc] [Microphone] Session state changed: '
         'status=${sessionState.status}, phase=${sessionState.phase}, '
         'error=${sessionState.error}',
       );
-      if (sessionState.phase == MeasurementPhase.playing) {
-        emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
-      } else if (sessionState.phase != MeasurementPhase.playing &&
-          state.playbackPhase != PlaybackPhase.idle) {
-        emit(state.copyWith(playbackPhase: PlaybackPhase.idle));
-      }
-      if (sessionState.status == MeasurementSessionStatus.completed) {
-        emit(state.copyWith(sweepStatus: SweepStatus.completed));
-        // Clean up after completion
-        _cleanupSessionBloc();
-      } else if (sessionState.status == MeasurementSessionStatus.error ||
-          sessionState.status == MeasurementSessionStatus.cancelled) {
-        emit(
-          state.copyWith(
-            sweepStatus: SweepStatus.failed,
-            sweepError: sessionState.error,
-            playbackPhase: PlaybackPhase.idle,
-          ),
-        );
-        _cleanupSessionBloc();
-      }
+      add(_SessionStateChanged(sessionState: sessionState));
     });
 
     // Join the existing session as a microphone
@@ -727,6 +690,37 @@ class MeasurementPageBloc
         speakerSlotId: event.speakerSlotId,
       ),
     );
+  }
+
+  /// Handles session state changes from the MeasurementSessionBloc.
+  void _onSessionStateChanged(
+    _SessionStateChanged event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    final sessionState = event.sessionState;
+
+    if (sessionState.phase == MeasurementPhase.playing) {
+      emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
+    } else if (sessionState.phase != MeasurementPhase.playing &&
+        state.playbackPhase != PlaybackPhase.idle) {
+      emit(state.copyWith(playbackPhase: PlaybackPhase.idle));
+    }
+
+    if (sessionState.status == MeasurementSessionStatus.completed) {
+      add(const MeasurementTimelineAdvanced());
+      emit(state.copyWith(sweepStatus: SweepStatus.completed));
+      _cleanupSessionBloc();
+    } else if (sessionState.status == MeasurementSessionStatus.error ||
+        sessionState.status == MeasurementSessionStatus.cancelled) {
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.failed,
+          sweepError: sessionState.error,
+          playbackPhase: PlaybackPhase.idle,
+        ),
+      );
+      _cleanupSessionBloc();
+    }
   }
 
   void _cleanupSessionBloc() {

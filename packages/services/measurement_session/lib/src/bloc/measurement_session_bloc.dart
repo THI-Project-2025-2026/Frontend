@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:recording_service/recording_service.dart';
 
 import '../models/measurement_session_models.dart';
@@ -633,10 +634,11 @@ class MeasurementSessionBloc
         await _recordingService.requestPermission();
       }
 
-      // Prepare recording path
+      // Prepare recording path using app's cache directory (works on all platforms)
       final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final cacheDir = await getTemporaryDirectory();
       _currentRecordingPath =
-          '/tmp/recording_${event.sessionId}_$timestamp.wav';
+          '${cacheDir.path}/recording_${event.sessionId}_$timestamp.wav';
 
       _log.debug(
         _tag,
@@ -943,8 +945,9 @@ class MeasurementSessionBloc
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final cacheDir = await getTemporaryDirectory();
       _currentRecordingPath =
-          '/tmp/recording_${event.sessionId}_$timestamp.wav';
+          '${cacheDir.path}/recording_${event.sessionId}_$timestamp.wav';
 
       add(const MeasurementSessionClientReady());
     } catch (e, stackTrace) {
