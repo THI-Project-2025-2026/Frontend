@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+
+import '../../backend_http_client.dart';
 
 // Conditional imports for file operations (native only)
 import 'audio_playback_service_io.dart'
@@ -39,20 +38,17 @@ class AudioPlaybackService {
 
   /// Download the measurement audio from the backend.
   ///
-  /// [baseUrl] - The measurement service base URL
+  /// [httpClient] - The BackendHttpClient to use for the download
   /// [sessionId] - Optional session ID for tracking
   /// [sampleRate] - Sample rate in Hz (default: 48000)
   Future<String> downloadMeasurementAudio({
-    required String baseUrl,
+    required BackendHttpClient httpClient,
     String? sessionId,
     int sampleRate = 48000,
   }) async {
-    final uri = Uri.parse('$baseUrl/v1/measurement/audio').replace(
-      queryParameters: {
-        if (sessionId != null) 'session_id': sessionId,
-        'sample_rate': sampleRate.toString(),
-        'format': 'wav',
-      },
+    final uri = httpClient.getMeasurementAudioUri(
+      sessionId: sessionId,
+      sampleRate: sampleRate,
     );
 
     debugPrint(
@@ -69,46 +65,26 @@ class AudioPlaybackService {
       return _audioUrl!;
     }
 
-    // On native, download the file
-    final response = await http.get(uri);
-    debugPrint(
-      '[AudioPlaybackService] Response status: ${response.statusCode}',
+    // On native, download the file using BackendHttpClient
+    final downloadedAudio = await httpClient.downloadMeasurementAudio(
+      sessionId: sessionId,
+      sampleRate: sampleRate,
     );
-    debugPrint(
-      '[AudioPlaybackService] Response body length: ${response.bodyBytes.length}',
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to download audio: ${response.statusCode}');
-    }
-
-    // Validate Hash
-    final receivedHash = response.headers['x-audio-hash'];
-    final bytes = response.bodyBytes;
-    final calculatedHash = sha256.convert(bytes).toString();
 
     debugPrint('[AudioPlaybackService] Audio Validation:');
-    debugPrint('  File size: ${bytes.length} bytes');
-    debugPrint('  Received Hash: $receivedHash');
-    debugPrint('  Calculated Hash: $calculatedHash');
-
-    if (receivedHash != null && receivedHash != calculatedHash) {
-      debugPrint('  Result: INVALID HASH');
-      throw Exception(
-        'Audio hash validation failed. Received: $receivedHash, Calculated: $calculatedHash',
-      );
-    } else if (receivedHash == null) {
-      debugPrint('  Result: NO HASH RECEIVED (Skipping validation)');
-    } else {
-      debugPrint('  Result: VALID');
-    }
+    debugPrint('  File size: ${downloadedAudio.bytes.length} bytes');
+    debugPrint('  Received Hash: ${downloadedAudio.receivedHash}');
+    debugPrint('  Calculated Hash: ${downloadedAudio.calculatedHash}');
+    debugPrint(
+      '  Result: ${downloadedAudio.isHashValid ? "VALID" : "INVALID"}',
+    );
 
     // Store audio bytes
-    _cachedAudioBytes = response.bodyBytes;
+    _cachedAudioBytes = downloadedAudio.bytes;
 
     // On native platforms, save to temporary file
     final filePath = await platform.saveAudioToFile(
-      response.bodyBytes,
+      downloadedAudio.bytes,
       sessionId,
     );
     _cachedAudioPath = filePath;

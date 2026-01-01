@@ -59,6 +59,7 @@ class GatewayConfig {
   final Map<String, String> queryParameters;
   final String deviceId;
 
+  /// Build a WebSocket URI for connecting to the gateway.
   Uri buildUri({String? deviceIdOverride, Map<String, String>? extras}) {
     final merged = <String, String>{...queryParameters};
     if (extras != null) {
@@ -73,6 +74,21 @@ class GatewayConfig {
       path: path,
       queryParameters: merged,
     );
+  }
+
+  /// Build the HTTP base URL for the gateway.
+  ///
+  /// All HTTP requests (audio download, file upload, etc.) go through the
+  /// gateway which proxies them to the appropriate backend services.
+  String buildHttpBaseUrl() {
+    // Convert WebSocket scheme to HTTP scheme
+    final httpScheme = scheme == 'wss' ? 'https' : 'http';
+
+    // Build the base URL without the WebSocket path
+    if (port != null) {
+      return '$httpScheme://$host:$port';
+    }
+    return '$httpScheme://$host';
   }
 
   GatewayConfig copyWith({

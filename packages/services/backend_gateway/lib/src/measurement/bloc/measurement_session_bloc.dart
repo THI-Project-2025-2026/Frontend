@@ -1,11 +1,14 @@
 import 'dart:async';
 
-import 'package:backend_gateway/backend_gateway.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:recording_service/recording_service.dart';
 
+import '../../backend_http_client.dart';
+import '../../bloc/gateway_connection_bloc.dart';
+import '../../gateway_connection_repository.dart';
+import '../../gateway_envelope.dart';
 import '../models/measurement_session_models.dart';
 import '../services/audio_playback_service.dart';
 import '../services/measurement_audio_service.dart';
@@ -32,15 +35,15 @@ class MeasurementSessionBloc
   MeasurementSessionBloc({
     required GatewayConnectionRepository repository,
     required GatewayConnectionBloc gatewayBloc,
-    required String measurementServiceUrl,
+    required BackendHttpClient httpClient,
     required String localDeviceId,
     RecordingService? recordingService,
   }) : _repository = repository,
        _gatewayBloc = gatewayBloc,
-       _measurementServiceUrl = measurementServiceUrl,
+       _httpClient = httpClient,
        _localDeviceId = localDeviceId,
        _recordingService = recordingService ?? createRecordingService(),
-       _audioService = MeasurementAudioService(baseUrl: measurementServiceUrl),
+       _audioService = MeasurementAudioService(httpClient: httpClient),
        _playbackService = AudioPlaybackService(),
        _log = MeasurementDebugLogger.instance,
        super(const MeasurementSessionState()) {
@@ -48,7 +51,7 @@ class MeasurementSessionBloc
       _tag,
       'MeasurementSessionBloc initialized',
       data: {
-        'measurementServiceUrl': measurementServiceUrl,
+        'backendHttpBaseUrl': httpClient.baseUrl,
         'localDeviceId': localDeviceId,
       },
     );
@@ -89,7 +92,7 @@ class MeasurementSessionBloc
 
   final GatewayConnectionRepository _repository;
   final GatewayConnectionBloc _gatewayBloc;
-  final String _measurementServiceUrl;
+  final BackendHttpClient _httpClient;
   final String _localDeviceId;
   final RecordingService _recordingService;
   final MeasurementAudioService _audioService;
@@ -545,7 +548,7 @@ class MeasurementSessionBloc
       emit(state.copyWith(phase: MeasurementPhase.downloadingAudio));
 
       final audioPath = await _playbackService.downloadMeasurementAudio(
-        baseUrl: _measurementServiceUrl,
+        httpClient: _httpClient,
         sessionId: event.sessionId,
       );
 
@@ -988,7 +991,7 @@ class MeasurementSessionBloc
 
     try {
       final audioPath = await _playbackService.downloadMeasurementAudio(
-        baseUrl: _measurementServiceUrl,
+        httpClient: _httpClient,
         sessionId: event.sessionId,
       );
       _log.debug(_tag, 'Audio downloaded to: $audioPath');

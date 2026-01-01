@@ -22,8 +22,6 @@ dependencies:
     path: ../../features/room_modeling
   backend_gateway:
     path: ../../services/backend_gateway
-  measurement_session:
-    path: ../../services/measurement_session
   recording_service:
     path: ../../services/recording
   audioplayers: ^6.0.0

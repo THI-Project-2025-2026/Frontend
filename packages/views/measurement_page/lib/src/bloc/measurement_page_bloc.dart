@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:measurement_session/measurement_session.dart';
 
 part 'measurement_page_event.dart';
 part 'measurement_page_state.dart';
@@ -17,11 +16,11 @@ class MeasurementPageBloc
   MeasurementPageBloc({
     required GatewayConnectionRepository repository,
     required GatewayConnectionBloc gatewayBloc,
-    required String measurementServiceUrl,
+    required BackendHttpClient httpClient,
     required String localDeviceId,
   }) : _repository = repository,
        _gatewayBloc = gatewayBloc,
-       _measurementServiceUrl = measurementServiceUrl,
+       _httpClient = httpClient,
        _localDeviceId = localDeviceId,
        super(MeasurementPageState.initial()) {
     on<MeasurementLobbyCreated>(_onLobbyCreated);
@@ -93,7 +92,7 @@ class MeasurementPageBloc
 
   final GatewayConnectionRepository _repository;
   final GatewayConnectionBloc _gatewayBloc;
-  final String _measurementServiceUrl;
+  final BackendHttpClient _httpClient;
   final String _localDeviceId;
   StreamSubscription? _gatewaySubscription;
   MeasurementSessionBloc? _sessionBloc;
@@ -548,12 +547,12 @@ class MeasurementPageBloc
 
       // Create and configure the measurement session BLoC
       debugPrint(
-        '[MeasurementPageBloc] Creating MeasurementSessionBloc with url=$_measurementServiceUrl, deviceId=$_localDeviceId',
+        '[MeasurementPageBloc] Creating MeasurementSessionBloc with httpClient=${_httpClient.baseUrl}, deviceId=$_localDeviceId',
       );
       _sessionBloc = MeasurementSessionBloc(
         repository: _repository,
         gatewayBloc: _gatewayBloc,
-        measurementServiceUrl: _measurementServiceUrl,
+        httpClient: _httpClient,
         localDeviceId: _localDeviceId,
       );
 
@@ -665,7 +664,7 @@ class MeasurementPageBloc
     _sessionBloc = MeasurementSessionBloc(
       repository: _repository,
       gatewayBloc: _gatewayBloc,
-      measurementServiceUrl: _measurementServiceUrl,
+      httpClient: _httpClient,
       localDeviceId: _localDeviceId,
     );
 

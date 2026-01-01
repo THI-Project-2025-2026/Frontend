@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
-import 'package:measurement_session/measurement_session.dart';
 import 'package:recording_service/recording_service.dart';
 import 'package:room_modeling/room_modeling.dart';
 import 'package:uuid/uuid.dart';
@@ -28,9 +27,8 @@ class MeasurementPageScreen extends StatelessWidget {
     final repository = GetIt.I<GatewayConnectionRepository>();
     final gatewayBloc = GetIt.I<GatewayConnectionBloc>();
     final gatewayConfig = GetIt.I<GatewayConfig>();
-    // Construct the measurement service URL from gateway config
-    // All measurement HTTP requests go through the gateway proxy
-    final measurementServiceUrl = _buildGatewayHttpUrl(gatewayConfig);
+    // Create the HTTP client for backend requests through the gateway
+    final httpClient = BackendHttpClient(config: gatewayConfig);
     // Use the actual device ID from gateway config - this is the same ID
     // the backend uses to identify this device
     final localDeviceId = gatewayConfig.deviceId;
@@ -41,7 +39,7 @@ class MeasurementPageScreen extends StatelessWidget {
           create: (_) => MeasurementPageBloc(
             repository: repository,
             gatewayBloc: gatewayBloc,
-            measurementServiceUrl: measurementServiceUrl,
+            httpClient: httpClient,
             localDeviceId: localDeviceId,
           ),
         ),
@@ -1514,19 +1512,6 @@ Color _themeColor(String keyPath) {
 
 List<Color> _themeColors(String keyPath) {
   return AppConstants.getThemeColors(keyPath);
-}
-
-/// Build the HTTP URL for the gateway from the WebSocket config.
-/// The gateway exposes HTTP endpoints for measurement service operations.
-String _buildGatewayHttpUrl(GatewayConfig config) {
-  // Convert WebSocket scheme to HTTP scheme
-  final httpScheme = config.scheme == 'wss' ? 'https' : 'http';
-
-  // Build the base URL without the WebSocket path
-  if (config.port != null) {
-    return '$httpScheme://${config.host}:${config.port}';
-  }
-  return '$httpScheme://${config.host}';
 }
 
 void _showJoinLobbyDialog(
