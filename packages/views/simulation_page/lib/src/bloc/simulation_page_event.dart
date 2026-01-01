@@ -65,3 +65,8 @@ class SimulationResultReceived extends SimulationPageEvent {
 
   final Map<String, dynamic>? payload;
 }
+
+/// Requests baseline room reference profiles from the backend.
+class SimulationReferenceProfilesRequested extends SimulationPageEvent {
+  const SimulationReferenceProfilesRequested();
+}

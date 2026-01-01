@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:backend_gateway/backend_gateway.dart';
-import 'package:common_helpers/common_helpers.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,9 +21,17 @@ class SimulationPageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gatewayBloc = GetIt.instance<GatewayConnectionBloc>();
+    final gatewayConfig = GetIt.instance<GatewayConfig>();
+    final referenceRepository = SimulationReferenceRepository(
+      httpClient: BackendHttpClient(config: gatewayConfig),
+    );
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => SimulationPageBloc()),
+        BlocProvider(
+          create: (_) =>
+              SimulationPageBloc(referenceRepository: referenceRepository)
+                ..add(const SimulationReferenceProfilesRequested()),
+        ),
         BlocProvider(create: (_) => RoomModelingBloc()),
         BlocProvider.value(value: gatewayBloc),
       ],
@@ -723,7 +730,12 @@ class _SimulationMetricSection extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               if (result != null) ...[
-                SimulationResultsChart(result: result),
+                SimulationResultsChart(
+                  result: result,
+                  referenceProfiles: state.referenceProfiles,
+                  referenceStatus: state.referenceProfilesStatus,
+                  referenceError: state.referenceProfilesError,
+                ),
                 if (result.warnings.any((w) => !w.contains('STI'))) ...[
                   const SizedBox(height: 24),
                   Text(
@@ -749,51 +761,9 @@ class _SimulationMetricSection extends StatelessWidget {
                   ),
                 ],
               ] else
-                _SimulationMetricsPlaceholder(series: state.metrics),
+                const _SimulationResultsEmptyState(),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _SimulationMetricsPlaceholder extends StatelessWidget {
-  const _SimulationMetricsPlaceholder({required this.series});
-
-  final List<SimulationMetricSeries> series;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (series.isEmpty) {
-          return Text(
-            _localizedOr(
-              'simulation_page.results.empty',
-              'Run a simulation to preview estimated responses.',
-            ),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          );
-        }
-        final isWide = constraints.maxWidth > 1000;
-        final itemWidth = isWide
-            ? (constraints.maxWidth - 32) / 3
-            : double.infinity;
-        return Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            for (final metric in series)
-              SizedBox(
-                width: itemWidth,
-                child: _MetricChartCard(series: metric),
-              ),
-          ],
         );
       },
     );
@@ -825,148 +795,20 @@ class _ResultWarningChip extends StatelessWidget {
   }
 }
 
-class _MetricChartCard extends StatelessWidget {
-  const _MetricChartCard({required this.series});
-
-  final SimulationMetricSeries series;
+class _SimulationResultsEmptyState extends StatelessWidget {
+  const _SimulationResultsEmptyState();
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = _themeColor('simulation_page.graphs.card_background');
-    final axisColor = _themeColor('simulation_page.graphs.axis');
-    final lineColor = _themeColor(series.colorKey);
-    final fillColor = _themeColor('${series.colorKey}_fill');
-
-    final latestValue = series.values.last;
-
-    return SonalyzeSurface(
-      padding: const EdgeInsets.all(20),
-      backgroundColor: cardColor.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _tr(series.labelKey),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '${formatNumber(latestValue, fractionDigits: 2)} ${_tr(series.unitKey)}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 180,
-            child: CustomPaint(
-              painter: _MetricChartPainter(
-                series: series,
-                axisColor: axisColor.withValues(alpha: 0.4),
-                lineColor: lineColor,
-                fillColor: fillColor.withValues(alpha: 0.25),
-              ),
-            ),
-          ),
-        ],
+    return Text(
+      _localizedOr(
+        'simulation_page.results.empty',
+        'Run a simulation to preview responses from the backend.',
+      ),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
       ),
     );
-  }
-}
-
-class _MetricChartPainter extends CustomPainter {
-  _MetricChartPainter({
-    required this.series,
-    required this.axisColor,
-    required this.lineColor,
-    required this.fillColor,
-  });
-
-  final SimulationMetricSeries series;
-  final Color axisColor;
-  final Color lineColor;
-  final Color fillColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final padding = 12.0;
-    final chartWidth = size.width - padding * 2;
-    final chartHeight = size.height - padding * 2;
-    final origin = Offset(padding, size.height - padding);
-
-    final axisPaint = Paint()
-      ..color = axisColor
-      ..strokeWidth = 1;
-
-    canvas.drawLine(
-      origin,
-      Offset(origin.dx + chartWidth, origin.dy),
-      axisPaint,
-    );
-    canvas.drawLine(
-      origin,
-      Offset(origin.dx, origin.dy - chartHeight),
-      axisPaint,
-    );
-
-    final maxValue = series.values.reduce((a, b) => a > b ? a : b);
-    final minValue = series.values.reduce((a, b) => a < b ? a : b);
-    final span = (maxValue - minValue).abs() < 0.001
-        ? 1
-        : (maxValue - minValue);
-
-    final points = <Offset>[];
-    for (var i = 0; i < series.values.length; i++) {
-      final progress = i / (series.values.length - 1);
-      final x = origin.dx + chartWidth * progress;
-      final normalized = (series.values[i] - minValue) / span;
-      final y = origin.dy - normalized * chartHeight;
-      points.add(Offset(x, y));
-    }
-
-    final fillPath = Path()..moveTo(points.first.dx, origin.dy);
-    for (final point in points) {
-      fillPath.lineTo(point.dx, point.dy);
-    }
-    fillPath.lineTo(points.last.dx, origin.dy);
-    fillPath.close();
-
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(fillPath, fillPaint);
-
-    final linePaint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
-
-    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      linePath.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(linePath, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MetricChartPainter oldDelegate) {
-    return oldDelegate.series != series ||
-        oldDelegate.axisColor != axisColor ||
-        oldDelegate.lineColor != lineColor ||
-        oldDelegate.fillColor != fillColor;
   }
 }
 

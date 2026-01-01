@@ -1,348 +1,576 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:l10n_service/l10n_service.dart';
 
 import '../bloc/simulation_page_bloc.dart';
 
-enum RoomType { classroom, concertHall, homeTheater, recordingStudio, office }
-
-class RoomAcousticProfile {
-  final double rt60;
-  final double edt;
-  final double d50;
-  final double c50;
-  final double c80;
-  final double drr;
-
-  const RoomAcousticProfile({
-    required this.rt60,
-    required this.edt,
-    required this.d50,
-    required this.c50,
-    required this.c80,
-    required this.drr,
-  });
-}
-
 class SimulationResultsChart extends StatefulWidget {
-  final SimulationResult result;
+  const SimulationResultsChart({
+    super.key,
+    required this.result,
+    required this.referenceProfiles,
+    required this.referenceStatus,
+    this.referenceError,
+  });
 
-  const SimulationResultsChart({super.key, required this.result});
+  final SimulationResult result;
+  final List<SimulationReferenceProfile> referenceProfiles;
+  final SimulationReferenceProfilesStatus referenceStatus;
+  final String? referenceError;
 
   @override
   State<SimulationResultsChart> createState() => _SimulationResultsChartState();
 }
 
 class _SimulationResultsChartState extends State<SimulationResultsChart> {
-  RoomType _selectedRoomType = RoomType.classroom;
+  String? _selectedProfileId;
 
-  static const Map<RoomType, RoomAcousticProfile> _idealProfiles = {
-    RoomType.classroom: RoomAcousticProfile(
-      rt60: 0.6,
-      edt: 0.6,
-      d50: 0.6,
-      c50: 2.0,
-      c80: 4.0,
-      drr: 0.0,
-    ),
-    RoomType.concertHall: RoomAcousticProfile(
-      rt60: 2.0,
-      edt: 2.0,
-      d50: 0.3,
-      c50: -2.0,
-      c80: -1.0,
-      drr: -5.0,
-    ),
-    RoomType.homeTheater: RoomAcousticProfile(
-      rt60: 0.4,
-      edt: 0.4,
-      d50: 0.7,
-      c50: 5.0,
-      c80: 8.0,
-      drr: 5.0,
-    ),
-    RoomType.recordingStudio: RoomAcousticProfile(
-      rt60: 0.3,
-      edt: 0.3,
-      d50: 0.8,
-      c50: 10.0,
-      c80: 15.0,
-      drr: 10.0,
-    ),
-    RoomType.office: RoomAcousticProfile(
-      rt60: 0.5,
-      edt: 0.5,
-      d50: 0.6,
-      c50: 3.0,
-      c80: 6.0,
-      drr: 2.0,
-    ),
-  };
-
-  // Normalization ranges
-  static const double _maxRt60 = 3.0;
-  static const double _maxEdt = 3.0;
-  static const double _maxD50 = 1.0;
-  static const double _minC50 = -10.0;
-  static const double _maxC50 = 20.0;
-  static const double _minC80 = -10.0;
-  static const double _maxC80 = 20.0;
-  static const double _minDrr = -20.0;
-  static const double _maxDrr = 20.0;
-
-  double _normalize(double value, double min, double max) {
-    return ((value - min) / (max - min)).clamp(0.0, 1.0);
+  @override
+  void initState() {
+    super.initState();
+    _selectedProfileId = _initialProfileId(widget.referenceProfiles);
   }
 
-  String _tr(String key) {
-    final value = AppConstants.translation(key);
-    return value is String ? value : key;
+  @override
+  void didUpdateWidget(covariant SimulationResultsChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_hasSelectedProfile(widget.referenceProfiles, _selectedProfileId)) {
+      _selectedProfileId = _initialProfileId(widget.referenceProfiles);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final idealProfile = _idealProfiles[_selectedRoomType]!;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
 
-    // Average the measured values across all pairs for the chart
-    // Or should we show one chart per pair? The user said "All of the measured values should be displayed".
-    // Usually, we average them or show the first one if it's a single point simulation.
-    // Let's average them for the chart overview.
-
-    double avgRt60 = 0;
-    double avgEdt = 0;
-    double avgD50 = 0;
-    double avgC50 = 0;
-    double avgC80 = 0;
-    double avgDrr = 0;
-
-    if (widget.result.pairs.isNotEmpty) {
-      for (final pair in widget.result.pairs) {
-        avgRt60 += pair.metrics.rt60Seconds ?? 0.0;
-        avgEdt += pair.metrics.edtSeconds ?? 0.0;
-        avgD50 += pair.metrics.earlyDecay50 ?? 0.0;
-        avgC50 += pair.metrics.clarity50Db ?? 0.0;
-        avgC80 += pair.metrics.clarity80Db ?? 0.0;
-        avgDrr += pair.metrics.directToReverberantDb ?? 0.0;
-      }
-      final count = widget.result.pairs.length;
-      avgRt60 /= count;
-      avgEdt /= count;
-      avgD50 /= count;
-      avgC50 /= count;
-      avgC80 /= count;
-      avgDrr /= count;
-    }
-
-    final titles = ['RT60', 'EDT', 'D50', 'C50', 'C80', 'DRR'];
-    final measuredValues = [avgRt60, avgEdt, avgD50, avgC50, avgC80, avgDrr];
-    final idealValues = [
-      idealProfile.rt60,
-      idealProfile.edt,
-      idealProfile.d50,
-      idealProfile.c50,
-      idealProfile.c80,
-      idealProfile.drr,
-    ];
-    final normalizedMeasured = [
-      _normalize(avgRt60, 0, _maxRt60),
-      _normalize(avgEdt, 0, _maxEdt),
-      _normalize(avgD50, 0, _maxD50),
-      _normalize(avgC50, _minC50, _maxC50),
-      _normalize(avgC80, _minC80, _maxC80),
-      _normalize(avgDrr, _minDrr, _maxDrr),
-    ];
-    final normalizedIdeal = [
-      _normalize(idealProfile.rt60, 0, _maxRt60),
-      _normalize(idealProfile.edt, 0, _maxEdt),
-      _normalize(idealProfile.d50, 0, _maxD50),
-      _normalize(idealProfile.c50, _minC50, _maxC50),
-      _normalize(idealProfile.c80, _minC80, _maxC80),
-      _normalize(idealProfile.drr, _minDrr, _maxDrr),
-    ];
+    final selectedProfile = _selectedProfile;
+    final metricEntries = selectedProfile == null
+        ? const <_MetricChartEntry>[]
+        : _buildMetricEntries(selectedProfile);
+    final hasReferenceMetrics = metricEntries.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Room Type Selector
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.4,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _tr('simulation_page.room_type_selector.label'),
+                _tr(
+                  'simulation_page.room_type_selector.label',
+                  fallback: 'Reference profile',
+                ),
                 style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 12),
-              DropdownButton<RoomType>(
-                value: _selectedRoomType,
-                underline: const SizedBox(),
-                items: RoomType.values.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(_tr('simulation_page.room_type.${type.name}')),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedRoomType = value;
-                    });
-                  }
-                },
+              const SizedBox(width: 16),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildReferenceSelector(context, selectedProfile),
+                ),
               ),
             ],
           ),
         ),
+        if (selectedProfile?.notes?.isNotEmpty == true) ...[
+          const SizedBox(height: 8),
+          Text(
+            selectedProfile!.notes!,
+            style: textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
         const SizedBox(height: 32),
+        if (!hasReferenceMetrics)
+          _buildReferencePlaceholder(context)
+        else ...[
+          SizedBox(
+            height: 320,
+            child: _buildChart(
+              context,
+              entries: metricEntries,
+              measuredColor: colorScheme.primary,
+              referenceColor: colorScheme.secondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildLegend(
+            context,
+            measuredColor: colorScheme.primary,
+            referenceColor: colorScheme.secondary,
+          ),
+        ],
+      ],
+    );
+  }
 
-        // Bar Chart
-        SizedBox(
-          height: 300,
-          child: RotatedBox(
-            quarterTurns: 1,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 1.2, // Leave space for tooltips/labels if needed
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    rotateAngle: -90,
-                    getTooltipColor: (group) => Colors.black87,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final metricName = titles[groupIndex];
-                      final isMeasured = rodIndex == 0;
-                      final value = isMeasured
-                          ? measuredValues[groupIndex]
-                          : idealValues[groupIndex];
-                      final label = isMeasured
-                          ? _tr('simulation_page.legend.measured')
-                          : _tr('simulation_page.legend.ideal');
-                      return BarTooltipItem(
-                        '$metricName\n$label: ${value.toStringAsFixed(2)}',
-                        const TextStyle(color: Colors.white),
-                      );
-                    },
-                  ),
+  Widget _buildReferenceSelector(
+    BuildContext context,
+    SimulationReferenceProfile? selectedProfile,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+
+    switch (widget.referenceStatus) {
+      case SimulationReferenceProfilesStatus.loading:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(
+                  Theme.of(context).colorScheme.primary,
                 ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < titles.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: RotatedBox(
-                              quarterTurns: -1,
-                              child: Text(
-                                titles[index],
-                                style: textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox();
-                      },
-                      reservedSize: 40,
-                    ),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: List.generate(titles.length, (index) {
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: normalizedMeasured[index],
-                        color: Colors.blue,
-                        width: 20,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                          topRight: Radius.circular(4),
-                        ),
-                      ),
-                      BarChartRodData(
-                        toY: normalizedIdeal[index],
-                        color: Colors.green.withValues(alpha: 0.5),
-                        width: 20,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                          topRight: Radius.circular(4),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _tr(
+                'simulation_page.reference_profiles.loading',
+                fallback: 'Loading profiles…',
+              ),
+              style: textTheme.bodyMedium,
+            ),
+          ],
+        );
+      case SimulationReferenceProfilesStatus.failure:
+        return Text(
+          widget.referenceError ??
+              _tr(
+                'simulation_page.reference_profiles.error',
+                fallback: 'Failed to load profiles',
+              ),
+          style: textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
+        );
+      case SimulationReferenceProfilesStatus.initial:
+      case SimulationReferenceProfilesStatus.success:
+        break;
+    }
+
+    if (widget.referenceProfiles.isEmpty) {
+      return Text(
+        _tr(
+          'simulation_page.reference_profiles.empty',
+          fallback: 'No reference profiles available',
+        ),
+        style: textTheme.bodyMedium,
+      );
+    }
+
+    return DropdownButton<String>(
+      value: selectedProfile?.id ?? widget.referenceProfiles.first.id,
+      items: widget.referenceProfiles
+          .map(
+            (profile) => DropdownMenuItem(
+              value: profile.id,
+              child: Text(profile.displayName, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(growable: false),
+      onChanged: (value) {
+        if (value == null) {
+          return;
+        }
+        setState(() => _selectedProfileId = value);
+      },
+    );
+  }
+
+  Widget _buildReferencePlaceholder(BuildContext context) {
+    final theme = Theme.of(context);
+    final isFailure =
+        widget.referenceStatus == SimulationReferenceProfilesStatus.failure;
+    final message = isFailure
+        ? widget.referenceError ??
+              _tr(
+                'simulation_page.results.reference_unavailable',
+                fallback:
+                    'Reference profiles are unavailable. Try again later.',
+              )
+        : _tr(
+            'simulation_page.results.reference_select_prompt',
+            fallback:
+                'Select a reference profile to compare your measurements.',
+          );
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.25,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        message,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart(
+    BuildContext context, {
+    required List<_MetricChartEntry> entries,
+    required Color measuredColor,
+    required Color referenceColor,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        minY: 0,
+        maxY: 1,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final entry = entries[groupIndex];
+              final isMeasuredRod = rodIndex == 0;
+              final value = isMeasuredRod
+                  ? entry.measuredValue
+                  : entry.idealValue;
+              final unit = entry.unit != null && entry.unit!.isNotEmpty
+                  ? ' ${entry.unit}'
+                  : '';
+              final label = isMeasuredRod
+                  ? _tr(
+                      'simulation_page.results.measured',
+                      fallback: 'Measured value',
+                    )
+                  : _tr(
+                      'simulation_page.results.ideal',
+                      fallback: 'Reference value',
+                    );
+              final displayValue = value == null
+                  ? '-'
+                  : '${value.toStringAsFixed(2)}$unit';
+              return BarTooltipItem(
+                '${entry.title}\n$label: $displayValue',
+                textTheme.bodySmall ?? const TextStyle(fontSize: 12),
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              getTitlesWidget: (value, meta) => Text(
+                '${(value * 100).round()}%',
+                style: textTheme.labelSmall?.copyWith(color: Colors.white70),
               ),
             ),
           ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Legend
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _LegendItem(
-              color: Colors.blue,
-              label: _tr('simulation_page.legend.measured'),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= entries.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    entries[index].title,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(width: 24),
-            _LegendItem(
-              color: Colors.green.withValues(alpha: 0.5),
-              label: _tr('simulation_page.legend.ideal'),
-            ),
-          ],
+          ),
         ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.white.withOpacity(0.15),
+            strokeWidth: 1,
+            dashArray: value == 0 || value == 1 ? null : const [4, 4],
+          ),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.2)),
+            bottom: BorderSide(color: Colors.white.withOpacity(0.2)),
+          ),
+        ),
+        barGroups: List.generate(entries.length, (index) {
+          final entry = entries[index];
+          return BarChartGroupData(
+            x: index,
+            barsSpace: 6,
+            barRods: [
+              BarChartRodData(
+                toY: entry.hasMeasurement ? entry.normalizedMeasured : 0,
+                gradient: LinearGradient(
+                  colors: entry.hasMeasurement
+                      ? [measuredColor, measuredColor.withOpacity(0.7)]
+                      : [
+                          measuredColor.withOpacity(0.3),
+                          measuredColor.withOpacity(0.1),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              BarChartRodData(
+                toY: entry.normalizedIdeal,
+                gradient: LinearGradient(
+                  colors: [referenceColor, referenceColor.withOpacity(0.6)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildLegend(
+    BuildContext context, {
+    required Color measuredColor,
+    required Color referenceColor,
+  }) {
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
+    return Wrap(
+      spacing: 24,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
+      children: [
+        _LegendItem(
+          color: measuredColor,
+          label: _tr(
+            'simulation_page.results.legend_measured',
+            fallback: 'Measured value',
+          ),
+          style: bodyStyle,
+        ),
+        _LegendItem(
+          color: referenceColor,
+          label: _tr(
+            'simulation_page.results.legend_ideal',
+            fallback: 'Reference value (simulation)',
+          ),
+          style: bodyStyle,
+        ),
+      ],
+    );
+  }
+
+  List<_MetricChartEntry> _buildMetricEntries(
+    SimulationReferenceProfile profile,
+  ) {
+    final averages = _averageMetrics(widget.result);
+    return profile.metrics
+        .map((metric) {
+          final double? measured = averages[metric.key];
+          final hasMeasurement = measured != null;
+          final comparisonValue = measured ?? metric.value;
+          final bounds = _resolveRange(metric, comparisonValue);
+
+          return _MetricChartEntry(
+            title: metric.label,
+            unit: metric.unit,
+            measuredValue: measured,
+            idealValue: metric.value,
+            normalizedMeasured: measured == null
+                ? 0
+                : _normalize(measured, bounds.start, bounds.end),
+            normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
+            hasMeasurement: hasMeasurement,
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Map<String, double> _averageMetrics(SimulationResult result) {
+    final aggregates = <String, _MetricAccumulator>{};
+    for (final pair in result.pairs) {
+      pair.metrics.values.forEach((key, value) {
+        final metricValue = value;
+        if (metricValue == null || metricValue.isNaN) {
+          return;
+        }
+        aggregates
+            .putIfAbsent(key, () => _MetricAccumulator())
+            .add(metricValue);
+      });
+    }
+    return aggregates.map(
+      (key, accumulator) => MapEntry(key, accumulator.average),
+    );
+  }
+
+  RangeValues _resolveRange(
+    SimulationReferenceMetric metric,
+    double comparisonValue,
+  ) {
+    double? min = metric.minValue;
+    double? max = metric.maxValue;
+
+    if (min != null && max != null && max > min) {
+      return RangeValues(min, max);
+    }
+
+    final magnitude = math
+        .max(metric.value.abs(), comparisonValue.abs())
+        .clamp(0.5, 100.0);
+    const paddingFactor = 0.5;
+
+    min ??= math.min(metric.value, comparisonValue) - magnitude * paddingFactor;
+    max ??= math.max(metric.value, comparisonValue) + magnitude * paddingFactor;
+
+    if (max - min < 1e-6) {
+      max = min + 1;
+    }
+
+    return RangeValues(min, max);
+  }
+
+  double _normalize(double value, double min, double max) {
+    if (max - min <= 0) {
+      return 0;
+    }
+    final normalized = (value - min) / (max - min);
+    return normalized.clamp(0.0, 1.0);
+  }
+
+  String? _initialProfileId(List<SimulationReferenceProfile> profiles) {
+    if (profiles.isEmpty) {
+      return null;
+    }
+    return profiles.first.id;
+  }
+
+  bool _hasSelectedProfile(
+    List<SimulationReferenceProfile> profiles,
+    String? id,
+  ) {
+    if (id == null) {
+      return false;
+    }
+    for (final profile in profiles) {
+      if (profile.id == id) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  SimulationReferenceProfile? get _selectedProfile {
+    final id = _selectedProfileId;
+    if (id == null) {
+      return null;
+    }
+    for (final profile in widget.referenceProfiles) {
+      if (profile.id == id) {
+        return profile;
+      }
+    }
+    return null;
+  }
+}
+
+class _MetricChartEntry {
+  const _MetricChartEntry({
+    required this.title,
+    required this.unit,
+    required this.measuredValue,
+    required this.idealValue,
+    required this.normalizedMeasured,
+    required this.normalizedIdeal,
+    required this.hasMeasurement,
+  });
+
+  final String title;
+  final String? unit;
+  final double? measuredValue;
+  final double idealValue;
+  final double normalizedMeasured;
+  final double normalizedIdeal;
+  final bool hasMeasurement;
+}
+
+class _MetricAccumulator {
+  double _sum = 0;
+  int _count = 0;
+
+  void add(double value) {
+    _sum += value;
+    _count += 1;
+  }
+
+  double get average => _count == 0 ? 0 : _sum / _count;
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({required this.color, required this.label, this.style});
+
+  final Color color;
+  final String label;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: style),
       ],
     );
   }
 }
 
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      ],
-    );
+String _tr(String keyPath, {String? fallback}) {
+  final value = AppConstants.translation(keyPath);
+  if (value is String && value.isNotEmpty) {
+    return value;
   }
+  if (fallback != null && fallback.isNotEmpty) {
+    return fallback;
+  }
+  return keyPath;
 }

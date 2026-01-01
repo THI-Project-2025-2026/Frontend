@@ -1,5 +1,4 @@
-import 'dart:math';
-import 'package:common_helpers/common_helpers.dart';
+import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,7 +12,9 @@ part 'simulation_page_state.dart';
 /// to render the preview charts.
 class SimulationPageBloc
     extends Bloc<SimulationPageEvent, SimulationPageState> {
-  SimulationPageBloc() : super(SimulationPageState.initial()) {
+  SimulationPageBloc({SimulationReferenceRepository? referenceRepository})
+    : _referenceRepository = referenceRepository,
+      super(SimulationPageState.initial()) {
     on<SimulationRoomDimensionChanged>(_onDimensionChanged);
     on<SimulationFurnitureTypeSelected>(_onFurnitureTypeSelected);
     on<SimulationFurniturePlaced>(_onFurniturePlaced);
@@ -23,7 +24,10 @@ class SimulationPageBloc
     on<SimulationTimelineAdvanced>(_onTimelineAdvanced);
     on<SimulationTimelineStepBack>(_onTimelineStepBack);
     on<SimulationResultReceived>(_onResultReceived);
+    on<SimulationReferenceProfilesRequested>(_onReferenceProfilesRequested);
   }
+
+  final SimulationReferenceRepository? _referenceRepository;
 
   void _onDimensionChanged(
     SimulationRoomDimensionChanged event,
@@ -147,122 +151,84 @@ class SimulationPageBloc
     }
     emit(state.copyWith(lastResult: result));
   }
-}
 
-/// Acoustic utility helpers used by the bloc/state.
-class SimulationAcousticMath {
-  static List<double> defaultFrequencies() => <double>[
-    125,
-    250,
-    500,
-    1000,
-    2000,
-    4000,
-  ];
+  Future<void> _onReferenceProfilesRequested(
+    SimulationReferenceProfilesRequested event,
+    Emitter<SimulationPageState> emit,
+  ) async {
+    final repository = _referenceRepository;
+    if (repository == null) {
+      emit(
+        state.copyWith(
+          referenceProfilesStatus: SimulationReferenceProfilesStatus.failure,
+          referenceProfilesError: 'Reference repository unavailable',
+        ),
+      );
+      return;
+    }
 
-  static List<double> computeRt60(
-    double width,
-    double length,
-    double height,
-    Iterable<SimulationFurnitureItem> furniture,
-  ) {
-    final volume = width * length * height;
-    final surface = 2 * (width * length + width * height + length * height);
-    final absorberCount = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.absorber)
-        .length;
-    final diffuserCount = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.diffuser)
-        .length;
+    if (state.referenceProfilesStatus ==
+        SimulationReferenceProfilesStatus.loading) {
+      return;
+    }
 
-    final baseAbsorption = 0.15 + absorberCount * 0.03 + diffuserCount * 0.01;
-    final minAbsorption = 0.1;
-    final effectiveAbsorption = max(baseAbsorption, minAbsorption);
+    emit(
+      state.copyWith(
+        referenceProfilesStatus: SimulationReferenceProfilesStatus.loading,
+        referenceProfilesError: null,
+      ),
+    );
 
-    final baseRt = (0.161 * volume) / (surface * effectiveAbsorption);
-    final clamped = baseRt.clamp(0.25, 3.2);
+    try {
+      final dtos = await repository.fetchReferenceProfiles();
+      final profiles = dtos
+          .map((dto) {
+            final metrics = dto.metrics
+                .where((metric) => metric.value != null)
+                .map(
+                  (metric) => SimulationReferenceMetric(
+                    key: metric.key,
+                    label: metric.label,
+                    value: metric.value!,
+                    unit: metric.unit,
+                    minValue: metric.minValue,
+                    maxValue: metric.maxValue,
+                  ),
+                )
+                .toList(growable: false);
 
-    return defaultFrequencies()
-        .map((freq) {
-          final modifier =
-              1.0 - (absorberCount * 0.015) - (diffuserCount * 0.008);
-          final freqShape =
-              1 +
-              (freq >= 2000
-                  ? -0.08
-                  : freq >= 1000
-                  ? -0.04
-                  : 0.06);
-          final value = clamped * modifier * freqShape;
-          return value.clamp(0.2, 2.6);
-        })
-        .toList(growable: false);
-  }
+            return SimulationReferenceProfile(
+              id: dto.id,
+              displayName: dto.displayName,
+              notes: dto.notes,
+              metrics: metrics,
+            );
+          })
+          .where((profile) => profile.metrics.isNotEmpty)
+          .toList(growable: false);
 
-  static List<double> computeSti(
-    double width,
-    double length,
-    double height,
-    Iterable<SimulationFurnitureItem> furniture,
-  ) {
-    final seating = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.seating)
-        .length;
-    final absorbers = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.absorber)
-        .length;
-    final diffusers = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.diffuser)
-        .length;
-
-    final baseline =
-        0.42 + (seating * 0.01) + (absorbers * 0.012) + (diffusers * 0.006);
-    final volume = width * length * height;
-    final volumeFactor = (volume / 200).clamp(0.0, 0.15);
-
-    return defaultFrequencies()
-        .map((freq) {
-          final freqWeight = freq >= 2000
-              ? 0.14
-              : freq >= 1000
-              ? 0.1
-              : 0.06;
-          final value = (baseline + freqWeight - volumeFactor)
-              .clamp(0.3, 0.95)
-              .toDouble();
-          return roundToDigits(value, fractionDigits: 3);
-        })
-        .toList(growable: false);
-  }
-
-  static List<double> computeD50(
-    double width,
-    double length,
-    double height,
-    Iterable<SimulationFurnitureItem> furniture,
-  ) {
-    final diffusers = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.diffuser)
-        .length;
-    final stage = furniture
-        .where((item) => item.kind == SimulationFurnitureKind.stage)
-        .length;
-
-    final base = 0.38 + diffusers * 0.015 + stage * 0.008;
-    final enclosureFactor = ((width + length) / 40).clamp(0.0, 0.12);
-
-    return defaultFrequencies()
-        .map((freq) {
-          final freqWeight = freq >= 2000
-              ? 0.18
-              : freq >= 1000
-              ? 0.12
-              : 0.06;
-          final value = (base + freqWeight + enclosureFactor)
-              .clamp(0.35, 0.95)
-              .toDouble();
-          return roundToDigits(value, fractionDigits: 3);
-        })
-        .toList(growable: false);
+      emit(
+        state.copyWith(
+          referenceProfiles: profiles,
+          referenceProfilesStatus: SimulationReferenceProfilesStatus.success,
+          referenceProfilesError: null,
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Reference profile fetch failed: $error');
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'SimulationPageBloc',
+        ),
+      );
+      emit(
+        state.copyWith(
+          referenceProfilesStatus: SimulationReferenceProfilesStatus.failure,
+          referenceProfilesError: error.toString(),
+        ),
+      );
+    }
   }
 }
