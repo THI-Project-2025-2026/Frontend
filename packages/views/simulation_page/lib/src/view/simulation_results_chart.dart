@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:l10n_service/l10n_service.dart';
 
 import '../bloc/simulation_page_bloc.dart';
+
+const Color _measuredBarColor = Color(0xFF3B82F6);
+const Color _idealBarColor = Color(0xFF22C55E);
 
 class SimulationResultsChart extends StatefulWidget {
   const SimulationResultsChart({
@@ -24,7 +26,8 @@ class SimulationResultsChart extends StatefulWidget {
   State<SimulationResultsChart> createState() => _SimulationResultsChartState();
 }
 
-class _SimulationResultsChartState extends State<SimulationResultsChart> {
+class _SimulationResultsChartState extends State<SimulationResultsChart>
+    with TickerProviderStateMixin {
   String? _selectedProfileId;
 
   @override
@@ -46,6 +49,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
+    const measuredColor = _measuredBarColor;
+    const referenceColor = _idealBarColor;
 
     final selectedProfile = _selectedProfile;
     final metricEntries = selectedProfile == null
@@ -57,12 +62,27 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.4,
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.surface.withValues(alpha: 0.95),
+                colorScheme.surfaceVariant.withValues(alpha: 0.7),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -98,20 +118,21 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
         if (!hasReferenceMetrics)
           _buildReferencePlaceholder(context)
         else ...[
-          SizedBox(
-            height: 320,
-            child: _buildChart(
+          AnimatedSize(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            child: _buildMetricCard(
               context,
               entries: metricEntries,
-              measuredColor: colorScheme.primary,
-              referenceColor: colorScheme.secondary,
+              measuredColor: measuredColor,
+              referenceColor: referenceColor,
             ),
           ),
           const SizedBox(height: 16),
           _buildLegend(
             context,
-            measuredColor: colorScheme.primary,
-            referenceColor: colorScheme.secondary,
+            measuredColor: measuredColor,
+            referenceColor: referenceColor,
           ),
         ],
       ],
@@ -122,7 +143,9 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
     BuildContext context,
     SimulationReferenceProfile? selectedProfile,
   ) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
 
     switch (widget.referenceStatus) {
       case SimulationReferenceProfilesStatus.loading:
@@ -175,8 +198,42 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
       );
     }
 
-    return DropdownButton<String>(
-      value: selectedProfile?.id ?? widget.referenceProfiles.first.id,
+    final selectedId = selectedProfile?.id ?? widget.referenceProfiles.first.id;
+
+    return DropdownButtonFormField<String>(
+      value: selectedId,
+      isExpanded: true,
+      dropdownColor: colorScheme.surface,
+      icon: Icon(
+        Icons.expand_more,
+        color: colorScheme.onSurface.withValues(alpha: 0.7),
+      ),
+      decoration: InputDecoration(
+        prefixIcon: Icon(Icons.layers_outlined, color: colorScheme.primary),
+        filled: true,
+        fillColor: colorScheme.surface.withValues(alpha: 0.95),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.outline.withValues(alpha: 0.3),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.8)),
+        ),
+      ),
+      style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
       items: widget.referenceProfiles
           .map(
             (profile) => DropdownMenuItem(
@@ -231,129 +288,51 @@ class _SimulationResultsChartState extends State<SimulationResultsChart> {
     );
   }
 
-  Widget _buildChart(
+  Widget _buildMetricCard(
     BuildContext context, {
     required List<_MetricChartEntry> entries,
     required Color measuredColor,
     required Color referenceColor,
   }) {
-    final textTheme = Theme.of(context).textTheme;
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
-        minY: 0,
-        maxY: 1,
-        barTouchData: BarTouchData(
-          enabled: true,
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final entry = entries[groupIndex];
-              final isMeasuredRod = rodIndex == 0;
-              final value = isMeasuredRod
-                  ? entry.measuredValue
-                  : entry.idealValue;
-              final unit = entry.unit != null && entry.unit!.isNotEmpty
-                  ? ' ${entry.unit}'
-                  : '';
-              final label = isMeasuredRod
-                  ? _tr(
-                      'simulation_page.results.measured',
-                      fallback: 'Measured value',
-                    )
-                  : _tr(
-                      'simulation_page.results.ideal',
-                      fallback: 'Reference value',
-                    );
-              final displayValue = value == null
-                  ? '-'
-                  : '${value.toStringAsFixed(2)}$unit';
-              return BarTooltipItem(
-                '${entry.title}\n$label: $displayValue',
-                textTheme.bodySmall ?? const TextStyle(fontSize: 12),
-              );
-            },
-          ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+            colorScheme.surfaceContainerHigh.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 36,
-              getTitlesWidget: (value, meta) => Text(
-                '${(value * 100).round()}%',
-                style: textTheme.labelSmall?.copyWith(color: Colors.white70),
-              ),
-            ),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index < 0 || index >= entries.length) {
-                  return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    entries[index].title,
-                    style: textTheme.labelSmall?.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.25),
         ),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.white.withOpacity(0.15),
-            strokeWidth: 1,
-            dashArray: value == 0 || value == 1 ? null : const [4, 4],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 35,
+            offset: const Offset(0, 25),
           ),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border(
-            top: BorderSide(color: Colors.white.withOpacity(0.2)),
-            bottom: BorderSide(color: Colors.white.withOpacity(0.2)),
-          ),
-        ),
-        barGroups: List.generate(entries.length, (index) {
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(entries.length, (index) {
           final entry = entries[index];
-          return BarChartGroupData(
-            x: index,
-            barsSpace: 6,
-            barRods: [
-              BarChartRodData(
-                toY: entry.hasMeasurement ? entry.normalizedMeasured : 0,
-                gradient: LinearGradient(
-                  colors: entry.hasMeasurement
-                      ? [measuredColor, measuredColor.withOpacity(0.7)]
-                      : [
-                          measuredColor.withOpacity(0.3),
-                          measuredColor.withOpacity(0.1),
-                        ],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              BarChartRodData(
-                toY: entry.normalizedIdeal,
-                gradient: LinearGradient(
-                  colors: [referenceColor, referenceColor.withOpacity(0.6)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ],
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index == entries.length - 1 ? 0 : 24,
+            ),
+            child: _MetricComparisonRow(
+              entry: entry,
+              measuredColor: measuredColor,
+              idealColor: referenceColor,
+            ),
           );
         }),
       ),
@@ -537,6 +516,186 @@ class _MetricAccumulator {
   double get average => _count == 0 ? 0 : _sum / _count;
 }
 
+class _MetricComparisonRow extends StatelessWidget {
+  const _MetricComparisonRow({
+    required this.entry,
+    required this.measuredColor,
+    required this.idealColor,
+  });
+
+  final _MetricChartEntry entry;
+  final Color measuredColor;
+  final Color idealColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final measuredLabel = _tr(
+      'simulation_page.results.measured',
+      fallback: 'Measured value',
+    );
+    final idealLabel = _tr(
+      'simulation_page.results.ideal',
+      fallback: 'Reference value',
+    );
+
+    final measuredValueText = entry.measuredValue == null
+        ? _tr('simulation_page.results.not_available', fallback: 'N/A')
+        : _formatMetricValue(entry.measuredValue!, entry.unit);
+    final idealValueText = _formatMetricValue(entry.idealValue, entry.unit);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                entry.title,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            _MetricValueChip(
+              label: measuredLabel,
+              valueText: measuredValueText,
+              color: measuredColor,
+              dimmed: !entry.hasMeasurement,
+            ),
+            const SizedBox(width: 8),
+            _MetricValueChip(
+              label: idealLabel,
+              valueText: idealValueText,
+              color: idealColor,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _MetricBarTrack(
+          progress: entry.normalizedMeasured,
+          color: measuredColor,
+          isActive: entry.hasMeasurement,
+        ),
+        const SizedBox(height: 8),
+        _MetricBarTrack(
+          progress: entry.normalizedIdeal,
+          color: idealColor,
+          isActive: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricValueChip extends StatelessWidget {
+  const _MetricValueChip({
+    required this.label,
+    required this.valueText,
+    required this.color,
+    this.dimmed = false,
+  });
+
+  final String label;
+  final String valueText;
+  final Color color;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final effectiveColor = dimmed ? color.withOpacity(0.5) : color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: effectiveColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: effectiveColor.withOpacity(0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: effectiveColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$label · $valueText',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricBarTrack extends StatelessWidget {
+  const _MetricBarTrack({
+    required this.progress,
+    required this.color,
+    required this.isActive,
+  });
+
+  final double progress;
+  final Color color;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final clamped = progress.clamp(0.0, 1.0);
+        final activeWidth = isActive ? width * clamped : 0.0;
+        return SizedBox(
+          height: 18,
+          child: Stack(
+            children: [
+              Container(
+                height: 18,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: color.withOpacity(0.15)),
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeOutCubic,
+                width: activeWidth,
+                height: 18,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, Color.lerp(color, Colors.white, 0.25)!],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+String _formatMetricValue(double value, String? unit) {
+  final digits = value.abs() >= 10 ? 1 : 2;
+  final formatted = value.toStringAsFixed(digits);
+  if (unit == null || unit.isEmpty) {
+    return formatted;
+  }
+  return '$formatted $unit';
+}
+
 class _LegendItem extends StatelessWidget {
   const _LegendItem({required this.color, required this.label, this.style});
 
@@ -550,10 +709,14 @@ class _LegendItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 14,
+          height: 14,
           decoration: BoxDecoration(
-            color: color,
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(6),
           ),
         ),
