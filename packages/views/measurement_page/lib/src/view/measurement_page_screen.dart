@@ -28,8 +28,9 @@ class MeasurementPageScreen extends StatelessWidget {
     final repository = GetIt.I<GatewayConnectionRepository>();
     final gatewayBloc = GetIt.I<GatewayConnectionBloc>();
     final gatewayConfig = GetIt.I<GatewayConfig>();
-    // TODO: Get measurementServiceUrl from configuration or environment
-    const measurementServiceUrl = 'http://192.168.3.9:8002';
+    // Construct the measurement service URL from gateway config
+    // All measurement HTTP requests go through the gateway proxy
+    final measurementServiceUrl = _buildGatewayHttpUrl(gatewayConfig);
     // Use the actual device ID from gateway config - this is the same ID
     // the backend uses to identify this device
     final localDeviceId = gatewayConfig.deviceId;
@@ -1513,6 +1514,19 @@ Color _themeColor(String keyPath) {
 
 List<Color> _themeColors(String keyPath) {
   return AppConstants.getThemeColors(keyPath);
+}
+
+/// Build the HTTP URL for the gateway from the WebSocket config.
+/// The gateway exposes HTTP endpoints for measurement service operations.
+String _buildGatewayHttpUrl(GatewayConfig config) {
+  // Convert WebSocket scheme to HTTP scheme
+  final httpScheme = config.scheme == 'wss' ? 'https' : 'http';
+
+  // Build the base URL without the WebSocket path
+  if (config.port != null) {
+    return '$httpScheme://${config.host}:${config.port}';
+  }
+  return '$httpScheme://${config.host}';
 }
 
 void _showJoinLobbyDialog(
