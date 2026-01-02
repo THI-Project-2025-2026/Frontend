@@ -22,10 +22,14 @@ class AudioPlaybackService {
   String? _cachedAudioPath;
   Uint8List? _cachedAudioBytes;
   String? _audioUrl; // Store URL for web playback
+  String? _audioHash; // Store audio hash for analysis
   Completer<void>? _playbackCompleter;
 
   /// Whether audio is currently playing.
   bool get isPlaying => _player.state == PlayerState.playing;
+
+  /// The audio hash received from the server (for use in analysis).
+  String? get audioHash => _audioHash;
 
   /// Stream of playback state changes.
   Stream<PlayerState> get onPlayerStateChanged => _player.onPlayerStateChanged;
@@ -59,6 +63,9 @@ class AudioPlaybackService {
       // On web, store the URL and use it directly for playback
       // This is more reliable than using bytes on web
       _audioUrl = uri.toString();
+      // TODO: On web, we can't easily get the hash without a separate request
+      // For now, web clients won't have audio hash validation
+      _audioHash = null;
       debugPrint(
         '[AudioPlaybackService] Running on web, will use URL directly: $_audioUrl',
       );
@@ -79,8 +86,9 @@ class AudioPlaybackService {
       '  Result: ${downloadedAudio.isHashValid ? "VALID" : "INVALID"}',
     );
 
-    // Store audio bytes
+    // Store audio bytes and hash
     _cachedAudioBytes = downloadedAudio.bytes;
+    _audioHash = downloadedAudio.receivedHash;
 
     // On native platforms, save to temporary file
     final filePath = await platform.saveAudioToFile(
@@ -255,9 +263,10 @@ class AudioPlaybackService {
     await _player.dispose();
     await _demoPlayer.dispose();
 
-    // Clear cached bytes and URL
+    // Clear cached bytes, URL, and hash
     _cachedAudioBytes = null;
     _audioUrl = null;
+    _audioHash = null;
 
     // Clean up cached file (native only)
     if (!kIsWeb && _cachedAudioPath != null) {

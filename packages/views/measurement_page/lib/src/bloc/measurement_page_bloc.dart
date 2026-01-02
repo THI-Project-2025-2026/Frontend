@@ -705,6 +705,11 @@ class MeasurementPageBloc
   ) {
     final sessionState = event.sessionState;
 
+    // Capture audioHash when available
+    if (sessionState.audioHash != null && state.audioHash == null) {
+      emit(state.copyWith(audioHash: sessionState.audioHash));
+    }
+
     if (sessionState.phase == MeasurementPhase.playing) {
       emit(state.copyWith(playbackPhase: PlaybackPhase.measurementPlaying));
     } else if (sessionState.phase != MeasurementPhase.playing &&
@@ -717,6 +722,7 @@ class MeasurementPageBloc
       debugPrint(
         '[MeasurementPageBloc] Session completed, requesting analysis...',
       );
+      debugPrint('[MeasurementPageBloc] audioHash: ${state.audioHash}');
       emit(
         state.copyWith(
           sweepStatus: SweepStatus.requestingAnalysis,
@@ -791,6 +797,8 @@ class MeasurementPageBloc
           'source': 'sweep_deconvolution_generated',
           // Use the recording uploaded by microphone
           'recording_upload': _findRecordingUploadName(),
+          // audio_hash identifies the exact measurement signal for alignment
+          if (state.audioHash != null) 'audio_hash': state.audioHash,
         },
       };
 

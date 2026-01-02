@@ -39,6 +39,7 @@ class MeasurementSessionState extends Equatable {
     this.localRole = LocalMeasurementRole.none,
     this.isLocalReady = false,
     this.audioInfo,
+    this.audioHash,
     this.error,
     this.playbackProgress = 0.0,
     this.recordingDuration = Duration.zero,
@@ -61,6 +62,9 @@ class MeasurementSessionState extends Equatable {
 
   /// Information about the measurement audio.
   final MeasurementAudioInfo? audioInfo;
+
+  /// Hash of the downloaded measurement audio (for analysis).
+  final String? audioHash;
 
   /// Error message if any.
   final String? error;
@@ -99,6 +103,7 @@ class MeasurementSessionState extends Equatable {
     LocalMeasurementRole? localRole,
     bool? isLocalReady,
     MeasurementAudioInfo? audioInfo,
+    String? audioHash,
     String? error,
     double? playbackProgress,
     Duration? recordingDuration,
@@ -110,6 +115,7 @@ class MeasurementSessionState extends Equatable {
       localRole: localRole ?? this.localRole,
       isLocalReady: isLocalReady ?? this.isLocalReady,
       audioInfo: audioInfo ?? this.audioInfo,
+      audioHash: audioHash ?? this.audioHash,
       error: error ?? this.error,
       playbackProgress: playbackProgress ?? this.playbackProgress,
       recordingDuration: recordingDuration ?? this.recordingDuration,
@@ -124,6 +130,7 @@ class MeasurementSessionState extends Equatable {
     localRole,
     isLocalReady,
     audioInfo,
+    audioHash,
     error,
     playbackProgress,
     recordingDuration,

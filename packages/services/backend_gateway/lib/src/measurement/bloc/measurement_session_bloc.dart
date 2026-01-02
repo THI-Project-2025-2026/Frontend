@@ -552,11 +552,20 @@ class MeasurementSessionBloc
         sessionId: event.sessionId,
       );
 
-      _log.info(_tag, 'Audio downloaded', data: {'path': audioPath});
+      // Capture the audio hash for later use in analysis
+      final audioHash = _playbackService.audioHash;
+      _log.info(
+        _tag,
+        'Audio downloaded',
+        data: {'path': audioPath, 'audioHash': audioHash},
+      );
 
       // Prepare the player
       await _playbackService.prepare();
       _log.debug(_tag, 'Audio player prepared');
+
+      // Update state with audio hash
+      emit(state.copyWith(audioHash: audioHash));
 
       // Step 6: Notify server that audio is ready
       _log.info(_tag, 'Step 6: Confirming audio ready to server');

@@ -259,6 +259,7 @@ class MeasurementPageState {
     this.sharedRoomPlanVersion = 0,
     this.sweepStatus = SweepStatus.idle,
     this.jobId,
+    this.audioHash,
     this.sweepError,
     this.playbackPhase = PlaybackPhase.idle,
     this.analysisResults,
@@ -281,6 +282,7 @@ class MeasurementPageState {
   final int sharedRoomPlanVersion;
   final SweepStatus sweepStatus;
   final String? jobId;
+  final String? audioHash;
   final String? sweepError;
   final PlaybackPhase playbackPhase;
   final AnalysisResults? analysisResults;
@@ -335,6 +337,7 @@ class MeasurementPageState {
     int? sharedRoomPlanVersion,
     SweepStatus? sweepStatus,
     String? jobId,
+    String? audioHash,
     String? sweepError,
     PlaybackPhase? playbackPhase,
     AnalysisResults? analysisResults,
@@ -357,6 +360,7 @@ class MeasurementPageState {
           sharedRoomPlanVersion ?? this.sharedRoomPlanVersion,
       sweepStatus: sweepStatus ?? this.sweepStatus,
       jobId: jobId ?? this.jobId,
+      audioHash: audioHash ?? this.audioHash,
       sweepError: sweepError ?? this.sweepError,
       playbackPhase: playbackPhase ?? this.playbackPhase,
       analysisResults: analysisResults ?? this.analysisResults,
