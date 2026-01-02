@@ -96,6 +96,7 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
   void _showSimulationDialog(
     BuildContext context, {
     bool useRaytracing = false,
+    int raytracingBounces = 3,
   }) {
     if (_isSimulationDialogShowing) return;
     _isSimulationDialogShowing = true;
@@ -113,6 +114,7 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
           gatewayRepository: _gatewayRepository,
           roomBloc: roomBloc,
           useRaytracing: useRaytracing,
+          raytracingBounces: raytracingBounces,
           onComplete: (result) {
             Navigator.of(context).pop();
             final simulationBloc = this.context.read<SimulationPageBloc>();
@@ -269,10 +271,11 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                               SizedBox(height: isWide ? 48 : 36),
                               _SimulationMetricSection(
                                 key: _metricsKey,
-                                onRaytracingPressed: () =>
+                                onRaytracingPressed: (bounces) =>
                                     _showSimulationDialog(
                                       context,
                                       useRaytracing: true,
+                                      raytracingBounces: bounces,
                                     ),
                               ),
                             ],
@@ -298,6 +301,7 @@ class _SimulationProgressDialog extends StatefulWidget {
     required this.gatewayRepository,
     required this.roomBloc,
     this.useRaytracing = false,
+    this.raytracingBounces = 3,
   });
 
   final ValueChanged<Map<String, dynamic>?> onComplete;
@@ -305,6 +309,7 @@ class _SimulationProgressDialog extends StatefulWidget {
   final GatewayConnectionRepository gatewayRepository;
   final RoomModelingBloc roomBloc;
   final bool useRaytracing;
+  final int raytracingBounces;
 
   @override
   State<_SimulationProgressDialog> createState() =>
@@ -420,6 +425,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
           'room_model': roomJson,
           'include_rir': false,
           'use_raytracing': widget.useRaytracing,
+          'raytracing_bounces': widget.raytracingBounces,
         },
       };
       debugPrint('Simulation request payload: ${jsonEncode(payload)}');
@@ -427,6 +433,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
       debugPrint(
         'Simulation payload sent (requestId: $requestId, rooms: $roomCount, '
         'furniture: $furnitureCount, raytracing: ${widget.useRaytracing}, '
+        'bounces: ${widget.raytracingBounces}, '
         'elapsed: ${timer.elapsedMilliseconds} ms)',
       );
       _updateTask(1, _SimulationTaskStatus.success);
@@ -786,10 +793,18 @@ class _SimulationHeader extends StatelessWidget {
   }
 }
 
-class _SimulationMetricSection extends StatelessWidget {
+class _SimulationMetricSection extends StatefulWidget {
   const _SimulationMetricSection({super.key, this.onRaytracingPressed});
 
-  final VoidCallback? onRaytracingPressed;
+  final void Function(int bounces)? onRaytracingPressed;
+
+  @override
+  State<_SimulationMetricSection> createState() =>
+      _SimulationMetricSectionState();
+}
+
+class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
+  int _selectedBounces = 5; // Default to medium (5 bounces)
 
   @override
   Widget build(BuildContext context) {
@@ -818,7 +833,7 @@ class _SimulationMetricSection extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (onRaytracingPressed != null)
+                  if (widget.onRaytracingPressed != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -844,8 +859,16 @@ class _SimulationMetricSection extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        _RaytracingPerformanceDropdown(
+                          selectedBounces: _selectedBounces,
+                          onChanged: (bounces) {
+                            setState(() => _selectedBounces = bounces);
+                          },
+                        ),
+                        const SizedBox(width: 8),
                         SonalyzeButton(
-                          onPressed: onRaytracingPressed,
+                          onPressed: () =>
+                              widget.onRaytracingPressed!(_selectedBounces),
                           backgroundColor: accentColor.withValues(alpha: 0.15),
                           foregroundColor: accentColor,
                           borderRadius: BorderRadius.circular(12),
@@ -900,6 +923,98 @@ class _SimulationMetricSection extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+enum _RaytracingPerformance {
+  fast(3, 'Fast'),
+  medium(5, 'Medium'),
+  high(7, 'High'),
+  extreme(10, 'Extreme'),
+  bonkers(15, 'Bonkers'),
+  bonkersPlus(20, 'Bonkers+'),
+  serverCrasher(30, 'Servercrasher');
+
+  const _RaytracingPerformance(this.bounces, this.label);
+  final int bounces;
+  final String label;
+
+  String localizedLabel(BuildContext context) {
+    final key = 'simulation_page.results.raytracing_performance.$name';
+    return _localizedOr(key, label);
+  }
+
+  static _RaytracingPerformance fromBounces(int bounces) {
+    return _RaytracingPerformance.values.firstWhere(
+      (p) => p.bounces == bounces,
+      orElse: () => _RaytracingPerformance.medium,
+    );
+  }
+}
+
+class _RaytracingPerformanceDropdown extends StatelessWidget {
+  const _RaytracingPerformanceDropdown({
+    required this.selectedBounces,
+    required this.onChanged,
+  });
+
+  final int selectedBounces;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = _themeColor('simulation_page.timeline_active');
+    final selected = _RaytracingPerformance.fromBounces(selectedBounces);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_RaytracingPerformance>(
+          value: selected,
+          isDense: true,
+          icon: Icon(Icons.arrow_drop_down, color: accentColor, size: 20),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: accentColor,
+            fontWeight: FontWeight.w600,
+          ),
+          dropdownColor: Theme.of(context).colorScheme.surface,
+          items: _RaytracingPerformance.values.map((performance) {
+            return DropdownMenuItem(
+              value: performance,
+              child: Text(
+                '${performance.localizedLabel(context)} (${performance.bounces})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (performance) {
+            if (performance != null) {
+              onChanged(performance.bounces);
+            }
+          },
+          selectedItemBuilder: (context) {
+            return _RaytracingPerformance.values.map((performance) {
+              return Center(
+                child: Text(
+                  performance.localizedLabel(context),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
     );
   }
 }

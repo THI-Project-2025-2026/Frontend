@@ -335,7 +335,16 @@
             "legend_raytracing": "Raytracing-Simulation",
             "measured": "Gemessen",
             "ideal": "Ideal",
-            "raytracing": "Raytracing"
+            "raytracing": "Raytracing",
+            "raytracing_performance": {
+                "fast": "Schnell",
+                "medium": "Mittel",
+                "high": "Hoch",
+                "extreme": "Extrem",
+                "bonkers": "Bonkers",
+                "bonkersPlus": "Bonkers+",
+                "serverCrasher": "Servercrasher"
+            }
         },
         "progress": {
             "title": "Simulation läuft",
