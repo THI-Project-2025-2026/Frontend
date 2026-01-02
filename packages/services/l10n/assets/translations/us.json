@@ -2,7 +2,9 @@
     "common": {
         "back": "Back",
         "cancel": "Cancel",
-        "join": "Join"
+        "close": "Close",
+        "join": "Join",
+        "retry": "Retry"
     },
     "app": {
         "loading_title": "Loading Sonalyze",
@@ -328,7 +330,11 @@
             "warnings": "Warnings",
             "raytracing_button": "Experimental Raytracing Simulation",
             "raytracing_badge": "Experimental",
+            "legend_measured": "Measured simulation",
+            "legend_ideal": "Ideal range",
             "legend_raytracing": "Raytracing simulation",
+            "measured": "Measured",
+            "ideal": "Ideal",
             "raytracing": "Raytracing"
         },
         "progress": {

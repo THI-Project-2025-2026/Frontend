@@ -481,6 +481,20 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
         .timeout(_simulationTimeout);
   }
 
+  void _retry() {
+    setState(() {
+      _hasError = false;
+      _errorMessage = null;
+      for (int i = 0; i < _tasks.length; i++) {
+        _tasks[i] = _tasks[i].copyWith(
+          status: _SimulationTaskStatus.pending,
+          resetDetail: true,
+        );
+      }
+    });
+    _runWorkflow();
+  }
+
   Map<String, dynamic>? _payloadAsJsonMap(dynamic value) {
     if (value is Map<String, dynamic>) {
       return Map<String, dynamic>.from(value);
@@ -566,12 +580,25 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SonalyzeButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Text(_tr('common.close')),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SonalyzeButton(
+                      onPressed: _retry,
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Text(_tr('common.retry')),
+                    ),
+                    const SizedBox(width: 12),
+                    SonalyzeButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Text(_tr('common.close')),
+                    ),
+                  ],
                 ),
               ] else ...[
                 Row(
