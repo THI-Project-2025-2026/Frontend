@@ -93,7 +93,10 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
     super.dispose();
   }
 
-  void _showSimulationDialog(BuildContext context) {
+  void _showSimulationDialog(
+    BuildContext context, {
+    bool useRaytracing = false,
+  }) {
     if (_isSimulationDialogShowing) return;
     _isSimulationDialogShowing = true;
     final gatewayBloc = context.read<GatewayConnectionBloc>();
@@ -109,12 +112,17 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
           gatewayBloc: gatewayBloc,
           gatewayRepository: _gatewayRepository,
           roomBloc: roomBloc,
+          useRaytracing: useRaytracing,
           onComplete: (result) {
             Navigator.of(context).pop();
             final simulationBloc = this.context.read<SimulationPageBloc>();
-            simulationBloc.add(SimulationResultReceived(result));
-            // Advance to step 4 (results)
-            simulationBloc.add(const SimulationTimelineAdvanced());
+            simulationBloc.add(
+              SimulationResultReceived(result, isRaytracing: useRaytracing),
+            );
+            // Advance to step 4 (results) only if not already there
+            if (simulationBloc.state.activeStepIndex < 4) {
+              simulationBloc.add(const SimulationTimelineAdvanced());
+            }
             // Scroll to results after a short delay
             Future.delayed(const Duration(milliseconds: 100), () {
               _scrollToMetrics();
@@ -259,7 +267,14 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                             const _SimulationTimelineCard(),
                             if (showMetrics) ...[
                               SizedBox(height: isWide ? 48 : 36),
-                              _SimulationMetricSection(key: _metricsKey),
+                              _SimulationMetricSection(
+                                key: _metricsKey,
+                                onRaytracingPressed: () =>
+                                    _showSimulationDialog(
+                                      context,
+                                      useRaytracing: true,
+                                    ),
+                              ),
                             ],
                           ],
                         );
@@ -282,12 +297,14 @@ class _SimulationProgressDialog extends StatefulWidget {
     required this.gatewayBloc,
     required this.gatewayRepository,
     required this.roomBloc,
+    this.useRaytracing = false,
   });
 
   final ValueChanged<Map<String, dynamic>?> onComplete;
   final GatewayConnectionBloc gatewayBloc;
   final GatewayConnectionRepository gatewayRepository;
   final RoomModelingBloc roomBloc;
+  final bool useRaytracing;
 
   @override
   State<_SimulationProgressDialog> createState() =>
@@ -399,13 +416,18 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
       final payload = <String, dynamic>{
         'event': 'simulation.run',
         'request_id': requestId,
-        'data': {'room_model': roomJson, 'include_rir': false},
+        'data': {
+          'room_model': roomJson,
+          'include_rir': false,
+          'use_raytracing': widget.useRaytracing,
+        },
       };
       debugPrint('Simulation request payload: ${jsonEncode(payload)}');
       await widget.gatewayRepository.sendJson(payload);
       debugPrint(
         'Simulation payload sent (requestId: $requestId, rooms: $roomCount, '
-        'furniture: $furnitureCount, elapsed: ${timer.elapsedMilliseconds} ms)',
+        'furniture: $furnitureCount, raytracing: ${widget.useRaytracing}, '
+        'elapsed: ${timer.elapsedMilliseconds} ms)',
       );
       _updateTask(1, _SimulationTaskStatus.success);
     } on Object catch (error) {
@@ -738,11 +760,16 @@ class _SimulationHeader extends StatelessWidget {
 }
 
 class _SimulationMetricSection extends StatelessWidget {
-  const _SimulationMetricSection({super.key});
+  const _SimulationMetricSection({super.key, this.onRaytracingPressed});
+
+  final VoidCallback? onRaytracingPressed;
 
   @override
   Widget build(BuildContext context) {
     final panelColor = _themeColor('simulation_page.metrics_background');
+    final accentColor = _themeColor('simulation_page.timeline_active');
+    final badgeColor = _themeColor('simulation_page.header_badge_background');
+    final badgeText = _themeColor('simulation_page.header_badge_text');
 
     return BlocBuilder<SimulationPageBloc, SimulationPageState>(
       builder: (context, state) {
@@ -754,17 +781,64 @@ class _SimulationMetricSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _tr('simulation_page.results.title'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _tr('simulation_page.results.title'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (onRaytracingPressed != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _localizedOr(
+                              'simulation_page.results.raytracing_badge',
+                              'Experimental',
+                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: badgeText,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SonalyzeButton(
+                          onPressed: onRaytracingPressed,
+                          backgroundColor: accentColor.withValues(alpha: 0.15),
+                          foregroundColor: accentColor,
+                          borderRadius: BorderRadius.circular(12),
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          child: Text(
+                            _localizedOr(
+                              'simulation_page.results.raytracing_button',
+                              'Raytracing Simulation',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
               const SizedBox(height: 24),
               if (result != null) ...[
                 SimulationResultsChart(
                   result: result,
+                  raytracingResult: state.lastRaytracingResult,
                   referenceProfiles: state.referenceProfiles,
                   referenceStatus: state.referenceProfilesStatus,
                   referenceError: state.referenceProfilesError,

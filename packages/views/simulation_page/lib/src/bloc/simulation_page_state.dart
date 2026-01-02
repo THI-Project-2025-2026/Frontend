@@ -270,6 +270,7 @@ class SimulationPageState {
     required List<SimulationStepDescriptor> steps,
     required this.activeStepIndex,
     required this.lastResult,
+    required this.lastRaytracingResult,
     required List<SimulationReferenceProfile> referenceProfiles,
     required this.referenceProfilesStatus,
     required this.referenceProfilesError,
@@ -292,6 +293,7 @@ class SimulationPageState {
   final List<SimulationStepDescriptor> steps;
   final int activeStepIndex;
   final SimulationResult? lastResult;
+  final SimulationResult? lastRaytracingResult;
   final List<SimulationReferenceProfile> referenceProfiles;
   final SimulationReferenceProfilesStatus referenceProfilesStatus;
   final String? referenceProfilesError;
@@ -325,6 +327,7 @@ class SimulationPageState {
     List<SimulationStepDescriptor>? steps,
     int? activeStepIndex,
     Object? lastResult = _copyWithUnset,
+    Object? lastRaytracingResult = _copyWithUnset,
     List<SimulationReferenceProfile>? referenceProfiles,
     SimulationReferenceProfilesStatus? referenceProfilesStatus,
     Object? referenceProfilesError = _copyWithUnset,
@@ -344,6 +347,9 @@ class SimulationPageState {
       lastResult: identical(lastResult, _copyWithUnset)
           ? this.lastResult
           : lastResult as SimulationResult?,
+      lastRaytracingResult: identical(lastRaytracingResult, _copyWithUnset)
+          ? this.lastRaytracingResult
+          : lastRaytracingResult as SimulationResult?,
       referenceProfiles: referenceProfiles ?? this.referenceProfiles,
       referenceProfilesStatus:
           referenceProfilesStatus ?? this.referenceProfilesStatus,
@@ -450,6 +456,7 @@ class SimulationPageState {
       steps: steps,
       activeStepIndex: 0,
       lastResult: null,
+      lastRaytracingResult: null,
       referenceProfiles: const <SimulationReferenceProfile>[],
       referenceProfilesStatus: SimulationReferenceProfilesStatus.initial,
       referenceProfilesError: null,

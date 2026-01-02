@@ -149,7 +149,11 @@ class SimulationPageBloc
       debugPrint('Simulation result parsing failed; payload ignored.');
       return;
     }
-    emit(state.copyWith(lastResult: result));
+    if (event.isRaytracing) {
+      emit(state.copyWith(lastRaytracingResult: result));
+    } else {
+      emit(state.copyWith(lastResult: result));
+    }
   }
 
   Future<void> _onReferenceProfilesRequested(

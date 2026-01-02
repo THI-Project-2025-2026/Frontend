@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:l10n_service/l10n_service.dart';
 
@@ -7,17 +5,20 @@ import '../bloc/simulation_page_bloc.dart';
 
 const Color _measuredBarColor = Color(0xFF3B82F6);
 const Color _idealBarColor = Color(0xFF22C55E);
+const Color _raytracingBarColor = Color(0xFFEF4444);
 
 class SimulationResultsChart extends StatefulWidget {
   const SimulationResultsChart({
     super.key,
     required this.result,
+    this.raytracingResult,
     required this.referenceProfiles,
     required this.referenceStatus,
     this.referenceError,
   });
 
   final SimulationResult result;
+  final SimulationResult? raytracingResult;
   final List<SimulationReferenceProfile> referenceProfiles;
   final SimulationReferenceProfilesStatus referenceStatus;
   final String? referenceError;
@@ -51,12 +52,14 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     final colorScheme = theme.colorScheme;
     const measuredColor = _measuredBarColor;
     const referenceColor = _idealBarColor;
+    const raytracingColor = _raytracingBarColor;
 
     final selectedProfile = _selectedProfile;
     final metricEntries = selectedProfile == null
         ? const <_MetricChartEntry>[]
         : _buildMetricEntries(selectedProfile);
     final hasReferenceMetrics = metricEntries.isNotEmpty;
+    final hasRaytracingResult = widget.raytracingResult != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,6 +129,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
               entries: metricEntries,
               measuredColor: measuredColor,
               referenceColor: referenceColor,
+              raytracingColor: raytracingColor,
+              showRaytracing: hasRaytracingResult,
             ),
           ),
           const SizedBox(height: 16),
@@ -133,6 +138,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
             context,
             measuredColor: measuredColor,
             referenceColor: referenceColor,
+            raytracingColor: raytracingColor,
+            showRaytracing: hasRaytracingResult,
           ),
         ],
       ],
@@ -293,6 +300,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     required List<_MetricChartEntry> entries,
     required Color measuredColor,
     required Color referenceColor,
+    required Color raytracingColor,
+    required bool showRaytracing,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -332,6 +341,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
               entry: entry,
               measuredColor: measuredColor,
               idealColor: referenceColor,
+              raytracingColor: raytracingColor,
+              showRaytracing: showRaytracing,
             ),
           );
         }),
@@ -343,6 +354,8 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     BuildContext context, {
     required Color measuredColor,
     required Color referenceColor,
+    required Color raytracingColor,
+    required bool showRaytracing,
   }) {
     final bodyStyle = Theme.of(context).textTheme.bodyMedium;
     return Wrap(
@@ -366,6 +379,15 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
           ),
           style: bodyStyle,
         ),
+        if (showRaytracing)
+          _LegendItem(
+            color: raytracingColor,
+            label: _tr(
+              'simulation_page.results.legend_raytracing',
+              fallback: 'Raytracing simulation',
+            ),
+            style: bodyStyle,
+          ),
       ],
     );
   }
@@ -374,23 +396,38 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     SimulationReferenceProfile profile,
   ) {
     final averages = _averageMetrics(widget.result);
+    final raytracingAverages = widget.raytracingResult != null
+        ? _averageMetrics(widget.raytracingResult!)
+        : <String, double>{};
+
     return profile.metrics
         .map((metric) {
           final double? measured = averages[metric.key];
+          final double? raytracing = raytracingAverages[metric.key];
           final hasMeasurement = measured != null;
-          final comparisonValue = measured ?? metric.value;
-          final bounds = _resolveRange(metric, comparisonValue);
+          final hasRaytracing = raytracing != null;
+
+          // Include raytracing value when computing bounds
+          final allValues = [metric.value];
+          if (measured != null) allValues.add(measured);
+          if (raytracing != null) allValues.add(raytracing);
+          final bounds = _resolveRangeWithValues(metric, allValues);
 
           return _MetricChartEntry(
             title: metric.label,
             unit: metric.unit,
             measuredValue: measured,
             idealValue: metric.value,
+            raytracingValue: raytracing,
             normalizedMeasured: measured == null
                 ? 0
                 : _normalize(measured, bounds.start, bounds.end),
             normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
+            normalizedRaytracing: raytracing == null
+                ? 0
+                : _normalize(raytracing, bounds.start, bounds.end),
             hasMeasurement: hasMeasurement,
+            hasRaytracing: hasRaytracing,
           );
         })
         .toList(growable: false);
@@ -414,9 +451,9 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     );
   }
 
-  RangeValues _resolveRange(
+  RangeValues _resolveRangeWithValues(
     SimulationReferenceMetric metric,
-    double comparisonValue,
+    List<double> values,
   ) {
     double? min = metric.minValue;
     double? max = metric.maxValue;
@@ -425,13 +462,13 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
       return RangeValues(min, max);
     }
 
-    final magnitude = math
-        .max(metric.value.abs(), comparisonValue.abs())
-        .clamp(0.5, 100.0);
+    final minVal = values.reduce((a, b) => a < b ? a : b);
+    final maxVal = values.reduce((a, b) => a > b ? a : b);
+    final magnitude = maxVal.abs().clamp(0.5, 100.0);
     const paddingFactor = 0.5;
 
-    min ??= math.min(metric.value, comparisonValue) - magnitude * paddingFactor;
-    max ??= math.max(metric.value, comparisonValue) + magnitude * paddingFactor;
+    min ??= minVal - magnitude * paddingFactor;
+    max ??= maxVal + magnitude * paddingFactor;
 
     if (max - min < 1e-6) {
       max = min + 1;
@@ -490,18 +527,24 @@ class _MetricChartEntry {
     required this.unit,
     required this.measuredValue,
     required this.idealValue,
+    required this.raytracingValue,
     required this.normalizedMeasured,
     required this.normalizedIdeal,
+    required this.normalizedRaytracing,
     required this.hasMeasurement,
+    required this.hasRaytracing,
   });
 
   final String title;
   final String? unit;
   final double? measuredValue;
   final double idealValue;
+  final double? raytracingValue;
   final double normalizedMeasured;
   final double normalizedIdeal;
+  final double normalizedRaytracing;
   final bool hasMeasurement;
+  final bool hasRaytracing;
 }
 
 class _MetricAccumulator {
@@ -521,11 +564,15 @@ class _MetricComparisonRow extends StatelessWidget {
     required this.entry,
     required this.measuredColor,
     required this.idealColor,
+    required this.raytracingColor,
+    required this.showRaytracing,
   });
 
   final _MetricChartEntry entry;
   final Color measuredColor;
   final Color idealColor;
+  final Color raytracingColor;
+  final bool showRaytracing;
 
   @override
   Widget build(BuildContext context) {
@@ -538,11 +585,18 @@ class _MetricComparisonRow extends StatelessWidget {
       'simulation_page.results.ideal',
       fallback: 'Reference value',
     );
+    final raytracingLabel = _tr(
+      'simulation_page.results.raytracing',
+      fallback: 'Raytracing',
+    );
 
     final measuredValueText = entry.measuredValue == null
         ? _tr('simulation_page.results.not_available', fallback: 'N/A')
         : _formatMetricValue(entry.measuredValue!, entry.unit);
     final idealValueText = _formatMetricValue(entry.idealValue, entry.unit);
+    final raytracingValueText = entry.raytracingValue == null
+        ? _tr('simulation_page.results.not_available', fallback: 'N/A')
+        : _formatMetricValue(entry.raytracingValue!, entry.unit);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,6 +623,15 @@ class _MetricComparisonRow extends StatelessWidget {
               valueText: idealValueText,
               color: idealColor,
             ),
+            if (showRaytracing) ...[
+              const SizedBox(width: 8),
+              _MetricValueChip(
+                label: raytracingLabel,
+                valueText: raytracingValueText,
+                color: raytracingColor,
+                dimmed: !entry.hasRaytracing,
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -583,6 +646,14 @@ class _MetricComparisonRow extends StatelessWidget {
           color: idealColor,
           isActive: true,
         ),
+        if (showRaytracing) ...[
+          const SizedBox(height: 8),
+          _MetricBarTrack(
+            progress: entry.normalizedRaytracing,
+            color: raytracingColor,
+            isActive: entry.hasRaytracing,
+          ),
+        ],
       ],
     );
   }

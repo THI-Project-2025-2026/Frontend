@@ -325,7 +325,11 @@
         },
         "results": {
             "title": "Simulationsergebnisse",
-            "warnings": "Warnungen"
+            "warnings": "Warnungen",
+            "raytracing_button": "Experimentelle Raytracing-Simulation",
+            "raytracing_badge": "Experimentell",
+            "legend_raytracing": "Raytracing-Simulation",
+            "raytracing": "Raytracing"
         },
         "progress": {
             "title": "Simulation läuft",
