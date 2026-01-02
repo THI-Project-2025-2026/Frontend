@@ -217,7 +217,27 @@
                     "title": "Impulsergebnisse prüfen",
                     "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
                 }
-            }
+            },
+            "demo_button": "Demo-Audio abspielen"
+        },
+        "sweep": {
+            "dialog_title": "Messung läuft",
+            "copy_logs": "Debug-Logs kopieren",
+            "toggle_debug": "Debug-Log umschalten",
+            "logs_copied": "Debug-Logs in Zwischenablage kopiert",
+            "copy_all_logs": "Alle Logs kopieren"
+        },
+        "results": {
+            "title": "Impulsantwort-Analyse",
+            "subtitle": "Akustische Kennzahlen aus der gemessenen Impulsantwort berechnet.",
+            "rt60_desc": "Nachhallzeit (60 dB Abfall)",
+            "edt_desc": "Frühe Abklingzeit",
+            "sti_desc": "Sprachübertragungsindex",
+            "c50_desc": "Deutlichkeit für Sprache",
+            "c80_desc": "Deutlichkeit für Musik",
+            "d50_desc": "Definition (Sprachverständlichkeit)",
+            "drr_desc": "Direkt-zu-Nachhall-Verhältnis",
+            "snr_desc": "Signal-Rausch-Verhältnis"
         }
     },
     "simulation_page": {

@@ -122,3 +122,22 @@ class _SessionStateChanged extends MeasurementPageEvent {
 
   final MeasurementSessionState sessionState;
 }
+
+/// Internal event to request analysis from the backend.
+class _AnalysisRequested extends MeasurementPageEvent {
+  const _AnalysisRequested();
+}
+
+/// Internal event when analysis results are received.
+class _AnalysisResultsReceived extends MeasurementPageEvent {
+  const _AnalysisResultsReceived({required this.results});
+
+  final AnalysisResults results;
+}
+
+/// Internal event when analysis fails.
+class _AnalysisFailed extends MeasurementPageEvent {
+  const _AnalysisFailed({required this.error});
+
+  final String error;
+}

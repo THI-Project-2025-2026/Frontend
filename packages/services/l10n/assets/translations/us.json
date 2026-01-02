@@ -217,7 +217,27 @@
                     "title": "Review impulse results",
                     "description": "Validate energy decay curves and analyze impulse response data."
                 }
-            }
+            },
+            "demo_button": "Play demo audio"
+        },
+        "sweep": {
+            "dialog_title": "Measurement in Progress",
+            "copy_logs": "Copy debug logs",
+            "toggle_debug": "Toggle debug log",
+            "logs_copied": "Debug logs copied to clipboard",
+            "copy_all_logs": "Copy All Logs"
+        },
+        "results": {
+            "title": "Impulse Response Analysis",
+            "subtitle": "Acoustic metrics calculated from the measured impulse response.",
+            "rt60_desc": "Reverberation time (60 dB decay)",
+            "edt_desc": "Early decay time",
+            "sti_desc": "Speech transmission index",
+            "c50_desc": "Clarity for speech",
+            "c80_desc": "Clarity for music",
+            "d50_desc": "Definition (speech intelligibility)",
+            "drr_desc": "Direct-to-reverberant ratio",
+            "snr_desc": "Signal-to-noise ratio"
         }
     },
     "simulation_page": {

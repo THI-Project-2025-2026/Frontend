@@ -39,6 +39,9 @@ class MeasurementPageBloc
     on<MeasurementJobCreated>(_onJobCreated);
     on<_MeasurementStartReceived>(_onMeasurementStartReceived);
     on<_SessionStateChanged>(_onSessionStateChanged);
+    on<_AnalysisRequested>(_onAnalysisRequested);
+    on<_AnalysisResultsReceived>(_onAnalysisResultsReceived);
+    on<_AnalysisFailed>(_onAnalysisFailed);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -100,6 +103,10 @@ class MeasurementPageBloc
 
   @override
   Future<void> close() async {
+    debugPrint(
+      '[NAV_DEBUG] MeasurementPageBloc.close() called - BLOC IS BEING CLOSED',
+    );
+    debugPrint('[NAV_DEBUG] Stack trace: ${StackTrace.current}');
     await _gatewaySubscription?.cancel();
     await _sessionSubscription?.cancel();
     await _sessionBloc?.close();
@@ -706,9 +713,19 @@ class MeasurementPageBloc
     }
 
     if (sessionState.status == MeasurementSessionStatus.completed) {
-      add(const MeasurementTimelineAdvanced());
-      emit(state.copyWith(sweepStatus: SweepStatus.completed));
+      // Session completed (recordings uploaded), now request analysis
+      debugPrint(
+        '[MeasurementPageBloc] Session completed, requesting analysis...',
+      );
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.requestingAnalysis,
+          playbackPhase: PlaybackPhase.idle,
+        ),
+      );
       _cleanupSessionBloc();
+      // Request analysis from backend
+      add(const _AnalysisRequested());
     } else if (sessionState.status == MeasurementSessionStatus.error ||
         sessionState.status == MeasurementSessionStatus.cancelled) {
       emit(
@@ -741,6 +758,132 @@ class MeasurementPageBloc
         sweepStatus: SweepStatus.idle,
         sweepError: null,
         playbackPhase: PlaybackPhase.idle,
+      ),
+    );
+  }
+
+  /// Requests analysis from the backend after recordings are uploaded.
+  Future<void> _onAnalysisRequested(
+    _AnalysisRequested event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    if (state.jobId == null) {
+      debugPrint('[MeasurementPageBloc] ERROR: No job ID for analysis');
+      add(const _AnalysisFailed(error: 'No job ID available'));
+      return;
+    }
+
+    debugPrint(
+      '[MeasurementPageBloc] Requesting analysis for job ${state.jobId}',
+    );
+
+    try {
+      final requestId = _generateRequestId();
+      final responseFuture = _waitForResponse(requestId);
+
+      // Request sweep deconvolution analysis using regenerated sweep
+      // The backend will regenerate the exact sweep signal used during measurement
+      final payload = {
+        'event': 'analysis.run',
+        'request_id': requestId,
+        'data': {
+          'job_id': state.jobId,
+          'source': 'sweep_deconvolution_generated',
+          // Use the recording uploaded by microphone
+          'recording_upload': _findRecordingUploadName(),
+        },
+      };
+
+      debugPrint('[MeasurementPageBloc] Sending analysis.run: $payload');
+      await _repository.sendJson(payload);
+
+      debugPrint('[MeasurementPageBloc] Waiting for analysis response...');
+      final response = await responseFuture;
+
+      if (response.error != null) {
+        debugPrint('[MeasurementPageBloc] Analysis failed: ${response.error}');
+        add(_AnalysisFailed(error: response.error.toString()));
+        return;
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final resultsData = data['results'] as Map<String, dynamic>?;
+
+      if (resultsData == null) {
+        debugPrint('[MeasurementPageBloc] No results in analysis response');
+        add(const _AnalysisFailed(error: 'No results returned from analysis'));
+        return;
+      }
+
+      debugPrint(
+        '[MeasurementPageBloc] Analysis results received: $resultsData',
+      );
+      final results = AnalysisResults.fromJson(resultsData);
+      add(_AnalysisResultsReceived(results: results));
+    } catch (e, stackTrace) {
+      debugPrint('[MeasurementPageBloc] ERROR in analysis request: $e');
+      debugPrint('[MeasurementPageBloc] Stack trace: $stackTrace');
+      add(_AnalysisFailed(error: e.toString()));
+    }
+  }
+
+  /// Returns the recording upload name based on device/speaker configuration.
+  String _findRecordingUploadName() {
+    // Get the first microphone device to determine the upload name pattern
+    final micDevice = state.devices.firstWhere(
+      (d) => d.role == MeasurementDeviceRole.microphone,
+      orElse: () => state.devices.first,
+    );
+
+    final speakerDevice = state.devices.firstWhere(
+      (d) => d.role == MeasurementDeviceRole.loudspeaker,
+      orElse: () => state.devices.first,
+    );
+
+    // Recording naming pattern from measurement_session_bloc.dart:
+    // 'recording_${_localDeviceId}_${event.speakerSlotId}.wav'
+    return 'recording_${micDevice.id}_${speakerDevice.roleSlotId ?? 'speaker-1'}.wav';
+  }
+
+  /// Handles successful analysis results.
+  void _onAnalysisResultsReceived(
+    _AnalysisResultsReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint('[NAV_DEBUG] _onAnalysisResultsReceived called');
+    debugPrint(
+      '[MeasurementPageBloc] Analysis complete - RT60: ${event.results.rt.rt60}s, '
+      'STI: ${event.results.sti}',
+    );
+
+    // Advance to results step (step 6 - "Review impulse results")
+    debugPrint('[NAV_DEBUG] About to add MeasurementTimelineAdvanced event');
+    add(const MeasurementTimelineAdvanced());
+
+    debugPrint('[NAV_DEBUG] About to emit completed state with results');
+    emit(
+      state.copyWith(
+        sweepStatus: SweepStatus.completed,
+        analysisResults: event.results,
+      ),
+    );
+    debugPrint(
+      '[NAV_DEBUG] Completed state emitted, sweepStatus should be completed',
+    );
+  }
+
+  /// Handles analysis failure.
+  void _onAnalysisFailed(
+    _AnalysisFailed event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint('[NAV_DEBUG] _onAnalysisFailed called: ${event.error}');
+    debugPrint('[MeasurementPageBloc] Analysis failed: ${event.error}');
+
+    emit(
+      state.copyWith(
+        sweepStatus: SweepStatus.failed,
+        sweepError: 'Analysis failed: ${event.error}',
       ),
     );
   }

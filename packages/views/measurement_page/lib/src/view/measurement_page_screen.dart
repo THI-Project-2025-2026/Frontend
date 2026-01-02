@@ -279,11 +279,40 @@ class _MeasurementPageView extends StatefulWidget {
 }
 
 class _MeasurementPageViewState extends State<_MeasurementPageView> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _analysisResultsKey = GlobalKey();
+  AnalysisResults? _previousAnalysisResults;
+
   @override
   void initState() {
     super.initState();
+    debugPrint('[NAV_DEBUG] _MeasurementPageViewState.initState called');
     // Request all necessary permissions when the page opens
     _requestPermissions();
+  }
+
+  @override
+  void dispose() {
+    debugPrint(
+      '[NAV_DEBUG] _MeasurementPageViewState.dispose called - PAGE IS BEING DISPOSED',
+    );
+    debugPrint('[NAV_DEBUG] Stack trace: ${StackTrace.current}');
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToAnalysisResults() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _analysisResultsKey.currentContext;
+      if (context != null) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+          alignment: 0.1, // Slight offset from top
+        );
+      }
+    });
   }
 
   Future<void> _requestPermissions() async {
@@ -326,9 +355,19 @@ class _MeasurementPageViewState extends State<_MeasurementPageView> {
     return MultiBlocListener(
       listeners: [
         BlocListener<MeasurementPageBloc, MeasurementPageState>(
-          listenWhen: (previous, current) =>
-              previous.activeStepIndex != current.activeStepIndex,
+          listenWhen: (previous, current) {
+            final changed = previous.activeStepIndex != current.activeStepIndex;
+            if (changed) {
+              debugPrint(
+                '[NAV_DEBUG] activeStepIndex changed: ${previous.activeStepIndex} -> ${current.activeStepIndex}',
+              );
+            }
+            return changed;
+          },
           listener: (context, state) {
+            debugPrint(
+              '[NAV_DEBUG] activeStepIndex listener fired, step=${state.activeStepIndex}',
+            );
             final roomBloc = context.read<RoomModelingBloc>();
             if (state.activeStepIndex <= 1) {
               roomBloc.add(const StepChanged(RoomModelingStep.structure));
@@ -381,15 +420,29 @@ class _MeasurementPageViewState extends State<_MeasurementPageView> {
           },
         ),
         BlocListener<MeasurementPageBloc, MeasurementPageState>(
-          listenWhen: (previous, current) =>
-              previous.activeStepIndex != current.activeStepIndex &&
-              current.activeStepIndex == MeasurementPageScreen._sweepStepIndex,
+          listenWhen: (previous, current) {
+            final changed =
+                previous.activeStepIndex != current.activeStepIndex &&
+                current.activeStepIndex ==
+                    MeasurementPageScreen._sweepStepIndex;
+            if (changed) {
+              debugPrint(
+                '[NAV_DEBUG] Sweep step listener will fire - entering step 5',
+              );
+            }
+            return changed;
+          },
           listener: (context, state) {
+            debugPrint(
+              '[NAV_DEBUG] Sweep step listener fired, sweepStatus=${state.sweepStatus}',
+            );
             if (state.sweepStatus == SweepStatus.idle) {
+              debugPrint('[NAV_DEBUG] Starting sweep request');
               context.read<MeasurementPageBloc>().add(
                 const MeasurementSweepStartRequested(),
               );
             }
+            debugPrint('[NAV_DEBUG] Showing sweep progress dialog');
             _showSweepProgressDialog(context);
           },
         ),
@@ -430,6 +483,7 @@ class _MeasurementPageViewState extends State<_MeasurementPageView> {
                     radius: const Radius.circular(999),
                   ),
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: EdgeInsets.symmetric(
                       horizontal: horizontalPadding,
                       vertical: verticalPadding,
@@ -441,7 +495,16 @@ class _MeasurementPageViewState extends State<_MeasurementPageView> {
                         SizedBox(height: isWide ? 40 : 32),
                         BlocBuilder<MeasurementPageBloc, MeasurementPageState>(
                           builder: (context, state) {
-                            return _MeasurementPrimaryLayout(state: state);
+                            // Scroll to analysis results when they first appear
+                            if (state.analysisResults != null &&
+                                _previousAnalysisResults == null) {
+                              _scrollToAnalysisResults();
+                            }
+                            _previousAnalysisResults = state.analysisResults;
+                            return _MeasurementPrimaryLayout(
+                              state: state,
+                              analysisResultsKey: _analysisResultsKey,
+                            );
                           },
                         ),
                       ],
@@ -524,9 +587,13 @@ class _MeasurementHeader extends StatelessWidget {
 }
 
 class _MeasurementPrimaryLayout extends StatelessWidget {
-  const _MeasurementPrimaryLayout({required this.state});
+  const _MeasurementPrimaryLayout({
+    required this.state,
+    required this.analysisResultsKey,
+  });
 
   final MeasurementPageState state;
+  final GlobalKey analysisResultsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -560,6 +627,14 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         _TimelineCard(state: state),
+        // Show results panel below timeline when analysis results are available
+        if (state.analysisResults != null) ...[
+          const SizedBox(height: 28),
+          _AnalysisResultsCard(
+            key: analysisResultsKey,
+            results: state.analysisResults!,
+          ),
+        ],
       ],
     );
 
@@ -1050,6 +1125,228 @@ class _DeviceDataRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Card displaying full analysis results on step 7 (Review impulse results).
+class _AnalysisResultsCard extends StatelessWidget {
+  const _AnalysisResultsCard({super.key, required this.results});
+
+  final AnalysisResults results;
+
+  @override
+  Widget build(BuildContext context) {
+    final panelColor = _themeColor('measurement_page.panel_background');
+    final accent = _themeColor('measurement_page.accent');
+
+    return SonalyzeSurface(
+      padding: const EdgeInsets.all(28),
+      backgroundColor: panelColor.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.analytics_outlined, color: accent, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _tr(
+                    'measurement_page.results.title',
+                    fallback: 'Impulse Response Analysis',
+                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _tr(
+              'measurement_page.results.subtitle',
+              fallback:
+                  'Acoustic metrics calculated from the measured impulse response.',
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Main metrics grid
+          Wrap(
+            spacing: 24,
+            runSpacing: 20,
+            children: [
+              _ResultMetricTile(
+                label: 'RT60',
+                value: results.rt.rt60.toStringAsFixed(2),
+                unit: 's',
+                description: _tr(
+                  'measurement_page.results.rt60_desc',
+                  fallback: 'Reverberation time (60 dB decay)',
+                ),
+                icon: Icons.timer_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'EDT',
+                value: results.rt.edt.toStringAsFixed(2),
+                unit: 's',
+                description: _tr(
+                  'measurement_page.results.edt_desc',
+                  fallback: 'Early decay time',
+                ),
+                icon: Icons.speed_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'STI',
+                value: results.sti.toStringAsFixed(2),
+                unit: '',
+                description: _tr(
+                  'measurement_page.results.sti_desc',
+                  fallback: 'Speech transmission index',
+                ),
+                icon: Icons.record_voice_over_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'C50',
+                value: results.clarity.c50.toStringAsFixed(1),
+                unit: 'dB',
+                description: _tr(
+                  'measurement_page.results.c50_desc',
+                  fallback: 'Clarity for speech',
+                ),
+                icon: Icons.hearing_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'C80',
+                value: results.clarity.c80.toStringAsFixed(1),
+                unit: 'dB',
+                description: _tr(
+                  'measurement_page.results.c80_desc',
+                  fallback: 'Clarity for music',
+                ),
+                icon: Icons.music_note_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'D50',
+                value: (results.clarity.d50 * 100).toStringAsFixed(0),
+                unit: '%',
+                description: _tr(
+                  'measurement_page.results.d50_desc',
+                  fallback: 'Definition (speech intelligibility)',
+                ),
+                icon: Icons.graphic_eq_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'DRR',
+                value: results.drr.drr.toStringAsFixed(1),
+                unit: 'dB',
+                description: _tr(
+                  'measurement_page.results.drr_desc',
+                  fallback: 'Direct-to-reverberant ratio',
+                ),
+                icon: Icons.surround_sound_outlined,
+              ),
+              _ResultMetricTile(
+                label: 'SNR',
+                value: results.quality.snr.toStringAsFixed(1),
+                unit: 'dB',
+                description: _tr(
+                  'measurement_page.results.snr_desc',
+                  fallback: 'Signal-to-noise ratio',
+                ),
+                icon: Icons.signal_cellular_alt_outlined,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual metric tile for the results card.
+class _ResultMetricTile extends StatelessWidget {
+  const _ResultMetricTile({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.description,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+  final String description;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _themeColor('measurement_page.accent');
+
+    return SizedBox(
+      width: 160,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: accent.withValues(alpha: 0.7)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              children: [
+                TextSpan(text: value),
+                if (unit.isNotEmpty)
+                  TextSpan(
+                    text: ' $unit',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1614,6 +1911,7 @@ class _RoomSnapshotApplier {
 }
 
 void _showSweepProgressDialog(BuildContext context) {
+  debugPrint('[NAV_DEBUG] _showSweepProgressDialog called');
   // Clear previous logs when starting a new sweep
   MeasurementDebugLogger.instance.clear();
   MeasurementDebugLogger.instance.info(
@@ -1625,16 +1923,21 @@ void _showSweepProgressDialog(BuildContext context) {
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) {
+      debugPrint('[NAV_DEBUG] showDialog builder called');
       return BlocProvider.value(
         value: context.read<MeasurementPageBloc>(),
-        child: const _SweepProgressDialog(),
+        child: _SweepProgressDialog(dialogContext: dialogContext),
       );
     },
-  );
+  ).then((_) {
+    debugPrint('[NAV_DEBUG] showDialog.then() called - dialog was closed');
+  });
 }
 
 class _SweepProgressDialog extends StatefulWidget {
-  const _SweepProgressDialog();
+  const _SweepProgressDialog({required this.dialogContext});
+
+  final BuildContext dialogContext;
 
   @override
   State<_SweepProgressDialog> createState() => _SweepProgressDialogState();
@@ -1644,6 +1947,7 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
   Timer? _timer;
   int _secondsElapsed = 0;
   bool _showDebugLog = false;
+  bool _hasPopped = false; // Prevent multiple Navigator.pop() calls
   final ScrollController _logScrollController = ScrollController();
   List<MeasurementLogEntry> _logEntries = [];
   StreamSubscription<MeasurementLogEntry>? _logSubscription;
@@ -1654,6 +1958,7 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[NAV_DEBUG] _SweepProgressDialogState.initState');
     _logEntries = List.from(MeasurementDebugLogger.instance.entries);
     _logSubscription = MeasurementDebugLogger.instance.stream.listen((entry) {
       if (mounted) {
@@ -1676,6 +1981,9 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
 
   @override
   void dispose() {
+    debugPrint(
+      '[NAV_DEBUG] _SweepProgressDialogState.dispose - DIALOG BEING DISPOSED',
+    );
     _timer?.cancel();
     _logSubscription?.cancel();
     _logScrollController.dispose();
@@ -1717,6 +2025,9 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<MeasurementPageBloc, MeasurementPageState>(
       listener: (context, state) {
+        debugPrint(
+          '[NAV_DEBUG] Dialog BlocConsumer listener: sweepStatus=${state.sweepStatus}, playbackPhase=${state.playbackPhase}',
+        );
         MeasurementDebugLogger.instance.debug(
           'SweepDialog',
           'State changed',
@@ -1731,18 +2042,44 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
           _startTimer();
         }
         if (state.sweepStatus == SweepStatus.completed) {
+          debugPrint(
+            '[NAV_DEBUG] SweepStatus.completed detected in dialog listener',
+          );
           _timer?.cancel();
           MeasurementDebugLogger.instance.info(
             'SweepDialog',
             'Measurement completed successfully',
           );
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          });
+          // Close dialog on next frame to avoid any race conditions
+          // Use the dialog's context to ensure we only pop the dialog, not the page
+          // IMPORTANT: Check _hasPopped to prevent multiple pops (the listener fires multiple times)
+          if (!_hasPopped) {
+            _hasPopped = true;
+            debugPrint(
+              '[NAV_DEBUG] Scheduling dialog pop on next frame (first time only)',
+            );
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              debugPrint(
+                '[NAV_DEBUG] PostFrameCallback executing, mounted=$mounted',
+              );
+              final canPop = Navigator.of(widget.dialogContext).canPop();
+              debugPrint('[NAV_DEBUG] Navigator.canPop()=$canPop');
+              if (mounted && canPop) {
+                debugPrint('[NAV_DEBUG] Calling Navigator.pop() for dialog');
+                Navigator.of(widget.dialogContext).pop();
+                debugPrint('[NAV_DEBUG] Navigator.pop() completed');
+              }
+            });
+          } else {
+            debugPrint(
+              '[NAV_DEBUG] SweepStatus.completed but _hasPopped=true, skipping pop',
+            );
+          }
         }
         if (state.sweepStatus == SweepStatus.failed) {
+          debugPrint(
+            '[NAV_DEBUG] SweepStatus.failed detected in dialog listener',
+          );
           _timer?.cancel();
           MeasurementDebugLogger.instance.error(
             'SweepDialog',
@@ -1756,16 +2093,25 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
             state.sweepStatus == SweepStatus.creatingJob ||
             state.sweepStatus == SweepStatus.creatingSession ||
             state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.requestingAnalysis ||
             state.sweepStatus == SweepStatus.completed;
 
         final isReceived =
             state.sweepStatus == SweepStatus.creatingSession ||
             state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.requestingAnalysis ||
             state.sweepStatus == SweepStatus.completed;
 
         final isVerified =
             state.sweepStatus == SweepStatus.running ||
+            state.sweepStatus == SweepStatus.requestingAnalysis ||
             state.sweepStatus == SweepStatus.completed;
+
+        final isRecordingDone =
+            state.sweepStatus == SweepStatus.requestingAnalysis ||
+            state.sweepStatus == SweepStatus.completed;
+
+        final isAnalyzing = state.sweepStatus == SweepStatus.requestingAnalysis;
 
         final isCompleted = state.sweepStatus == SweepStatus.completed;
         final isFailed = state.sweepStatus == SweepStatus.failed;
@@ -1856,18 +2202,18 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                     ),
                     _ProgressStep(
                       label: 'Step 7-8: Starting recording',
-                      isCompleted: isPlayingMeasurement || isCompleted,
+                      isCompleted: isPlayingMeasurement || isRecordingDone,
                       isActive:
                           isVerified &&
                           !isPlayingMeasurement &&
-                          !isCompleted &&
+                          !isRecordingDone &&
                           !isFailed,
                     ),
                     _ProgressStep(
                       label: 'Step 9: Playing audiofile',
-                      isCompleted: isCompleted,
+                      isCompleted: isRecordingDone,
                       isActive: isPlayingMeasurement,
-                      trailing: isPlayingMeasurement || isCompleted
+                      trailing: isPlayingMeasurement || isRecordingDone
                           ? Text(
                               '${_secondsElapsed}s / ${_totalDurationSeconds}s',
                               style: Theme.of(context).textTheme.bodySmall
@@ -1877,8 +2223,13 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                     ),
                     _ProgressStep(
                       label: 'Step 10-11: Uploading recordings',
-                      isCompleted: isCompleted,
+                      isCompleted: isRecordingDone,
                       isActive: false,
+                    ),
+                    _ProgressStep(
+                      label: 'Step 12: Analyzing impulse response',
+                      isCompleted: isCompleted,
+                      isActive: isAnalyzing,
                     ),
 
                     // Error display
