@@ -7,6 +7,7 @@ export 'src/simulation/simulation_reference_repository.dart';
 
 // Measurement session exports
 export 'src/measurement/bloc/measurement_session_bloc.dart';
+export 'src/measurement/models/measurement_profile.dart';
 export 'src/measurement/models/measurement_session_models.dart';
 export 'src/measurement/services/audio_playback_service.dart';
 export 'src/measurement/services/measurement_audio_service.dart';

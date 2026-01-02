@@ -1351,6 +1351,132 @@ class _ResultMetricTile extends StatelessWidget {
   }
 }
 
+/// Dropdown selector for measurement profile (frequency range).
+class _MeasurementProfileSelector extends StatelessWidget {
+  const _MeasurementProfileSelector({
+    required this.selectedProfile,
+    required this.enabled,
+  });
+
+  final MeasurementProfile selectedProfile;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _themeColor('measurement_page.accent');
+    final onBackground = Theme.of(context).colorScheme.onSurface;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        Icon(
+          Icons.tune_outlined,
+          size: 20,
+          color: accent.withValues(alpha: 0.8),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          _tr(
+            'measurement_page.profile.label',
+            fallback: 'Measurement Profile',
+          ),
+          style: textTheme.labelLarge?.copyWith(
+            color: onBackground.withValues(alpha: 0.8),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<MeasurementProfile>(
+              value: selectedProfile,
+              isDense: true,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: onBackground.withValues(alpha: 0.6),
+                size: 20,
+              ),
+              style: textTheme.bodyMedium?.copyWith(
+                color: onBackground.withValues(alpha: 0.85),
+              ),
+              dropdownColor: _themeColor('measurement_page.panel_background'),
+              borderRadius: BorderRadius.circular(12),
+              items: MeasurementProfile.values.map((profile) {
+                return DropdownMenuItem<MeasurementProfile>(
+                  value: profile,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _tr(
+                            profile.labelKey,
+                            fallback: profile.fallbackLabel,
+                          ),
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${profile.sweepFStart.toInt()} Hz - ${profile.sweepFEnd.toInt()} Hz',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: onBackground.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+              selectedItemBuilder: (context) {
+                return MeasurementProfile.values.map((profile) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _tr(profile.labelKey, fallback: profile.fallbackLabel),
+                    ),
+                  );
+                }).toList();
+              },
+              onChanged: enabled
+                  ? (profile) {
+                      if (profile != null) {
+                        context.read<MeasurementPageBloc>().add(
+                          MeasurementProfileChanged(profile: profile),
+                        );
+                      }
+                    }
+                  : null,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            _tr(
+              selectedProfile.descriptionKey,
+              fallback: selectedProfile.fallbackDescription,
+            ),
+            style: textTheme.bodySmall?.copyWith(
+              color: onBackground.withValues(alpha: 0.6),
+              fontStyle: FontStyle.italic,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TimelineCard extends StatelessWidget {
   const _TimelineCard({required this.state});
 
@@ -1447,6 +1573,11 @@ class _TimelineCard extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              _MeasurementProfileSelector(
+                selectedProfile: state.measurementProfile,
+                enabled: !sweepInProgress,
               ),
               if (atDeviceStep && !hasRequiredAudio)
                 Padding(

@@ -45,14 +45,20 @@ class AudioPlaybackService {
   /// [httpClient] - The BackendHttpClient to use for the download
   /// [sessionId] - Optional session ID for tracking
   /// [sampleRate] - Sample rate in Hz (default: 48000)
+  /// [sweepFStart] - Start frequency of measurement sweep in Hz (default: 20)
+  /// [sweepFEnd] - End frequency of measurement sweep in Hz (default: 20000)
   Future<String> downloadMeasurementAudio({
     required BackendHttpClient httpClient,
     String? sessionId,
     int sampleRate = 48000,
+    double sweepFStart = 20.0,
+    double sweepFEnd = 20000.0,
   }) async {
     final uri = httpClient.getMeasurementAudioUri(
       sessionId: sessionId,
       sampleRate: sampleRate,
+      sweepFStart: sweepFStart,
+      sweepFEnd: sweepFEnd,
     );
 
     debugPrint(
@@ -76,6 +82,8 @@ class AudioPlaybackService {
     final downloadedAudio = await httpClient.downloadMeasurementAudio(
       sessionId: sessionId,
       sampleRate: sampleRate,
+      sweepFStart: sweepFStart,
+      sweepFEnd: sweepFEnd,
     );
 
     debugPrint('[AudioPlaybackService] Audio Validation:');

@@ -91,6 +91,13 @@ class MeasurementSweepCancelled extends MeasurementPageEvent {
   const MeasurementSweepCancelled();
 }
 
+/// Changes the measurement profile (frequency range).
+class MeasurementProfileChanged extends MeasurementPageEvent {
+  const MeasurementProfileChanged({required this.profile});
+
+  final MeasurementProfile profile;
+}
+
 /// Internal event to mark a job as created.
 class MeasurementJobCreated extends MeasurementPageEvent {
   const MeasurementJobCreated({required this.jobId});

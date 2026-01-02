@@ -234,6 +234,8 @@ class MeasurementSessionInfo extends Equatable {
     required this.microphones,
     this.currentSpeakerIndex = 0,
     this.audioDurationSeconds = 15.0,
+    this.sweepFStart = 20.0,
+    this.sweepFEnd = 20000.0,
   });
 
   final String sessionId;
@@ -243,6 +245,12 @@ class MeasurementSessionInfo extends Equatable {
   final List<MicrophoneInfo> microphones;
   final int currentSpeakerIndex;
   final double audioDurationSeconds;
+
+  /// Start frequency of the measurement sweep in Hz.
+  final double sweepFStart;
+
+  /// End frequency of the measurement sweep in Hz.
+  final double sweepFEnd;
 
   SpeakerInfo? get currentSpeaker {
     if (currentSpeakerIndex < speakers.length) {
@@ -263,6 +271,8 @@ class MeasurementSessionInfo extends Equatable {
     List<MicrophoneInfo>? microphones,
     int? currentSpeakerIndex,
     double? audioDurationSeconds,
+    double? sweepFStart,
+    double? sweepFEnd,
   }) {
     return MeasurementSessionInfo(
       sessionId: sessionId ?? this.sessionId,
@@ -272,6 +282,8 @@ class MeasurementSessionInfo extends Equatable {
       microphones: microphones ?? this.microphones,
       currentSpeakerIndex: currentSpeakerIndex ?? this.currentSpeakerIndex,
       audioDurationSeconds: audioDurationSeconds ?? this.audioDurationSeconds,
+      sweepFStart: sweepFStart ?? this.sweepFStart,
+      sweepFEnd: sweepFEnd ?? this.sweepFEnd,
     );
   }
 
@@ -284,5 +296,7 @@ class MeasurementSessionInfo extends Equatable {
     microphones,
     currentSpeakerIndex,
     audioDurationSeconds,
+    sweepFStart,
+    sweepFEnd,
   ];
 }

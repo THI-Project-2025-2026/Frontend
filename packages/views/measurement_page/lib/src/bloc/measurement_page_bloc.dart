@@ -34,6 +34,7 @@ class MeasurementPageBloc
     on<MeasurementTimelineAdvanced>(_onTimelineAdvanced);
     on<MeasurementTimelineStepBack>(_onTimelineStepBack);
     on<MeasurementRoomPlanReceived>(_onRoomPlanReceived);
+    on<MeasurementProfileChanged>(_onProfileChanged);
     on<MeasurementSweepStartRequested>(_onSweepStartRequested);
     on<MeasurementSweepCancelled>(_onSweepCancelled);
     on<MeasurementJobCreated>(_onJobCreated);
@@ -407,6 +408,17 @@ class MeasurementPageBloc
     );
   }
 
+  void _onProfileChanged(
+    MeasurementProfileChanged event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint(
+      '[MeasurementPageBloc] Profile changed to: ${event.profile.id} '
+      '(${event.profile.sweepFStart}Hz - ${event.profile.sweepFEnd}Hz)',
+    );
+    emit(state.copyWith(measurementProfile: event.profile));
+  }
+
   String _generateRequestId() {
     return DateTime.now().microsecondsSinceEpoch.toString();
   }
@@ -575,12 +587,18 @@ class MeasurementPageBloc
       debugPrint(
         '[MeasurementPageBloc] Adding MeasurementSessionCreated event',
       );
+      debugPrint(
+        '[MeasurementPageBloc] Using profile: ${state.measurementProfile.id} '
+        '(${state.measurementProfile.sweepFStart}Hz - ${state.measurementProfile.sweepFEnd}Hz)',
+      );
       _sessionBloc!.add(
         MeasurementSessionCreated(
           jobId: event.jobId,
           lobbyId: state.lobbyId,
           speakers: speakers,
           microphones: microphones,
+          sweepFStart: state.measurementProfile.sweepFStart,
+          sweepFEnd: state.measurementProfile.sweepFEnd,
         ),
       );
 

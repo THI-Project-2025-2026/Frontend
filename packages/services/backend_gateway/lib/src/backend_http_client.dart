@@ -30,16 +30,23 @@ class BackendHttpClient {
   ///
   /// Returns a URL that can be used directly for audio playback on web,
   /// or for downloading the file on native platforms.
+  ///
+  /// [sweepFStart] and [sweepFEnd] define the frequency range of the
+  /// measurement sweep in Hz.
   Uri getMeasurementAudioUri({
     String? sessionId,
     int sampleRate = 48000,
     String format = 'wav',
+    double sweepFStart = 20.0,
+    double sweepFEnd = 20000.0,
   }) {
     return Uri.parse('$_baseUrl/v1/measurement/audio').replace(
       queryParameters: {
         if (sessionId != null) 'session_id': sessionId,
         'sample_rate': sampleRate.toString(),
         'format': format,
+        'sweep_f_start': sweepFStart.toString(),
+        'sweep_f_end': sweepFEnd.toString(),
       },
     );
   }
@@ -48,13 +55,20 @@ class BackendHttpClient {
   ///
   /// Returns a [DownloadedAudio] containing the audio bytes and validation info.
   /// Throws an exception if the download fails or hash validation fails.
+  ///
+  /// [sweepFStart] and [sweepFEnd] define the frequency range of the
+  /// measurement sweep in Hz.
   Future<DownloadedAudio> downloadMeasurementAudio({
     String? sessionId,
     int sampleRate = 48000,
+    double sweepFStart = 20.0,
+    double sweepFEnd = 20000.0,
   }) async {
     final uri = getMeasurementAudioUri(
       sessionId: sessionId,
       sampleRate: sampleRate,
+      sweepFStart: sweepFStart,
+      sweepFEnd: sweepFEnd,
     );
 
     debugPrint('[BackendHttpClient] Downloading measurement audio from: $uri');

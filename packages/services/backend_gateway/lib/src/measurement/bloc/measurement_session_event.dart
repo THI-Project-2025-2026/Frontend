@@ -15,6 +15,8 @@ class MeasurementSessionCreated extends MeasurementSessionEvent {
     required this.lobbyId,
     required this.speakers,
     required this.microphones,
+    this.sweepFStart = 20.0,
+    this.sweepFEnd = 20000.0,
   });
 
   final String jobId;
@@ -22,8 +24,21 @@ class MeasurementSessionCreated extends MeasurementSessionEvent {
   final List<SpeakerInfo> speakers;
   final List<MicrophoneInfo> microphones;
 
+  /// Start frequency of the measurement sweep in Hz.
+  final double sweepFStart;
+
+  /// End frequency of the measurement sweep in Hz.
+  final double sweepFEnd;
+
   @override
-  List<Object?> get props => [jobId, lobbyId, speakers, microphones];
+  List<Object?> get props => [
+    jobId,
+    lobbyId,
+    speakers,
+    microphones,
+    sweepFStart,
+    sweepFEnd,
+  ];
 }
 
 /// Start measurement for the next speaker.

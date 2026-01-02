@@ -257,6 +257,7 @@ class MeasurementPageState {
     this.currentDeviceId = '',
     this.sharedRoomPlan,
     this.sharedRoomPlanVersion = 0,
+    this.measurementProfile = MeasurementProfile.highEnd,
     this.sweepStatus = SweepStatus.idle,
     this.jobId,
     this.audioHash,
@@ -280,6 +281,9 @@ class MeasurementPageState {
   final String currentDeviceId;
   final Map<String, dynamic>? sharedRoomPlan;
   final int sharedRoomPlanVersion;
+
+  /// The selected measurement profile (affects sweep frequency range).
+  final MeasurementProfile measurementProfile;
   final SweepStatus sweepStatus;
   final String? jobId;
   final String? audioHash;
@@ -335,6 +339,7 @@ class MeasurementPageState {
     String? currentDeviceId,
     Map<String, dynamic>? sharedRoomPlan,
     int? sharedRoomPlanVersion,
+    MeasurementProfile? measurementProfile,
     SweepStatus? sweepStatus,
     String? jobId,
     String? audioHash,
@@ -358,6 +363,7 @@ class MeasurementPageState {
       sharedRoomPlan: sharedRoomPlan ?? this.sharedRoomPlan,
       sharedRoomPlanVersion:
           sharedRoomPlanVersion ?? this.sharedRoomPlanVersion,
+      measurementProfile: measurementProfile ?? this.measurementProfile,
       sweepStatus: sweepStatus ?? this.sweepStatus,
       jobId: jobId ?? this.jobId,
       audioHash: audioHash ?? this.audioHash,

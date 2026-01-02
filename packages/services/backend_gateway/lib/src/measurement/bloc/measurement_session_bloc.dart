@@ -319,6 +319,8 @@ class MeasurementSessionBloc
         microphones: event.microphones,
         audioDurationSeconds:
             (data['audio_duration_seconds'] as num?)?.toDouble() ?? 15.0,
+        sweepFStart: event.sweepFStart,
+        sweepFEnd: event.sweepFEnd,
       );
 
       _log.info(
@@ -547,9 +549,15 @@ class MeasurementSessionBloc
       _log.info(_tag, 'Step 5: Downloading audio file');
       emit(state.copyWith(phase: MeasurementPhase.downloadingAudio));
 
+      // Get sweep frequency parameters from session info
+      final sweepFStart = state.sessionInfo?.sweepFStart ?? 20.0;
+      final sweepFEnd = state.sessionInfo?.sweepFEnd ?? 20000.0;
+
       final audioPath = await _playbackService.downloadMeasurementAudio(
         httpClient: _httpClient,
         sessionId: event.sessionId,
+        sweepFStart: sweepFStart,
+        sweepFEnd: sweepFEnd,
       );
 
       // Capture the audio hash for later use in analysis
