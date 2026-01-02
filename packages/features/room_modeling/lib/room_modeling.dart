@@ -2,7 +2,12 @@ export 'src/room_modeling_widget.dart';
 export 'src/bloc/room_modeling_bloc.dart';
 export 'src/bloc/room_modeling_event.dart';
 export 'src/bloc/room_modeling_state.dart'
-    show RoomModelingState, RoomModelingStep, RoomModelingTool;
+    show
+        RoomModelingState,
+        RoomModelingStep,
+        RoomModelingTool,
+        AcousticMaterial,
+        RoomMaterials;
 export 'src/storage/room_plan_exporter.dart' show RoomPlanExporter;
 export 'src/storage/room_plan_importer.dart'
     show RoomPlanImporter, RoomPlanImportResult;

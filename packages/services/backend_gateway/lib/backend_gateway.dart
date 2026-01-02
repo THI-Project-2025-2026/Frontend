@@ -4,6 +4,7 @@ export 'src/gateway_connection_repository.dart';
 export 'src/gateway_config.dart';
 export 'src/gateway_envelope.dart';
 export 'src/simulation/simulation_reference_repository.dart';
+export 'src/simulation/simulation_materials_repository.dart';
 
 // Measurement session exports
 export 'src/measurement/bloc/measurement_session_bloc.dart';

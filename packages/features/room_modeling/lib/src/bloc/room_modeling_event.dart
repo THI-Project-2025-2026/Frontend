@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'room_modeling_state.dart';
+import 'room_modeling_state.dart'
+    show RoomModelingTool, RoomModelingStep, AcousticMaterial;
 import '../storage/room_plan_importer.dart';
 
 abstract class RoomModelingEvent extends Equatable {
@@ -137,4 +138,59 @@ class RoomPlanImported extends RoomModelingEvent {
 
   @override
   List<Object?> get props => [plan];
+}
+
+/// Request to load available materials from backend.
+class LoadMaterials extends RoomModelingEvent {
+  const LoadMaterials();
+}
+
+/// Provides the loaded materials to the bloc.
+class MaterialsLoaded extends RoomModelingEvent {
+  final List<AcousticMaterial> materials;
+
+  const MaterialsLoaded(this.materials);
+
+  @override
+  List<Object?> get props => [materials];
+}
+
+/// Reports a material loading error.
+class MaterialsLoadFailed extends RoomModelingEvent {
+  final String error;
+
+  const MaterialsLoadFailed(this.error);
+
+  @override
+  List<Object?> get props => [error];
+}
+
+/// Change the wall material selection.
+class WallMaterialChanged extends RoomModelingEvent {
+  final AcousticMaterial? material;
+
+  const WallMaterialChanged(this.material);
+
+  @override
+  List<Object?> get props => [material];
+}
+
+/// Change the floor material selection.
+class FloorMaterialChanged extends RoomModelingEvent {
+  final AcousticMaterial? material;
+
+  const FloorMaterialChanged(this.material);
+
+  @override
+  List<Object?> get props => [material];
+}
+
+/// Change the ceiling material selection.
+class CeilingMaterialChanged extends RoomModelingEvent {
+  final AcousticMaterial? material;
+
+  const CeilingMaterialChanged(this.material);
+
+  @override
+  List<Object?> get props => [material];
 }

@@ -406,7 +406,10 @@
             }
         },
         "structure": {
-            "options_title": "Raumhöhe",
+            "options_title": "Raumstruktur",
+            "wall_material_label": "Wandmaterial",
+            "floor_material_label": "Bodenmaterial",
+            "ceiling_material_label": "Deckenmaterial",
             "room_height_label": "Deckenhöhe",
             "room_height_helper": "Standard: {value} m"
         },

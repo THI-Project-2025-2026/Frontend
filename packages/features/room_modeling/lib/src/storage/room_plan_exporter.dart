@@ -155,11 +155,28 @@ class RoomPlanExporter {
       'ceiling': {'color': ceilingColor, 'height': state.roomHeightMeters},
     };
 
+    // Build materials map for simulation
+    final materials = <String, dynamic>{};
+    final wallMaterial = state.roomMaterials.wallMaterial;
+    final floorMaterial = state.roomMaterials.floorMaterial;
+    final ceilingMaterial = state.roomMaterials.ceilingMaterial;
+
+    if (wallMaterial != null) {
+      materials['wall'] = {'material_id': wallMaterial.id};
+    }
+    if (floorMaterial != null) {
+      materials['floor'] = {'material_id': floorMaterial.id};
+    }
+    if (ceilingMaterial != null) {
+      materials['ceiling'] = {'material_id': ceilingMaterial.id};
+    }
+
     return {
       'version': version,
       'rooms': [room],
       'sources': sources,
       'microphones': microphones,
+      'materials': materials,
       'metadata': {'created': now, 'modified': now},
     };
   }

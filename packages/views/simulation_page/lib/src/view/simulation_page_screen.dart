@@ -22,8 +22,12 @@ class SimulationPageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gatewayBloc = GetIt.instance<GatewayConnectionBloc>();
     final gatewayConfig = GetIt.instance<GatewayConfig>();
+    final httpClient = BackendHttpClient(config: gatewayConfig);
     final referenceRepository = SimulationReferenceRepository(
-      httpClient: BackendHttpClient(config: gatewayConfig),
+      httpClient: httpClient,
+    );
+    final materialsRepository = SimulationMaterialsRepository(
+      httpClient: httpClient,
     );
     return MultiBlocProvider(
       providers: [
@@ -35,13 +39,15 @@ class SimulationPageScreen extends StatelessWidget {
         BlocProvider(create: (_) => RoomModelingBloc()),
         BlocProvider.value(value: gatewayBloc),
       ],
-      child: const _SimulationPageView(),
+      child: _SimulationPageView(materialsRepository: materialsRepository),
     );
   }
 }
 
 class _SimulationPageView extends StatefulWidget {
-  const _SimulationPageView();
+  const _SimulationPageView({required this.materialsRepository});
+
+  final SimulationMaterialsRepository materialsRepository;
 
   @override
   State<_SimulationPageView> createState() => _SimulationPageViewState();
@@ -53,6 +59,33 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
   bool _isSimulationDialogShowing = false;
   final GatewayConnectionRepository _gatewayRepository =
       GetIt.instance<GatewayConnectionRepository>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterials();
+  }
+
+  Future<void> _loadMaterials() async {
+    final roomBloc = context.read<RoomModelingBloc>();
+    roomBloc.add(const LoadMaterials());
+    try {
+      final materials = await widget.materialsRepository.fetchMaterials();
+      final acousticMaterials = materials
+          .map(
+            (m) => AcousticMaterial(
+              id: m.id,
+              displayName: m.displayName,
+              absorption: m.absorption,
+              scattering: m.scattering,
+            ),
+          )
+          .toList();
+      roomBloc.add(MaterialsLoaded(acousticMaterials));
+    } catch (e) {
+      roomBloc.add(MaterialsLoadFailed(e.toString()));
+    }
+  }
 
   @override
   void dispose() {

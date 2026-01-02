@@ -406,7 +406,10 @@
             }
         },
         "structure": {
-            "options_title": "Room height",
+            "options_title": "Room structure",
+            "wall_material_label": "Wall material",
+            "floor_material_label": "Floor material",
+            "ceiling_material_label": "Ceiling material",
             "room_height_label": "Ceiling height",
             "room_height_helper": "Default: {value} m"
         },

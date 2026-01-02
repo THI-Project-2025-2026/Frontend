@@ -32,6 +32,10 @@ class MeasurementPageScreen extends StatelessWidget {
     // Use the actual device ID from gateway config - this is the same ID
     // the backend uses to identify this device
     final localDeviceId = gatewayConfig.deviceId;
+    // Materials repository for acoustic material selection
+    final materialsRepository = SimulationMaterialsRepository(
+      httpClient: httpClient,
+    );
 
     return MultiBlocProvider(
       providers: [
@@ -45,7 +49,7 @@ class MeasurementPageScreen extends StatelessWidget {
         ),
         BlocProvider(create: (_) => RoomModelingBloc()),
       ],
-      child: const _MeasurementPageView(),
+      child: _MeasurementPageView(materialsRepository: materialsRepository),
     );
   }
 }
@@ -272,7 +276,9 @@ const List<Color> _microphoneColors = [
 ];
 
 class _MeasurementPageView extends StatefulWidget {
-  const _MeasurementPageView();
+  const _MeasurementPageView({required this.materialsRepository});
+
+  final SimulationMaterialsRepository materialsRepository;
 
   @override
   State<_MeasurementPageView> createState() => _MeasurementPageViewState();
@@ -289,6 +295,29 @@ class _MeasurementPageViewState extends State<_MeasurementPageView> {
     debugPrint('[NAV_DEBUG] _MeasurementPageViewState.initState called');
     // Request all necessary permissions when the page opens
     _requestPermissions();
+    // Load acoustic materials
+    _loadMaterials();
+  }
+
+  Future<void> _loadMaterials() async {
+    final roomBloc = context.read<RoomModelingBloc>();
+    roomBloc.add(const LoadMaterials());
+    try {
+      final materials = await widget.materialsRepository.fetchMaterials();
+      final acousticMaterials = materials
+          .map(
+            (m) => AcousticMaterial(
+              id: m.id,
+              displayName: m.displayName,
+              absorption: m.absorption,
+              scattering: m.scattering,
+            ),
+          )
+          .toList();
+      roomBloc.add(MaterialsLoaded(acousticMaterials));
+    } catch (e) {
+      roomBloc.add(MaterialsLoadFailed(e.toString()));
+    }
   }
 
   @override

@@ -14,6 +14,67 @@ class ToolsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<RoomModelingBloc, RoomModelingState>(
       builder: (context, state) {
+        if (state.currentStep == RoomModelingStep.structure) {
+          // Structure step: use scrollable layout to handle overflow when wall is selected
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                RoomModelingL10n.text('tools.title'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSectionTitle(
+                        context,
+                        RoomModelingL10n.text('tools.construction_title'),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Text(
+                          RoomModelingL10n.text('tools.construction_helper'),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _RoomStructureOptions(roomHeight: state.roomHeightMeters),
+                      if (state.selectedWallId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: SonalyzeButton(
+                            onPressed: () {
+                              context
+                                  .read<RoomModelingBloc>()
+                                  .add(const DeleteSelectedWall());
+                            },
+                            variant: SonalyzeButtonVariant.filled,
+                            child: Text(
+                              RoomModelingL10n.text('tools.delete_wall'),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      SonalyzeButton(
+                        onPressed: () {
+                          context
+                              .read<RoomModelingBloc>()
+                              .add(const ClearRoom());
+                        },
+                        variant: SonalyzeButtonVariant.text,
+                        child: Text(RoomModelingL10n.text('tools.clear_room')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        // Furnishing and Audio steps: use existing layout
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -22,36 +83,7 @@ class ToolsPanel extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            if (state.currentStep == RoomModelingStep.structure) ...[
-              _buildSectionTitle(
-                context,
-                RoomModelingL10n.text('tools.construction_title'),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  RoomModelingL10n.text('tools.construction_helper'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _RoomStructureOptions(roomHeight: state.roomHeightMeters),
-              if (state.selectedWallId != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: SonalyzeButton(
-                    onPressed: () {
-                      context
-                          .read<RoomModelingBloc>()
-                          .add(const DeleteSelectedWall());
-                    },
-                    variant: SonalyzeButtonVariant.filled,
-                    child: Text(
-                      RoomModelingL10n.text('tools.delete_wall'),
-                    ),
-                  ),
-                ),
-            ] else if (state.currentStep == RoomModelingStep.furnishing) ...[
+            if (state.currentStep == RoomModelingStep.furnishing) ...[
               _buildFurnitureMenu(context, state),
               ..._buildSelectedFurnitureEditor(context, state),
             ] else ...[
@@ -703,35 +735,119 @@ class _RoomStructureOptionsState extends State<_RoomStructureOptions> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          RoomModelingL10n.text('structure.options_title'),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: RoomModelingColors.color('section.title'),
-              ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _heightController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            labelText: RoomModelingL10n.text('structure.room_height_label'),
-            suffixText: RoomModelingL10n.metersSuffix(),
-            helperText: RoomModelingL10n.text('structure.room_height_helper')
-                .replaceAll(
-              '{value}',
-              RoomModelingState.defaultRoomHeightMeters.toStringAsFixed(1),
+    return BlocBuilder<RoomModelingBloc, RoomModelingState>(
+      buildWhen: (prev, curr) =>
+          prev.availableMaterials != curr.availableMaterials ||
+          prev.roomMaterials != curr.roomMaterials ||
+          prev.isMaterialsLoading != curr.isMaterialsLoading,
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              RoomModelingL10n.text('structure.options_title'),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: RoomModelingColors.color('section.title'),
+                  ),
             ),
-            border: const OutlineInputBorder(),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            const SizedBox(height: 8),
+            // Material Selection Section
+            if (state.availableMaterials.isNotEmpty) ...[
+              _buildMaterialDropdown(
+                context,
+                label: RoomModelingL10n.text('structure.wall_material_label'),
+                value: state.roomMaterials.wallMaterial,
+                materials: state.availableMaterials,
+                onChanged: (material) {
+                  context
+                      .read<RoomModelingBloc>()
+                      .add(WallMaterialChanged(material));
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildMaterialDropdown(
+                context,
+                label: RoomModelingL10n.text('structure.floor_material_label'),
+                value: state.roomMaterials.floorMaterial,
+                materials: state.availableMaterials,
+                onChanged: (material) {
+                  context
+                      .read<RoomModelingBloc>()
+                      .add(FloorMaterialChanged(material));
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildMaterialDropdown(
+                context,
+                label:
+                    RoomModelingL10n.text('structure.ceiling_material_label'),
+                value: state.roomMaterials.ceilingMaterial,
+                materials: state.availableMaterials,
+                onChanged: (material) {
+                  context
+                      .read<RoomModelingBloc>()
+                      .add(CeilingMaterialChanged(material));
+                },
+              ),
+              const SizedBox(height: 12),
+            ] else if (state.isMaterialsLoading) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+            ],
+            // Room Height Field
+            TextField(
+              controller: _heightController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: RoomModelingL10n.text('structure.room_height_label'),
+                suffixText: RoomModelingL10n.metersSuffix(),
+                helperText:
+                    RoomModelingL10n.text('structure.room_height_helper')
+                        .replaceAll(
+                  '{value}',
+                  RoomModelingState.defaultRoomHeightMeters.toStringAsFixed(1),
+                ),
+                border: const OutlineInputBorder(),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: _handleHeightChanged,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMaterialDropdown(
+    BuildContext context, {
+    required String label,
+    required AcousticMaterial? value,
+    required List<AcousticMaterial> materials,
+    required ValueChanged<AcousticMaterial?> onChanged,
+  }) {
+    return DropdownButtonFormField<AcousticMaterial>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      isExpanded: true,
+      items: materials.map((material) {
+        return DropdownMenuItem<AcousticMaterial>(
+          value: material,
+          child: Text(
+            material.displayName,
+            overflow: TextOverflow.ellipsis,
           ),
-          onChanged: _handleHeightChanged,
-        ),
-      ],
+        );
+      }).toList(),
+      onChanged: onChanged,
     );
   }
 }

@@ -33,6 +33,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<ClearRoom>(_onClearRoom);
     on<DeviceHighlightsUpdated>(_onDeviceHighlightsUpdated);
     on<RoomPlanImported>(_onRoomPlanImported);
+    // Material events
+    on<LoadMaterials>(_onLoadMaterials);
+    on<MaterialsLoaded>(_onMaterialsLoaded);
+    on<MaterialsLoadFailed>(_onMaterialsLoadFailed);
+    on<WallMaterialChanged>(_onWallMaterialChanged);
+    on<FloorMaterialChanged>(_onFloorMaterialChanged);
+    on<CeilingMaterialChanged>(_onCeilingMaterialChanged);
   }
 
   @override
@@ -1531,5 +1538,89 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       translated.dx * cosA - translated.dy * sinA,
       translated.dx * sinA + translated.dy * cosA,
     );
+  }
+
+  // Material event handlers
+
+  void _onLoadMaterials(LoadMaterials event, Emitter<RoomModelingState> emit) {
+    emit(state.copyWith(
+      isMaterialsLoading: true,
+      clearMaterialsError: true,
+    ));
+  }
+
+  void _onMaterialsLoaded(
+    MaterialsLoaded event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    // Set default selections if not already set
+    final materials = event.materials;
+    AcousticMaterial? defaultWall = state.roomMaterials.wallMaterial;
+    AcousticMaterial? defaultFloor = state.roomMaterials.floorMaterial;
+    AcousticMaterial? defaultCeiling = state.roomMaterials.ceilingMaterial;
+
+    if (materials.isNotEmpty) {
+      // Find reasonable defaults
+      final findMaterial =
+          (String id) => materials.where((m) => m.id == id).firstOrNull;
+
+      defaultWall ??=
+          findMaterial('plaster') ?? findMaterial('default') ?? materials.first;
+      defaultFloor ??= findMaterial('hardwood') ??
+          findMaterial('default') ??
+          materials.first;
+      defaultCeiling ??=
+          findMaterial('plaster') ?? findMaterial('default') ?? materials.first;
+    }
+
+    emit(state.copyWith(
+      availableMaterials: materials,
+      roomMaterials: RoomMaterials(
+        wallMaterial: defaultWall,
+        floorMaterial: defaultFloor,
+        ceilingMaterial: defaultCeiling,
+      ),
+      isMaterialsLoading: false,
+      clearMaterialsError: true,
+    ));
+  }
+
+  void _onMaterialsLoadFailed(
+    MaterialsLoadFailed event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      isMaterialsLoading: false,
+      materialsError: event.error,
+    ));
+  }
+
+  void _onWallMaterialChanged(
+    WallMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials: state.roomMaterials.copyWith(wallMaterial: event.material),
+    ));
+  }
+
+  void _onFloorMaterialChanged(
+    FloorMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials:
+          state.roomMaterials.copyWith(floorMaterial: event.material),
+    ));
+  }
+
+  void _onCeilingMaterialChanged(
+    CeilingMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials:
+          state.roomMaterials.copyWith(ceilingMaterial: event.material),
+    ));
   }
 }

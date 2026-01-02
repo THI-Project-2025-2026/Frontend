@@ -3,6 +3,64 @@ import 'package:flutter/material.dart';
 import '../models/wall.dart';
 import '../models/furniture.dart';
 
+/// Represents an acoustic material with its properties.
+class AcousticMaterial extends Equatable {
+  final String id;
+  final String displayName;
+  final double absorption;
+  final double scattering;
+
+  const AcousticMaterial({
+    required this.id,
+    required this.displayName,
+    required this.absorption,
+    required this.scattering,
+  });
+
+  /// Default material when none is selected
+  static const AcousticMaterial defaultMaterial = AcousticMaterial(
+    id: 'default',
+    displayName: 'Default',
+    absorption: 0.20,
+    scattering: 0.05,
+  );
+
+  @override
+  List<Object?> get props => [id, displayName, absorption, scattering];
+}
+
+/// Holds the selected materials for walls, floor, and ceiling.
+class RoomMaterials extends Equatable {
+  final AcousticMaterial? wallMaterial;
+  final AcousticMaterial? floorMaterial;
+  final AcousticMaterial? ceilingMaterial;
+
+  const RoomMaterials({
+    this.wallMaterial,
+    this.floorMaterial,
+    this.ceilingMaterial,
+  });
+
+  RoomMaterials copyWith({
+    AcousticMaterial? wallMaterial,
+    AcousticMaterial? floorMaterial,
+    AcousticMaterial? ceilingMaterial,
+    bool clearWall = false,
+    bool clearFloor = false,
+    bool clearCeiling = false,
+  }) {
+    return RoomMaterials(
+      wallMaterial: clearWall ? null : (wallMaterial ?? this.wallMaterial),
+      floorMaterial: clearFloor ? null : (floorMaterial ?? this.floorMaterial),
+      ceilingMaterial:
+          clearCeiling ? null : (ceilingMaterial ?? this.ceilingMaterial),
+    );
+  }
+
+  @override
+  List<Object?> get props => [wallMaterial, floorMaterial, ceilingMaterial];
+}
+
 enum RoomModelingTool {
   wall,
   door,
@@ -62,6 +120,12 @@ class RoomModelingState extends Equatable {
   final double roomHeightMeters;
   final Map<String, Color> deviceHighlights;
 
+  // Material selection state
+  final List<AcousticMaterial> availableMaterials;
+  final RoomMaterials roomMaterials;
+  final bool isMaterialsLoading;
+  final String? materialsError;
+
   const RoomModelingState({
     this.walls = const [],
     this.furniture = const [],
@@ -81,6 +145,10 @@ class RoomModelingState extends Equatable {
     this.roomPolygon,
     this.roomHeightMeters = defaultRoomHeightMeters,
     this.deviceHighlights = const {},
+    this.availableMaterials = const [],
+    this.roomMaterials = const RoomMaterials(),
+    this.isMaterialsLoading = false,
+    this.materialsError,
   });
 
   RoomModelingState copyWith({
@@ -102,10 +170,15 @@ class RoomModelingState extends Equatable {
     List<Offset>? roomPolygon,
     double? roomHeightMeters,
     Map<String, Color>? deviceHighlights,
+    List<AcousticMaterial>? availableMaterials,
+    RoomMaterials? roomMaterials,
+    bool? isMaterialsLoading,
+    String? materialsError,
     bool clearDrag = false,
     bool clearSelection = false,
     bool clearSnapGuide = false,
     bool clearHighlights = false,
+    bool clearMaterialsError = false,
   }) {
     return RoomModelingState(
       walls: walls ?? this.walls,
@@ -140,6 +213,11 @@ class RoomModelingState extends Equatable {
       deviceHighlights: clearHighlights
           ? const {}
           : (deviceHighlights ?? this.deviceHighlights),
+      availableMaterials: availableMaterials ?? this.availableMaterials,
+      roomMaterials: roomMaterials ?? this.roomMaterials,
+      isMaterialsLoading: isMaterialsLoading ?? this.isMaterialsLoading,
+      materialsError:
+          clearMaterialsError ? null : (materialsError ?? this.materialsError),
     );
   }
 
@@ -163,6 +241,10 @@ class RoomModelingState extends Equatable {
         roomPolygon,
         roomHeightMeters,
         deviceHighlights,
+        availableMaterials,
+        roomMaterials,
+        isMaterialsLoading,
+        materialsError,
       ];
 }
 
