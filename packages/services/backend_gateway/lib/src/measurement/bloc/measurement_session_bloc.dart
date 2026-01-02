@@ -59,6 +59,7 @@ class MeasurementSessionBloc
     // Event handlers
     on<MeasurementSessionCreated>(_onSessionCreated);
     on<MeasurementSessionJoined>(_onSessionJoined);
+    on<MeasurementSessionJoinedAsSpeaker>(_onSessionJoinedAsSpeaker);
     on<MeasurementSessionStartSpeaker>(_onStartSpeaker);
     on<MeasurementSessionClientReady>(_onClientReady);
     on<MeasurementSessionSpeakerFinished>(_onSpeakerFinished);
@@ -201,6 +202,7 @@ class MeasurementSessionBloc
             completedSpeakers: List<String>.from(
               data['completed_speakers'] ?? [],
             ),
+            audioHash: data['audio_hash'] as String?,
           ),
         );
         break;
@@ -398,6 +400,54 @@ class MeasurementSessionBloc
 
     // Step 3: Immediately send ready signal as microphone
     _log.info(_tag, 'Step 3: Microphone sending ready signal');
+    add(const MeasurementSessionClientReady());
+  }
+
+  /// Handler for non-admin speaker devices joining an existing measurement session.
+  /// This is called when a speaker device receives measurement.start_measurement.
+  Future<void> _onSessionJoinedAsSpeaker(
+    MeasurementSessionJoinedAsSpeaker event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Joining existing measurement session as speaker',
+      data: {
+        'sessionId': event.sessionId,
+        'jobId': event.jobId,
+        'speakerSlotId': event.speakerSlotId,
+        'localDeviceId': _localDeviceId,
+      },
+    );
+
+    // Create minimal session info for speaker device
+    final sessionInfo = MeasurementSessionInfo(
+      sessionId: event.sessionId,
+      jobId: event.jobId,
+      lobbyId: '', // Not needed for speaker
+      speakers: [
+        SpeakerInfo(
+          deviceId: _localDeviceId,
+          slotId: event.speakerSlotId,
+          slotLabel: '',
+        ),
+      ],
+      microphones: [], // Not needed for speaker
+      audioDurationSeconds: 15.0, // Default
+    );
+
+    emit(
+      state.copyWith(
+        status: MeasurementSessionStatus.created,
+        sessionInfo: sessionInfo,
+        localRole: LocalMeasurementRole.speaker,
+        phase: MeasurementPhase.waitingReady,
+        isLocalReady: false,
+      ),
+    );
+
+    // Step 3: Speaker also sends ready signal
+    _log.info(_tag, 'Step 3: Speaker sending ready signal');
     add(const MeasurementSessionClientReady());
   }
 
@@ -603,7 +653,11 @@ class MeasurementSessionBloc
     final session = state.sessionInfo;
     if (session == null) return;
 
-    _log.info(_tag, 'Step 6: Sending audio ready confirmation');
+    _log.info(
+      _tag,
+      'Step 6: Sending audio ready confirmation',
+      data: {'audioHash': state.audioHash},
+    );
 
     emit(state.copyWith(phase: MeasurementPhase.speakerConfirmed));
 
@@ -612,7 +666,11 @@ class MeasurementSessionBloc
       await _repository.sendJson({
         'event': 'measurement.speaker_audio_ready',
         'request_id': requestId,
-        'data': {'session_id': event.sessionId, 'device_id': _localDeviceId},
+        'data': {
+          'session_id': event.sessionId,
+          'device_id': _localDeviceId,
+          'audio_hash': state.audioHash,
+        },
       });
       _log.debug(_tag, 'Audio ready confirmation sent');
     } catch (e, stackTrace) {
@@ -926,14 +984,19 @@ class MeasurementSessionBloc
       data: {
         'sessionId': event.sessionId,
         'completedSpeakers': event.completedSpeakers,
+        'audioHash': event.audioHash,
       },
     );
+
+    // Update audioHash if provided (for non-speaker devices that didn't download audio)
+    final newAudioHash = event.audioHash ?? state.audioHash;
 
     emit(
       state.copyWith(
         status: MeasurementSessionStatus.completed,
         phase: MeasurementPhase.completed,
         localRole: LocalMeasurementRole.none,
+        audioHash: newAudioHash,
       ),
     );
   }

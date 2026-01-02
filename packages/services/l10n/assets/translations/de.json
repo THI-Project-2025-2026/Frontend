@@ -230,6 +230,7 @@
         "results": {
             "title": "Impulsantwort-Analyse",
             "subtitle": "Akustische Kennzahlen aus der gemessenen Impulsantwort berechnet.",
+            "no_metrics": "Keine Messwerte verfügbar",
             "rt60_desc": "Nachhallzeit (60 dB Abfall)",
             "edt_desc": "Frühe Abklingzeit",
             "sti_desc": "Sprachübertragungsindex",
@@ -238,6 +239,13 @@
             "d50_desc": "Definition (Sprachverständlichkeit)",
             "drr_desc": "Direkt-zu-Nachhall-Verhältnis",
             "snr_desc": "Signal-Rausch-Verhältnis"
+        },
+        "profile": {
+            "label": "Messprofil",
+            "high_end": "High-End-Ausrüstung",
+            "high_end_description": "Voller Frequenzbereich (20 Hz – 20 kHz) für professionelle Audio-Ausrüstung mit hochwertigen Lautsprechern und Mikrofonen.",
+            "smartphone": "Smartphone",
+            "smartphone_description": "Optimierter Frequenzbereich (200 Hz – 12 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
         }
     },
     "simulation_page": {

@@ -27,144 +27,91 @@ enum SweepStatus {
   failed,
 }
 
-/// Analysis results from the backend measurement processing.
-class AnalysisResults {
-  const AnalysisResults({
-    required this.samplerateHz,
-    required this.rt,
-    required this.clarity,
-    required this.drr,
-    required this.quality,
-    required this.frequencyResponse,
-    required this.sti,
+/// A single displayable metric from the backend.
+///
+/// This is a universal format that allows the backend to define what metrics
+/// to display without the frontend needing to know about specific metric types.
+class DisplayMetric {
+  const DisplayMetric({
+    required this.key,
+    required this.label,
+    required this.value,
+    required this.formattedValue,
+    this.unit,
+    this.description,
+    this.icon,
+    this.category,
+    this.sortOrder = 0,
   });
 
+  factory DisplayMetric.fromJson(Map<String, dynamic> json) {
+    return DisplayMetric(
+      key: json['key'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      value: (json['value'] as num?)?.toDouble() ?? 0.0,
+      formattedValue: json['formatted_value'] as String? ?? '',
+      unit: json['unit'] as String?,
+      description: json['description'] as String?,
+      icon: json['icon'] as String?,
+      category: json['category'] as String?,
+      sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Unique identifier for this metric (e.g., 'rt60', 'sti', 'c50')
+  final String key;
+
+  /// Human-readable label (e.g., 'RT60', 'Speech Transmission Index')
+  final String label;
+
+  /// Raw numeric value for calculations/comparisons
+  final double value;
+
+  /// Pre-formatted value string from backend (e.g., '1.23', '0.85')
+  final String formattedValue;
+
+  /// Unit to display after value (e.g., 's', 'dB', '%')
+  final String? unit;
+
+  /// Optional description/tooltip text
+  final String? description;
+
+  /// Optional icon identifier (mapped to Icons on frontend)
+  final String? icon;
+
+  /// Optional category for grouping (e.g., 'reverberation', 'clarity', 'quality')
+  final String? category;
+
+  /// Order for display sorting
+  final int sortOrder;
+}
+
+/// Analysis results from the backend measurement processing.
+///
+/// Uses a universal format where the backend defines what metrics to display.
+/// The frontend does not need to know about specific metric types.
+class AnalysisResults {
+  const AnalysisResults({required this.samplerateHz, required this.metrics});
+
   factory AnalysisResults.fromJson(Map<String, dynamic> json) {
-    // The 'sti' field from backend is a Map containing the actual STI value
-    final stiData = json['sti'];
-    double stiValue = 0.0;
-    if (stiData is Map<String, dynamic>) {
-      stiValue = (stiData['sti'] as num?)?.toDouble() ?? 0.0;
-    } else if (stiData is num) {
-      stiValue = stiData.toDouble();
-    }
+    final metricsJson = json['display_metrics'] as List<dynamic>? ?? [];
+    final metrics = metricsJson
+        .map((m) => DisplayMetric.fromJson(m as Map<String, dynamic>))
+        .toList();
+
+    // Sort metrics by sortOrder
+    metrics.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return AnalysisResults(
       samplerateHz: (json['samplerate_hz'] as num?)?.toInt() ?? 48000,
-      rt: RtMetrics.fromJson(json['rt'] as Map<String, dynamic>? ?? {}),
-      clarity: ClarityMetrics.fromJson(
-        json['clarity'] as Map<String, dynamic>? ?? {},
-      ),
-      drr: DrrMetrics.fromJson(json['drr'] as Map<String, dynamic>? ?? {}),
-      quality: QualityMetrics.fromJson(
-        json['quality'] as Map<String, dynamic>? ?? {},
-      ),
-      frequencyResponse: FrequencyResponseMetrics.fromJson(
-        json['frequency_response'] as Map<String, dynamic>? ?? {},
-      ),
-      sti: stiValue,
+      metrics: metrics,
     );
   }
 
   final int samplerateHz;
-  final RtMetrics rt;
-  final ClarityMetrics clarity;
-  final DrrMetrics drr;
-  final QualityMetrics quality;
-  final FrequencyResponseMetrics frequencyResponse;
-  final double sti;
-}
 
-/// Reverberation time metrics.
-class RtMetrics {
-  const RtMetrics({this.rt60 = 0.0, this.rt30 = 0.0, this.edt = 0.0});
-
-  factory RtMetrics.fromJson(Map<String, dynamic> json) {
-    return RtMetrics(
-      // Backend uses _s suffix for seconds
-      rt60: (json['rt60_s'] as num?)?.toDouble() ?? 0.0,
-      rt30: (json['t30_rt60_s'] as num?)?.toDouble() ?? 0.0,
-      edt: (json['edt_s'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-
-  final double rt60;
-  final double rt30;
-  final double edt;
-}
-
-/// Clarity and definition metrics.
-class ClarityMetrics {
-  const ClarityMetrics({
-    this.c50 = 0.0,
-    this.c80 = 0.0,
-    this.d50 = 0.0,
-    this.d80 = 0.0,
-  });
-
-  factory ClarityMetrics.fromJson(Map<String, dynamic> json) {
-    return ClarityMetrics(
-      // Backend uses _db suffix for dB values
-      c50: (json['c50_db'] as num?)?.toDouble() ?? 0.0,
-      c80: (json['c80_db'] as num?)?.toDouble() ?? 0.0,
-      d50: (json['d50'] as num?)?.toDouble() ?? 0.0,
-      d80: (json['d80'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-
-  final double c50;
-  final double c80;
-  final double d50;
-  final double d80;
-}
-
-/// Direct-to-reverberant ratio metrics.
-class DrrMetrics {
-  const DrrMetrics({this.drr = 0.0});
-
-  factory DrrMetrics.fromJson(Map<String, dynamic> json) {
-    // Backend uses _db suffix for dB values
-    return DrrMetrics(drr: (json['drr_db'] as num?)?.toDouble() ?? 0.0);
-  }
-
-  final double drr;
-}
-
-/// Signal quality metrics.
-class QualityMetrics {
-  const QualityMetrics({this.snr = 0.0, this.noiseFloor = 0.0});
-
-  factory QualityMetrics.fromJson(Map<String, dynamic> json) {
-    return QualityMetrics(
-      // Backend uses _db suffix for dB values
-      snr: (json['snr_db'] as num?)?.toDouble() ?? 0.0,
-      noiseFloor: (json['noise_floor_db'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-
-  final double snr;
-  final double noiseFloor;
-}
-
-/// Frequency response metrics.
-class FrequencyResponseMetrics {
-  const FrequencyResponseMetrics({
-    this.lowFreqEnergy = 0.0,
-    this.midFreqEnergy = 0.0,
-    this.highFreqEnergy = 0.0,
-  });
-
-  factory FrequencyResponseMetrics.fromJson(Map<String, dynamic> json) {
-    return FrequencyResponseMetrics(
-      lowFreqEnergy: (json['low_freq_energy'] as num?)?.toDouble() ?? 0.0,
-      midFreqEnergy: (json['mid_freq_energy'] as num?)?.toDouble() ?? 0.0,
-      highFreqEnergy: (json['high_freq_energy'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-
-  final double lowFreqEnergy;
-  final double midFreqEnergy;
-  final double highFreqEnergy;
+  /// Universal list of metrics to display - backend defines what's shown
+  final List<DisplayMetric> metrics;
 }
 
 /// Metadata for the measurement step timeline.

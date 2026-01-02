@@ -230,6 +230,7 @@
         "results": {
             "title": "Impulse Response Analysis",
             "subtitle": "Acoustic metrics calculated from the measured impulse response.",
+            "no_metrics": "No metrics available",
             "rt60_desc": "Reverberation time (60 dB decay)",
             "edt_desc": "Early decay time",
             "sti_desc": "Speech transmission index",
@@ -238,6 +239,13 @@
             "d50_desc": "Definition (speech intelligibility)",
             "drr_desc": "Direct-to-reverberant ratio",
             "snr_desc": "Signal-to-noise ratio"
+        },
+        "profile": {
+            "label": "Measurement Profile",
+            "high_end": "High-End Equipment",
+            "high_end_description": "Full frequency range (20 Hz – 20 kHz) for professional audio equipment with high-quality speakers and microphones.",
+            "smartphone": "Smartphone",
+            "smartphone_description": "Optimized frequency range (200 Hz – 12 kHz) for typical smartphone speakers and microphones."
         }
     },
     "simulation_page": {

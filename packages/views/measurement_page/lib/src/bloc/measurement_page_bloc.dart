@@ -644,16 +644,7 @@ class MeasurementPageBloc
       return;
     }
 
-    // Skip if this device is the speaker being measured
-    if (event.speakerDeviceId == _localDeviceId) {
-      debugPrint(
-        '[MeasurementPageBloc] We are the speaker device, session will be '
-        'managed by admin on this device',
-      );
-      return;
-    }
-
-    // Check if this device is a microphone (should participate in recording)
+    // Check what role this device has in the measurement
     final localDevice = state.devices.firstWhere(
       (d) => d.id == _localDeviceId,
       orElse: () => MeasurementDevice(
@@ -671,6 +662,52 @@ class MeasurementPageBloc
       '[MeasurementPageBloc] Local device role: ${localDevice.role}, '
       'slotId: ${localDevice.roleSlotId}',
     );
+
+    // Check if this device is the speaker being measured (non-admin speaker)
+    final isNonAdminSpeaker = event.speakerDeviceId == _localDeviceId;
+
+    if (isNonAdminSpeaker) {
+      // This device is the speaker but NOT the admin, so we need to create
+      // a session bloc to handle audio playback
+      debugPrint(
+        '[MeasurementPageBloc] We are the speaker device (non-admin), '
+        'creating session bloc for playback',
+      );
+
+      emit(
+        state.copyWith(jobId: event.jobId, sweepStatus: SweepStatus.running),
+      );
+
+      _sessionBloc = MeasurementSessionBloc(
+        repository: _repository,
+        gatewayBloc: _gatewayBloc,
+        httpClient: _httpClient,
+        localDeviceId: _localDeviceId,
+      );
+
+      // Listen to session status changes
+      _sessionSubscription = _sessionBloc!.stream.listen((sessionState) {
+        debugPrint(
+          '[MeasurementPageBloc] [Speaker] Session state changed: '
+          'status=${sessionState.status}, phase=${sessionState.phase}, '
+          'error=${sessionState.error}',
+        );
+        add(_SessionStateChanged(sessionState: sessionState));
+      });
+
+      // Join the existing session as a speaker
+      debugPrint(
+        '[MeasurementPageBloc] Joining measurement session as speaker',
+      );
+      _sessionBloc!.add(
+        MeasurementSessionJoinedAsSpeaker(
+          sessionId: event.sessionId,
+          jobId: event.jobId,
+          speakerSlotId: event.speakerSlotId,
+        ),
+      );
+      return;
+    }
 
     if (localDevice.role != MeasurementDeviceRole.microphone) {
       debugPrint(
@@ -878,8 +915,7 @@ class MeasurementPageBloc
   ) {
     debugPrint('[NAV_DEBUG] _onAnalysisResultsReceived called');
     debugPrint(
-      '[MeasurementPageBloc] Analysis complete - RT60: ${event.results.rt.rt60}s, '
-      'STI: ${event.results.sti}',
+      '[MeasurementPageBloc] Analysis complete - ${event.results.metrics.length} metrics received',
     );
 
     // Advance to results step (step 6 - "Review impulse results")

@@ -71,9 +71,25 @@ class MeasurementSessionCancelled extends MeasurementSessionEvent {
   const MeasurementSessionCancelled();
 }
 
-/// Join an existing measurement session (for non-admin devices like microphones).
+/// Join an existing measurement session (for non-admin microphone devices).
 class MeasurementSessionJoined extends MeasurementSessionEvent {
   const MeasurementSessionJoined({
+    required this.sessionId,
+    required this.jobId,
+    required this.speakerSlotId,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final String speakerSlotId;
+
+  @override
+  List<Object?> get props => [sessionId, jobId, speakerSlotId];
+}
+
+/// Join an existing measurement session as a speaker device (non-admin).
+class MeasurementSessionJoinedAsSpeaker extends MeasurementSessionEvent {
+  const MeasurementSessionJoinedAsSpeaker({
     required this.sessionId,
     required this.jobId,
     required this.speakerSlotId,
@@ -295,11 +311,13 @@ class _MeasurementSessionComplete extends MeasurementSessionEvent {
   const _MeasurementSessionComplete({
     required this.sessionId,
     required this.completedSpeakers,
+    this.audioHash,
   });
 
   final String sessionId;
   final List<String> completedSpeakers;
+  final String? audioHash;
 
   @override
-  List<Object?> get props => [sessionId, completedSpeakers];
+  List<Object?> get props => [sessionId, completedSpeakers, audioHash];
 }

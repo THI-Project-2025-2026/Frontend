@@ -1129,7 +1129,24 @@ class _DeviceDataRow extends StatelessWidget {
   }
 }
 
+/// Maps backend icon identifiers to Flutter Icons.
+IconData _mapIconName(String? iconName) {
+  return switch (iconName) {
+    'timer' => Icons.timer_outlined,
+    'speed' => Icons.speed_outlined,
+    'record_voice_over' => Icons.record_voice_over_outlined,
+    'hearing' => Icons.hearing_outlined,
+    'music_note' => Icons.music_note_outlined,
+    'graphic_eq' => Icons.graphic_eq_outlined,
+    'surround_sound' => Icons.surround_sound_outlined,
+    'signal_cellular_alt' => Icons.signal_cellular_alt_outlined,
+    _ => Icons.analytics_outlined,
+  };
+}
+
 /// Card displaying full analysis results on step 7 (Review impulse results).
+///
+/// Uses a universal format - renders whatever metrics the backend provides.
 class _AnalysisResultsCard extends StatelessWidget {
   const _AnalysisResultsCard({super.key, required this.results});
 
@@ -1181,93 +1198,39 @@ class _AnalysisResultsCard extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Main metrics grid
-          Wrap(
-            spacing: 24,
-            runSpacing: 20,
-            children: [
-              _ResultMetricTile(
-                label: 'RT60',
-                value: results.rt.rt60.toStringAsFixed(2),
-                unit: 's',
-                description: _tr(
-                  'measurement_page.results.rt60_desc',
-                  fallback: 'Reverberation time (60 dB decay)',
+          // Render metrics dynamically from universal format
+          if (results.metrics.isNotEmpty)
+            Wrap(
+              spacing: 24,
+              runSpacing: 20,
+              children: [
+                for (final metric in results.metrics)
+                  _ResultMetricTile(
+                    label: metric.label,
+                    value: metric.formattedValue,
+                    unit: metric.unit ?? '',
+                    description: metric.description ?? '',
+                    icon: _mapIconName(metric.icon),
+                  ),
+              ],
+            )
+          else
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  _tr(
+                    'measurement_page.results.no_metrics',
+                    fallback: 'No metrics available',
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
-                icon: Icons.timer_outlined,
               ),
-              _ResultMetricTile(
-                label: 'EDT',
-                value: results.rt.edt.toStringAsFixed(2),
-                unit: 's',
-                description: _tr(
-                  'measurement_page.results.edt_desc',
-                  fallback: 'Early decay time',
-                ),
-                icon: Icons.speed_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'STI',
-                value: results.sti.toStringAsFixed(2),
-                unit: '',
-                description: _tr(
-                  'measurement_page.results.sti_desc',
-                  fallback: 'Speech transmission index',
-                ),
-                icon: Icons.record_voice_over_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'C50',
-                value: results.clarity.c50.toStringAsFixed(1),
-                unit: 'dB',
-                description: _tr(
-                  'measurement_page.results.c50_desc',
-                  fallback: 'Clarity for speech',
-                ),
-                icon: Icons.hearing_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'C80',
-                value: results.clarity.c80.toStringAsFixed(1),
-                unit: 'dB',
-                description: _tr(
-                  'measurement_page.results.c80_desc',
-                  fallback: 'Clarity for music',
-                ),
-                icon: Icons.music_note_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'D50',
-                value: (results.clarity.d50 * 100).toStringAsFixed(0),
-                unit: '%',
-                description: _tr(
-                  'measurement_page.results.d50_desc',
-                  fallback: 'Definition (speech intelligibility)',
-                ),
-                icon: Icons.graphic_eq_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'DRR',
-                value: results.drr.drr.toStringAsFixed(1),
-                unit: 'dB',
-                description: _tr(
-                  'measurement_page.results.drr_desc',
-                  fallback: 'Direct-to-reverberant ratio',
-                ),
-                icon: Icons.surround_sound_outlined,
-              ),
-              _ResultMetricTile(
-                label: 'SNR',
-                value: results.quality.snr.toStringAsFixed(1),
-                unit: 'dB',
-                description: _tr(
-                  'measurement_page.results.snr_desc',
-                  fallback: 'Signal-to-noise ratio',
-                ),
-                icon: Icons.signal_cellular_alt_outlined,
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
