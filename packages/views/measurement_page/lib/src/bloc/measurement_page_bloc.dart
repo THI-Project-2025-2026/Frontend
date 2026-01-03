@@ -43,12 +43,29 @@ class MeasurementPageBloc
     on<_AnalysisRequested>(_onAnalysisRequested);
     on<_AnalysisResultsReceived>(_onAnalysisResultsReceived);
     on<_AnalysisFailed>(_onAnalysisFailed);
+    on<_PhaseUpdateReceived>(_onPhaseUpdateReceived);
+    on<_AnalysisResultsBroadcastReceived>(_onAnalysisResultsBroadcastReceived);
+    on<_StepUpdateReceived>(_onStepUpdateReceived);
+    on<_ProfileUpdateReceived>(_onProfileUpdateReceived);
+    on<_BroadcastCurrentState>(_onBroadcastCurrentState);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
         return;
       }
       if (envelope.event == 'lobby.updated') {
+        final data = envelope.data;
+        // Check if this is a participant join - if so, host should broadcast current state
+        if (data is Map<String, dynamic>) {
+          final updateType = data['type'] as String?;
+          final lobbyId = data['lobby_id'] as String?;
+          if (updateType == 'participant_joined' &&
+              lobbyId == state.lobbyId &&
+              state.isHost) {
+            // Broadcast current step and profile to sync the new joiner
+            add(const _BroadcastCurrentState());
+          }
+        }
         add(const MeasurementLobbyRefreshed());
         return;
       }
@@ -89,6 +106,67 @@ class MeasurementPageBloc
               speakerSlotId: data['current_speaker_slot_id'] as String? ?? '',
             ),
           );
+        }
+      }
+      // Handle phase update broadcasts from server
+      if (envelope.event == 'measurement.phase_update') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        add(
+          _PhaseUpdateReceived(
+            phase: data['phase'] as String? ?? '',
+            phaseDescription: data['phase_description'] as String? ?? '',
+          ),
+        );
+      }
+      // Handle analysis results broadcast from server (for all clients)
+      if (envelope.event == 'measurement.analysis_results') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        final resultsData = data['results'] as Map<String, dynamic>?;
+        if (resultsData != null) {
+          debugPrint(
+            '[MeasurementPageBloc] Received analysis results broadcast',
+          );
+          add(_AnalysisResultsBroadcastReceived(results: resultsData));
+        }
+      }
+      // Handle timeline step updates from lobby host
+      if (envelope.event == 'lobby.step_update') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        final lobbyId = data['lobby_id'] as String?;
+        if (lobbyId != state.lobbyId) {
+          return;
+        }
+        final stepIndex = data['step_index'] as int?;
+        if (stepIndex != null) {
+          debugPrint('[MeasurementPageBloc] Received step update: $stepIndex');
+          add(_StepUpdateReceived(stepIndex: stepIndex));
+        }
+      }
+      // Handle measurement profile updates from lobby host
+      if (envelope.event == 'lobby.profile_update') {
+        final data = envelope.data;
+        if (data is! Map<String, dynamic>) {
+          return;
+        }
+        final lobbyId = data['lobby_id'] as String?;
+        if (lobbyId != state.lobbyId) {
+          return;
+        }
+        final profileId = data['profile_id'] as String?;
+        if (profileId != null) {
+          debugPrint(
+            '[MeasurementPageBloc] Received profile update: $profileId',
+          );
+          add(_ProfileUpdateReceived(profileId: profileId));
         }
       }
     });
@@ -373,27 +451,66 @@ class MeasurementPageBloc
     emit(state.copyWith(devices: devices));
   }
 
-  void _onTimelineAdvanced(
+  Future<void> _onTimelineAdvanced(
     MeasurementTimelineAdvanced event,
     Emitter<MeasurementPageState> emit,
-  ) {
+  ) async {
     if (state.steps.isEmpty) {
       return;
     }
     final lastIndex = state.steps.length - 1;
     final nextIndex = math.min(state.activeStepIndex + 1, lastIndex);
     emit(state.copyWith(activeStepIndex: nextIndex));
+
+    // Broadcast step change to other clients if we're the host
+    if (state.isHost && state.lobbyActive && state.lobbyId.isNotEmpty) {
+      await _broadcastStepUpdate(nextIndex);
+    }
   }
 
-  void _onTimelineStepBack(
+  Future<void> _onTimelineStepBack(
     MeasurementTimelineStepBack event,
     Emitter<MeasurementPageState> emit,
-  ) {
+  ) async {
     if (state.steps.isEmpty) {
       return;
     }
     final prevIndex = math.max(state.activeStepIndex - 1, 0);
     emit(state.copyWith(activeStepIndex: prevIndex));
+
+    // Broadcast step change to other clients if we're the host
+    if (state.isHost && state.lobbyActive && state.lobbyId.isNotEmpty) {
+      await _broadcastStepUpdate(prevIndex);
+    }
+  }
+
+  /// Broadcast current timeline step to all lobby participants.
+  Future<void> _broadcastStepUpdate(int stepIndex) async {
+    try {
+      final requestId = _generateRequestId();
+      await _repository.sendJson({
+        'event': 'lobby.step_update',
+        'request_id': requestId,
+        'data': {'lobby_id': state.lobbyId, 'step_index': stepIndex},
+      });
+      debugPrint('[MeasurementPageBloc] Broadcast step update: $stepIndex');
+    } catch (e) {
+      debugPrint('[MeasurementPageBloc] Failed to broadcast step update: $e');
+    }
+  }
+
+  /// Handle step update received from lobby host.
+  void _onStepUpdateReceived(
+    _StepUpdateReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    // Only update if we're not the host (host already updated locally)
+    if (!state.isHost) {
+      debugPrint(
+        '[MeasurementPageBloc] Applying step update from host: ${event.stepIndex}',
+      );
+      emit(state.copyWith(activeStepIndex: event.stepIndex));
+    }
   }
 
   void _onRoomPlanReceived(
@@ -408,15 +525,78 @@ class MeasurementPageBloc
     );
   }
 
-  void _onProfileChanged(
+  Future<void> _onProfileChanged(
     MeasurementProfileChanged event,
     Emitter<MeasurementPageState> emit,
-  ) {
+  ) async {
     debugPrint(
       '[MeasurementPageBloc] Profile changed to: ${event.profile.id} '
       '(${event.profile.sweepFStart}Hz - ${event.profile.sweepFEnd}Hz)',
     );
     emit(state.copyWith(measurementProfile: event.profile));
+
+    // Broadcast profile change to other clients if we're the host
+    if (state.isHost && state.lobbyActive && state.lobbyId.isNotEmpty) {
+      await _broadcastProfileUpdate(event.profile.id);
+    }
+  }
+
+  /// Broadcast current measurement profile to all lobby participants.
+  Future<void> _broadcastProfileUpdate(String profileId) async {
+    try {
+      final requestId = _generateRequestId();
+      await _repository.sendJson({
+        'event': 'lobby.profile_update',
+        'request_id': requestId,
+        'data': {'lobby_id': state.lobbyId, 'profile_id': profileId},
+      });
+      debugPrint('[MeasurementPageBloc] Broadcast profile update: $profileId');
+    } catch (e) {
+      debugPrint(
+        '[MeasurementPageBloc] Failed to broadcast profile update: $e',
+      );
+    }
+  }
+
+  /// Handle profile update received from lobby host.
+  void _onProfileUpdateReceived(
+    _ProfileUpdateReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    // Only update if we're not the host (host already updated locally)
+    if (!state.isHost) {
+      debugPrint(
+        '[MeasurementPageBloc] Applying profile update from host: ${event.profileId}',
+      );
+      // Find the profile by ID
+      final profile = MeasurementProfile.values.firstWhere(
+        (p) => p.id == event.profileId,
+        orElse: () => MeasurementProfile.highEnd,
+      );
+      emit(state.copyWith(measurementProfile: profile));
+    }
+  }
+
+  /// Broadcast current state (step + profile) to all participants.
+  /// Called when a new participant joins so they get the current state.
+  Future<void> _onBroadcastCurrentState(
+    _BroadcastCurrentState event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    if (!state.isHost || !state.lobbyActive || state.lobbyId.isEmpty) {
+      return;
+    }
+
+    debugPrint(
+      '[MeasurementPageBloc] Broadcasting current state to new joiner: '
+      'step=${state.activeStepIndex}, profile=${state.measurementProfile.id}',
+    );
+
+    // Broadcast current step
+    await _broadcastStepUpdate(state.activeStepIndex);
+
+    // Broadcast current profile
+    await _broadcastProfileUpdate(state.measurementProfile.id);
   }
 
   String _generateRequestId() {
@@ -437,13 +617,18 @@ class MeasurementPageBloc
   /// 3. Start the measurement session (server coordinates sync)
   /// 4. Each speaker plays the audio while microphones record
   /// 5. Recordings are uploaded and analyzed
+  ///
+  /// NOTE: Only the lobby host should trigger this. Non-host clients will
+  /// receive measurement.start_measurement broadcasts and join via
+  /// _onMeasurementStartReceived instead.
   Future<void> _onSweepStartRequested(
     MeasurementSweepStartRequested event,
     Emitter<MeasurementPageState> emit,
   ) async {
     debugPrint('[MeasurementPageBloc] _onSweepStartRequested called');
     debugPrint(
-      '[MeasurementPageBloc] lobbyActive=${state.lobbyActive}, lobbyId=${state.lobbyId}',
+      '[MeasurementPageBloc] lobbyActive=${state.lobbyActive}, '
+      'lobbyId=${state.lobbyId}, isHost=${state.isHost}',
     );
 
     if (!state.lobbyActive || state.lobbyId.isEmpty) {
@@ -452,6 +637,23 @@ class MeasurementPageBloc
         state.copyWith(
           sweepStatus: SweepStatus.failed,
           sweepError: 'No active lobby',
+        ),
+      );
+      return;
+    }
+
+    // Only the lobby host should create jobs and sessions.
+    // Non-host clients will receive measurement.start_measurement broadcasts
+    // and join via _onMeasurementStartReceived.
+    if (!state.isHost) {
+      debugPrint(
+        '[MeasurementPageBloc] Not the host - waiting for measurement broadcast',
+      );
+      emit(
+        state.copyWith(
+          sweepStatus: SweepStatus.running,
+          sweepError: null,
+          playbackPhase: PlaybackPhase.idle,
         ),
       );
       return;
@@ -909,14 +1111,53 @@ class MeasurementPageBloc
   }
 
   /// Handles successful analysis results.
-  void _onAnalysisResultsReceived(
+  Future<void> _onAnalysisResultsReceived(
     _AnalysisResultsReceived event,
     Emitter<MeasurementPageState> emit,
-  ) {
+  ) async {
     debugPrint('[NAV_DEBUG] _onAnalysisResultsReceived called');
     debugPrint(
       '[MeasurementPageBloc] Analysis complete - ${event.results.metrics.length} metrics received',
     );
+
+    // Broadcast results to all other clients in the session
+    if (state.jobId != null && _sessionBloc != null) {
+      final sessionInfo = _sessionBloc!.state.sessionInfo;
+      if (sessionInfo != null) {
+        debugPrint('[MeasurementPageBloc] Broadcasting results to all clients');
+        try {
+          final requestId = _generateRequestId();
+          await _repository.sendJson({
+            'event': 'measurement.broadcast_results',
+            'request_id': requestId,
+            'data': {
+              'session_id': sessionInfo.sessionId,
+              'job_id': state.jobId,
+              'results': {
+                'samplerate_hz': event.results.samplerateHz,
+                'display_metrics': event.results.metrics
+                    .map(
+                      (m) => {
+                        'key': m.key,
+                        'label': m.label,
+                        'value': m.value,
+                        'formatted_value': m.formattedValue,
+                        'unit': m.unit,
+                        'description': m.description,
+                        'icon': m.icon,
+                        'category': m.category,
+                        'sort_order': m.sortOrder,
+                      },
+                    )
+                    .toList(),
+              },
+            },
+          });
+        } catch (e) {
+          debugPrint('[MeasurementPageBloc] Failed to broadcast results: $e');
+        }
+      }
+    }
 
     // Advance to results step (step 6 - "Review impulse results")
     debugPrint('[NAV_DEBUG] About to add MeasurementTimelineAdvanced event');
@@ -946,6 +1187,81 @@ class MeasurementPageBloc
       state.copyWith(
         sweepStatus: SweepStatus.failed,
         sweepError: 'Analysis failed: ${event.error}',
+      ),
+    );
+  }
+
+  /// Handles phase update broadcasts from the server.
+  /// This keeps all clients in sync with the current measurement timeline step.
+  void _onPhaseUpdateReceived(
+    _PhaseUpdateReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint(
+      '[MeasurementPageBloc] Phase update: ${event.phase} - ${event.phaseDescription}',
+    );
+
+    // Map phase string to timeline step index
+    final stepIndex = _mapPhaseToTimelineStep(event.phase);
+
+    if (stepIndex != null && stepIndex != state.activeStepIndex) {
+      debugPrint(
+        '[MeasurementPageBloc] Updating timeline step from ${state.activeStepIndex} to $stepIndex',
+      );
+      emit(state.copyWith(activeStepIndex: stepIndex));
+    }
+  }
+
+  /// Maps a measurement phase to a timeline step index.
+  int? _mapPhaseToTimelineStep(String phase) {
+    // Map backend phases to frontend timeline steps
+    switch (phase) {
+      case 'idle':
+        return null; // Don't change
+      case 'initiating':
+      case 'notifying_clients':
+      case 'waiting_ready':
+        return 4; // Step 4: Run the measurement
+      case 'speaker_downloading':
+      case 'speaker_ready':
+      case 'starting_recording':
+      case 'recording':
+      case 'playing':
+        return 5; // Step 5: Run the sweep (measurement in progress)
+      case 'playback_complete':
+      case 'uploading':
+      case 'processing':
+        return 5; // Still in measurement step
+      case 'completed':
+        return 6; // Step 6: Review impulse results
+      case 'failed':
+        return null; // Don't change on failure
+      default:
+        return null;
+    }
+  }
+
+  /// Handles analysis results broadcast from the server.
+  /// This delivers results to ALL clients, not just the admin.
+  void _onAnalysisResultsBroadcastReceived(
+    _AnalysisResultsBroadcastReceived event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint('[MeasurementPageBloc] Analysis results broadcast received');
+
+    // Parse the results into AnalysisResults
+    final results = AnalysisResults.fromJson(event.results);
+
+    debugPrint(
+      '[MeasurementPageBloc] Broadcast results - ${results.metrics.length} metrics',
+    );
+
+    // Advance to results step and update state
+    emit(
+      state.copyWith(
+        sweepStatus: SweepStatus.completed,
+        analysisResults: results,
+        activeStepIndex: 6, // Results step
       ),
     );
   }

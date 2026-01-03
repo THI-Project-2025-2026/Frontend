@@ -321,3 +321,50 @@ class _MeasurementSessionComplete extends MeasurementSessionEvent {
   @override
   List<Object?> get props => [sessionId, completedSpeakers, audioHash];
 }
+
+/// Phase update broadcast from server.
+/// This event keeps all clients in sync with the current measurement phase.
+class _MeasurementPhaseUpdate extends MeasurementSessionEvent {
+  const _MeasurementPhaseUpdate({
+    required this.sessionId,
+    required this.phase,
+    required this.phaseDescription,
+    required this.currentSpeakerIndex,
+    required this.totalSpeakers,
+    required this.completedSpeakers,
+  });
+
+  final String sessionId;
+  final String phase;
+  final String phaseDescription;
+  final int currentSpeakerIndex;
+  final int totalSpeakers;
+  final int completedSpeakers;
+
+  @override
+  List<Object?> get props => [
+    sessionId,
+    phase,
+    phaseDescription,
+    currentSpeakerIndex,
+    totalSpeakers,
+    completedSpeakers,
+  ];
+}
+
+/// Analysis results broadcast from server.
+/// This event delivers analysis results to ALL clients, not just the admin.
+class _MeasurementAnalysisResultsReceived extends MeasurementSessionEvent {
+  const _MeasurementAnalysisResultsReceived({
+    required this.sessionId,
+    required this.jobId,
+    required this.results,
+  });
+
+  final String sessionId;
+  final String jobId;
+  final Map<String, dynamic> results;
+
+  @override
+  List<Object?> get props => [sessionId, jobId, results];
+}

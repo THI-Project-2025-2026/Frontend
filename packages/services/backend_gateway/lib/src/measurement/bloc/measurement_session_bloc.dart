@@ -76,6 +76,8 @@ class MeasurementSessionBloc
     on<_MeasurementStartPlaybackCommand>(_onStartPlaybackCommand);
     on<_MeasurementStopRecordingCommand>(_onStopRecordingCommand);
     on<_MeasurementSessionComplete>(_onSessionComplete);
+    on<_MeasurementPhaseUpdate>(_onPhaseUpdate);
+    on<_MeasurementAnalysisResultsReceived>(_onAnalysisResultsReceived);
 
     // Legacy events for backward compatibility
     on<_MeasurementPrepareRecording>(_onPrepareRecording);
@@ -203,6 +205,48 @@ class MeasurementSessionBloc
               data['completed_speakers'] ?? [],
             ),
             audioHash: data['audio_hash'] as String?,
+          ),
+        );
+        break;
+
+      case 'measurement.phase_update':
+        _log.info(
+          _tag,
+          'Phase update received',
+          data: {
+            'phase': data['phase'],
+            'phaseDescription': data['phase_description'],
+            'currentSpeakerIndex': data['current_speaker_index'],
+            'totalSpeakers': data['total_speakers'],
+          },
+        );
+        add(
+          _MeasurementPhaseUpdate(
+            sessionId: data['session_id'] as String,
+            phase: data['phase'] as String,
+            phaseDescription: data['phase_description'] as String? ?? '',
+            currentSpeakerIndex: data['current_speaker_index'] as int? ?? 0,
+            totalSpeakers: data['total_speakers'] as int? ?? 1,
+            completedSpeakers: data['completed_speakers'] as int? ?? 0,
+          ),
+        );
+        break;
+
+      case 'measurement.analysis_results':
+        _log.info(
+          _tag,
+          'Analysis results received from broadcast',
+          data: {
+            'sessionId': data['session_id'],
+            'jobId': data['job_id'],
+            'hasResults': data['results'] != null,
+          },
+        );
+        add(
+          _MeasurementAnalysisResultsReceived(
+            sessionId: data['session_id'] as String,
+            jobId: data['job_id'] as String,
+            results: data['results'] as Map<String, dynamic>? ?? {},
           ),
         );
         break;
@@ -997,6 +1041,93 @@ class MeasurementSessionBloc
         phase: MeasurementPhase.completed,
         localRole: LocalMeasurementRole.none,
         audioHash: newAudioHash,
+      ),
+    );
+  }
+
+  /// Handle phase update broadcasts from the server.
+  /// This keeps all clients in sync with the current measurement phase.
+  Future<void> _onPhaseUpdate(
+    _MeasurementPhaseUpdate event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Phase update received',
+      data: {
+        'phase': event.phase,
+        'phaseDescription': event.phaseDescription,
+        'currentSpeakerIndex': event.currentSpeakerIndex,
+        'totalSpeakers': event.totalSpeakers,
+        'completedSpeakers': event.completedSpeakers,
+      },
+    );
+
+    // Map string phase to enum
+    final phase = _parsePhase(event.phase);
+
+    emit(
+      state.copyWith(phase: phase, phaseDescription: event.phaseDescription),
+    );
+  }
+
+  /// Parse a phase string from the server to a MeasurementPhase enum.
+  MeasurementPhase _parsePhase(String phase) {
+    switch (phase) {
+      case 'idle':
+        return MeasurementPhase.idle;
+      case 'initiating':
+        return MeasurementPhase.initiating;
+      case 'notifying_clients':
+        return MeasurementPhase.notifyingClients;
+      case 'waiting_ready':
+        return MeasurementPhase.waitingReady;
+      case 'speaker_downloading':
+        return MeasurementPhase.downloadingAudio;
+      case 'speaker_ready':
+        return MeasurementPhase.speakerConfirmed;
+      case 'starting_recording':
+        return MeasurementPhase.startingRecording;
+      case 'recording':
+        return MeasurementPhase.recording;
+      case 'playing':
+        return MeasurementPhase.playing;
+      case 'playback_complete':
+        return MeasurementPhase.playbackComplete;
+      case 'uploading':
+        return MeasurementPhase.uploadingRecordings;
+      case 'processing':
+        return MeasurementPhase.processing;
+      case 'completed':
+        return MeasurementPhase.completed;
+      case 'failed':
+        return MeasurementPhase.failed;
+      default:
+        _log.warning(_tag, 'Unknown phase: $phase');
+        return MeasurementPhase.idle;
+    }
+  }
+
+  /// Handle analysis results broadcast from the server.
+  /// This delivers analysis results to ALL clients, not just the admin.
+  Future<void> _onAnalysisResultsReceived(
+    _MeasurementAnalysisResultsReceived event,
+    Emitter<MeasurementSessionState> emit,
+  ) async {
+    _log.info(
+      _tag,
+      'Analysis results received from broadcast',
+      data: {
+        'sessionId': event.sessionId,
+        'jobId': event.jobId,
+        'hasDisplayMetrics': event.results.containsKey('display_metrics'),
+      },
+    );
+
+    emit(
+      state.copyWith(
+        status: MeasurementSessionStatus.completed,
+        analysisResults: event.results,
       ),
     );
   }

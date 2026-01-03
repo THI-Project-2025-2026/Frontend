@@ -247,7 +247,7 @@
             "high_end": "High-End-Ausrüstung",
             "high_end_description": "Voller Frequenzbereich (20 Hz – 20 kHz) für professionelle Audio-Ausrüstung mit hochwertigen Lautsprechern und Mikrofonen.",
             "smartphone": "Smartphone",
-            "smartphone_description": "Optimierter Frequenzbereich (200 Hz – 12 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
+            "smartphone_description": "Optimierter Frequenzbereich (400 Hz – 10 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
         }
     },
     "simulation_page": {

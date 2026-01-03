@@ -35,6 +35,7 @@ class MeasurementSessionState extends Equatable {
   const MeasurementSessionState({
     this.status = MeasurementSessionStatus.initial,
     this.phase = MeasurementPhase.idle,
+    this.phaseDescription = '',
     this.sessionInfo,
     this.localRole = LocalMeasurementRole.none,
     this.isLocalReady = false,
@@ -43,6 +44,7 @@ class MeasurementSessionState extends Equatable {
     this.error,
     this.playbackProgress = 0.0,
     this.recordingDuration = Duration.zero,
+    this.analysisResults,
   });
 
   /// Overall session status.
@@ -50,6 +52,9 @@ class MeasurementSessionState extends Equatable {
 
   /// Current measurement phase (for active speaker).
   final MeasurementPhase phase;
+
+  /// Human-readable description of the current phase.
+  final String phaseDescription;
 
   /// Session information.
   final MeasurementSessionInfo? sessionInfo;
@@ -75,6 +80,9 @@ class MeasurementSessionState extends Equatable {
   /// Recording duration for microphones.
   final Duration recordingDuration;
 
+  /// Analysis results from the backend (broadcast to all clients).
+  final Map<String, dynamic>? analysisResults;
+
   /// Whether a session is active.
   bool get hasActiveSession =>
       sessionInfo != null &&
@@ -99,6 +107,7 @@ class MeasurementSessionState extends Equatable {
   MeasurementSessionState copyWith({
     MeasurementSessionStatus? status,
     MeasurementPhase? phase,
+    String? phaseDescription,
     MeasurementSessionInfo? sessionInfo,
     LocalMeasurementRole? localRole,
     bool? isLocalReady,
@@ -107,10 +116,12 @@ class MeasurementSessionState extends Equatable {
     String? error,
     double? playbackProgress,
     Duration? recordingDuration,
+    Map<String, dynamic>? analysisResults,
   }) {
     return MeasurementSessionState(
       status: status ?? this.status,
       phase: phase ?? this.phase,
+      phaseDescription: phaseDescription ?? this.phaseDescription,
       sessionInfo: sessionInfo ?? this.sessionInfo,
       localRole: localRole ?? this.localRole,
       isLocalReady: isLocalReady ?? this.isLocalReady,
@@ -119,6 +130,7 @@ class MeasurementSessionState extends Equatable {
       error: error ?? this.error,
       playbackProgress: playbackProgress ?? this.playbackProgress,
       recordingDuration: recordingDuration ?? this.recordingDuration,
+      analysisResults: analysisResults ?? this.analysisResults,
     );
   }
 
@@ -126,6 +138,7 @@ class MeasurementSessionState extends Equatable {
   List<Object?> get props => [
     status,
     phase,
+    phaseDescription,
     sessionInfo,
     localRole,
     isLocalReady,
@@ -134,5 +147,6 @@ class MeasurementSessionState extends Equatable {
     error,
     playbackProgress,
     recordingDuration,
+    analysisResults,
   ];
 }

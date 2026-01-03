@@ -247,7 +247,7 @@
             "high_end": "High-End Equipment",
             "high_end_description": "Full frequency range (20 Hz – 20 kHz) for professional audio equipment with high-quality speakers and microphones.",
             "smartphone": "Smartphone",
-            "smartphone_description": "Optimized frequency range (200 Hz – 12 kHz) for typical smartphone speakers and microphones."
+            "smartphone_description": "Optimized frequency range (400 Hz – 10 kHz) for typical smartphone speakers and microphones."
         }
     },
     "simulation_page": {

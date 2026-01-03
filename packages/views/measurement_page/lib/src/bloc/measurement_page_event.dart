@@ -148,3 +148,45 @@ class _AnalysisFailed extends MeasurementPageEvent {
 
   final String error;
 }
+
+/// Internal event when phase update is received from the server.
+/// This keeps all clients in sync with the current measurement timeline step.
+class _PhaseUpdateReceived extends MeasurementPageEvent {
+  const _PhaseUpdateReceived({
+    required this.phase,
+    required this.phaseDescription,
+  });
+
+  final String phase;
+  final String phaseDescription;
+}
+
+/// Internal event when analysis results are broadcast from server.
+/// This delivers results to ALL clients, not just the admin.
+class _AnalysisResultsBroadcastReceived extends MeasurementPageEvent {
+  const _AnalysisResultsBroadcastReceived({required this.results});
+
+  final Map<String, dynamic> results;
+}
+
+/// Internal event when timeline step update is received from lobby host.
+/// This keeps all clients synchronized on the measurement timeline step.
+class _StepUpdateReceived extends MeasurementPageEvent {
+  const _StepUpdateReceived({required this.stepIndex});
+
+  final int stepIndex;
+}
+
+/// Internal event when measurement profile update is received from lobby host.
+/// This keeps all clients synchronized on the measurement profile.
+class _ProfileUpdateReceived extends MeasurementPageEvent {
+  const _ProfileUpdateReceived({required this.profileId});
+
+  final String profileId;
+}
+
+/// Internal event to broadcast current state to all participants.
+/// Triggered when a new participant joins the lobby.
+class _BroadcastCurrentState extends MeasurementPageEvent {
+  const _BroadcastCurrentState();
+}

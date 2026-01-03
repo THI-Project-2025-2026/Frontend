@@ -18,7 +18,7 @@ enum MeasurementProfile {
 
   /// Smartphone-optimized measurement profile.
   ///
-  /// Uses a limited frequency range (200 Hz - 12 kHz) that smartphone
+  /// Uses a limited frequency range (400 Hz - 10 kHz) that smartphone
   /// speakers can reliably produce and smartphone microphones can accurately
   /// record. This avoids frequencies where phone hardware typically has
   /// significant distortion or roll-off.
@@ -26,8 +26,8 @@ enum MeasurementProfile {
     id: 'smartphone',
     labelKey: 'measurement_page.profile.smartphone',
     descriptionKey: 'measurement_page.profile.smartphone_description',
-    sweepFStart: 200.0,
-    sweepFEnd: 12000.0,
+    sweepFStart: 400.0,
+    sweepFEnd: 10000.0,
   );
 
   const MeasurementProfile({
@@ -56,7 +56,7 @@ enum MeasurementProfile {
   /// Fallback label for when localization is not available.
   String get fallbackLabel => switch (this) {
     MeasurementProfile.highEnd => 'High-End (20 Hz - 20 kHz)',
-    MeasurementProfile.smartphone => 'Smartphone (200 Hz - 12 kHz)',
+    MeasurementProfile.smartphone => 'Smartphone (400 Hz - 10 kHz)',
   };
 
   /// Fallback description for when localization is not available.
