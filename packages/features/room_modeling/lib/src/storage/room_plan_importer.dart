@@ -395,7 +395,8 @@ class RoomPlanImporter {
       case 'window':
         return FurnitureType.window;
       case 'wardrobe':
-        return FurnitureType.wardrobe;
+      case 'closet':
+        return FurnitureType.closet;
       case 'desk':
         return FurnitureType.desk;
       case 'shelf':

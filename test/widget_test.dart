@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:l10n_service/l10n_service.dart';
+import 'package:sonalyze_frontend/di/injector.dart';
 import 'package:sonalyze_frontend/main.dart';
 
 void main() {
@@ -15,6 +16,18 @@ void main() {
 
   setUpAll(() async {
     await AppConstants.initialize();
+
+    if (!getIt.isRegistered<AppConstants>()) {
+      getIt.registerSingleton<AppConstants>(AppConstants());
+    }
+
+    if (!getIt.isRegistered<JsonHotReloadBloc>()) {
+      getIt.registerSingleton<JsonHotReloadBloc>(JsonHotReloadBloc());
+    }
+  });
+
+  tearDownAll(() async {
+    await getIt.reset();
   });
 
   testWidgets('renders the Sonalyze app shell', (tester) async {
