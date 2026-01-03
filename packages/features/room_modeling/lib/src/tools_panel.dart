@@ -200,10 +200,11 @@ class ToolsPanel extends StatelessWidget {
               RoomModelingL10n.text('tools.menu.furniture'),
               [
                 _ToolItem(RoomModelingTool.chair, Icons.chair),
+                _ToolItem(RoomModelingTool.deskchair, Icons.chair_alt),
                 _ToolItem(RoomModelingTool.table, Icons.table_bar),
                 _ToolItem(RoomModelingTool.sofa, Icons.weekend),
                 _ToolItem(RoomModelingTool.bed, Icons.bed),
-                _ToolItem(RoomModelingTool.wardrobe, Icons.checkroom),
+                _ToolItem(RoomModelingTool.closet, Icons.checkroom),
                 _ToolItem(RoomModelingTool.desk, Icons.desk),
                 _ToolItem(RoomModelingTool.shelf, Icons.shelves),
               ],
@@ -545,7 +546,9 @@ class _FurnitureEditorState extends State<_FurnitureEditor> {
       case FurnitureType.door:
       case FurnitureType.window:
         return 0.0;
-      case FurnitureType.wardrobe:
+      case FurnitureType.deskchair:
+        return 1.0;
+      case FurnitureType.closet:
         return 2.0;
       case FurnitureType.desk:
         return 0.75;

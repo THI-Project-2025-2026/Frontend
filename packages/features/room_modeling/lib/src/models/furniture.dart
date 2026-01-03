@@ -5,13 +5,14 @@ enum FurnitureType {
   door,
   window,
   chair,
+  deskchair,
   table,
   sofa,
   bed,
   bathtub,
   toilet,
   sink,
-  wardrobe,
+  closet,
   desk,
   shelf,
   stove,
@@ -102,6 +103,8 @@ class Furniture extends Equatable {
         return const Size(50, 10); // ~1.0m width
       case FurnitureType.chair:
         return const Size(25, 25); // ~0.5m x 0.5m
+      case FurnitureType.deskchair:
+        return const Size(27, 27); // ~0.54m x 0.54m
       case FurnitureType.table:
         return const Size(80, 50); // ~1.6m x 1.0m
       case FurnitureType.sofa:
@@ -114,7 +117,7 @@ class Furniture extends Equatable {
         return const Size(20, 35); // ~0.4m x 0.7m
       case FurnitureType.sink:
         return const Size(30, 25); // ~0.6m x 0.5m
-      case FurnitureType.wardrobe:
+      case FurnitureType.closet:
         return const Size(100, 30); // ~2.0m x 0.6m
       case FurnitureType.desk:
         return const Size(60, 40); // ~1.2m x 0.8m

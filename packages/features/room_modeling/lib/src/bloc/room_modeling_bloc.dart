@@ -828,6 +828,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case RoomModelingTool.chair:
         type = FurnitureType.chair;
         break;
+      case RoomModelingTool.deskchair:
+        type = FurnitureType.deskchair;
+        break;
       case RoomModelingTool.table:
         type = FurnitureType.table;
         break;
@@ -846,8 +849,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case RoomModelingTool.sink:
         type = FurnitureType.sink;
         break;
-      case RoomModelingTool.wardrobe:
-        type = FurnitureType.wardrobe;
+      case RoomModelingTool.closet:
+        type = FurnitureType.closet;
         break;
       case RoomModelingTool.desk:
         type = FurnitureType.desk;
@@ -1240,7 +1243,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case FurnitureType.door:
       case FurnitureType.window:
         return 0.0;
-      case FurnitureType.wardrobe:
+      case FurnitureType.deskchair:
+        return 1.0;
+      case FurnitureType.closet:
         return 2.0;
       case FurnitureType.desk:
         return 0.75;

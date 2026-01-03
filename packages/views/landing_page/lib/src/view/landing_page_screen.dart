@@ -6,6 +6,7 @@ import 'package:l10n_service/l10n_service.dart';
 import 'package:core_ui/core_ui.dart';
 
 import '../bloc/landing_page_bloc.dart';
+import 'settings_dialog.dart';
 
 /// Landing page entry point wiring the BLoC to the widget tree.
 class LandingPageScreen extends StatelessWidget {
@@ -26,9 +27,13 @@ class LandingPageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => LandingPageBloc(),
-      child: _LandingPageView(
-        onNavigateToMeasurement: onNavigateToMeasurement,
-        onNavigateToSimulation: onNavigateToSimulation,
+      child: BlocBuilder<JsonHotReloadBloc, JsonHotReloadState>(
+        builder: (context, state) {
+          return _LandingPageView(
+            onNavigateToMeasurement: onNavigateToMeasurement,
+            onNavigateToSimulation: onNavigateToSimulation,
+          );
+        },
       ),
     );
   }
@@ -65,74 +70,102 @@ class _LandingPageView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: _themeColor('app.background'),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: backgroundGradient.length >= 2
-              ? LinearGradient(
-                  colors: backgroundGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: backgroundGradient.isEmpty
-              ? _themeColor('app.background')
-              : null,
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 1200;
-              final isMedium = constraints.maxWidth >= 900;
-              final horizontalPadding = isWide
-                  ? 96.0
-                  : isMedium
-                  ? 72.0
-                  : 24.0;
-              final verticalPadding = isWide ? 48.0 : 32.0;
-              final sectionSpacing = isWide ? 56.0 : 48.0;
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: backgroundGradient.length >= 2
+                  ? LinearGradient(
+                      colors: backgroundGradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: backgroundGradient.isEmpty
+                  ? _themeColor('app.background')
+                  : null,
+            ),
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 1200;
+                  final isMedium = constraints.maxWidth >= 900;
+                  final horizontalPadding = isWide
+                      ? 96.0
+                      : isMedium
+                      ? 72.0
+                      : 24.0;
+                  final verticalPadding = isWide ? 48.0 : 32.0;
+                  final sectionSpacing = isWide ? 56.0 : 48.0;
 
-              return ScrollbarTheme(
-                data: ScrollbarThemeData(
-                  thumbColor: WidgetStateProperty.all<Color>(
-                    _themeColor(
-                      'landing_page.scrollbar_thumb',
-                    ).withValues(alpha: 0.7),
-                  ),
-                  thickness: const WidgetStatePropertyAll<double>(6.0),
-                  radius: const Radius.circular(999),
-                ),
-                child: ScrollConfiguration(
-                  behavior: const _LandingScrollBehavior(),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                      vertical: verticalPadding,
+                  return ScrollbarTheme(
+                    data: ScrollbarThemeData(
+                      thumbColor: WidgetStateProperty.all<Color>(
+                        _themeColor(
+                          'landing_page.scrollbar_thumb',
+                        ).withValues(alpha: 0.7),
+                      ),
+                      thickness: const WidgetStatePropertyAll<double>(6.0),
+                      radius: const Radius.circular(999),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _HeroSection(
-                          isWide: isWide,
-                          isMedium: isMedium,
-                          onNavigateToMeasurement: _openMeasurement,
-                          onNavigateToSimulation: _openSimulation,
+                    child: ScrollConfiguration(
+                      behavior: const _LandingScrollBehavior(),
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: verticalPadding,
                         ),
-                        SizedBox(height: sectionSpacing),
-                        _FeatureShowcase(isWide: isWide, isMedium: isMedium),
-                        SizedBox(height: sectionSpacing),
-                        _WorkflowSection(isWide: isWide),
-                        SizedBox(height: sectionSpacing),
-                        const _ContactSection(),
-                        SizedBox(height: sectionSpacing),
-                        const _FaqSection(),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _HeroSection(
+                              isWide: isWide,
+                              isMedium: isMedium,
+                              onNavigateToMeasurement: _openMeasurement,
+                              onNavigateToSimulation: _openSimulation,
+                            ),
+                            SizedBox(height: sectionSpacing),
+                            _FeatureShowcase(
+                              isWide: isWide,
+                              isMedium: isMedium,
+                            ),
+                            SizedBox(height: sectionSpacing),
+                            _WorkflowSection(isWide: isWide),
+                            SizedBox(height: sectionSpacing),
+                            _ContactSection(),
+                            SizedBox(height: sectionSpacing),
+                            _FaqSection(),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                },
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: IconButton(
+                icon: Icon(
+                  Icons.settings,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  size: 28,
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const SettingsDialog(),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

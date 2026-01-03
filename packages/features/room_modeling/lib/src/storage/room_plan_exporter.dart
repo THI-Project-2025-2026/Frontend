@@ -208,6 +208,8 @@ class RoomPlanExporter {
         return 'table';
       case FurnitureType.chair:
         return 'chair';
+      case FurnitureType.deskchair:
+        return 'deskchair';
       case FurnitureType.sofa:
         return 'sofa';
       case FurnitureType.bed:
@@ -222,8 +224,8 @@ class RoomPlanExporter {
         return 'door';
       case FurnitureType.window:
         return 'window';
-      case FurnitureType.wardrobe:
-        return 'wardrobe';
+      case FurnitureType.closet:
+        return 'closet';
       case FurnitureType.desk:
         return 'desk';
       case FurnitureType.shelf:
@@ -260,7 +262,9 @@ class RoomPlanExporter {
       case FurnitureType.door:
       case FurnitureType.window:
         return 0.0;
-      case FurnitureType.wardrobe:
+      case FurnitureType.deskchair:
+        return 1.0;
+      case FurnitureType.closet:
         return 2.0;
       case FurnitureType.desk:
         return 0.75;
@@ -299,7 +303,9 @@ class RoomPlanExporter {
         return doorColor;
       case FurnitureType.window:
         return windowColor;
-      case FurnitureType.wardrobe:
+      case FurnitureType.deskchair:
+        return '#2c2c2c';
+      case FurnitureType.closet:
         return '#8B7355';
       case FurnitureType.desk:
         return '#A0826D';
