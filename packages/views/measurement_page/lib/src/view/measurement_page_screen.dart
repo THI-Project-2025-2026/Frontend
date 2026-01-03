@@ -1559,24 +1559,6 @@ class _TimelineCard extends StatelessWidget {
                         icon: const Icon(Icons.fast_forward_outlined),
                         child: Text(_tr('measurement_page.timeline.advance')),
                       ),
-                      const SizedBox(width: 12),
-                      SonalyzeButton(
-                        onPressed: !sweepInProgress
-                            ? () => context.read<MeasurementPageBloc>().add(
-                                const MeasurementDebugAudioRequested(),
-                              )
-                            : null,
-                        backgroundColor: inactiveColor,
-                        foregroundColor: onPrimary,
-                        borderRadius: BorderRadius.circular(18),
-                        icon: const Icon(Icons.volume_up_outlined),
-                        child: Text(
-                          _tr(
-                            'measurement_page.timeline.test_audio',
-                            fallback: 'Test Audio',
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
