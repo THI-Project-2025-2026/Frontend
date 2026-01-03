@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:audio_session/audio_session.dart' as audio_session;
+import 'package:audioplayers/audioplayers.dart';
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -48,6 +50,7 @@ class MeasurementPageBloc
     on<_StepUpdateReceived>(_onStepUpdateReceived);
     on<_ProfileUpdateReceived>(_onProfileUpdateReceived);
     on<_BroadcastCurrentState>(_onBroadcastCurrentState);
+    on<MeasurementDebugAudioRequested>(_onDebugAudioRequested);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -1268,4 +1271,64 @@ class MeasurementPageBloc
 
   /// Get the current measurement session BLoC for UI access.
   MeasurementSessionBloc? get sessionBloc => _sessionBloc;
+
+  /// Plays debug audio to test Bluetooth speaker connectivity.
+  Future<void> _onDebugAudioRequested(
+    MeasurementDebugAudioRequested event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    debugPrint('[MeasurementPageBloc] Debug audio requested');
+
+    // Configure audio session for media playback with Bluetooth support
+    try {
+      final session = await audio_session.AudioSession.instance;
+      await session.configure(
+        audio_session.AudioSessionConfiguration(
+          avAudioSessionCategory: audio_session.AVAudioSessionCategory.playback,
+          avAudioSessionCategoryOptions:
+              audio_session.AVAudioSessionCategoryOptions.allowBluetooth |
+              audio_session.AVAudioSessionCategoryOptions.allowBluetoothA2dp |
+              audio_session.AVAudioSessionCategoryOptions.allowAirPlay,
+          avAudioSessionMode: audio_session.AVAudioSessionMode.defaultMode,
+          avAudioSessionRouteSharingPolicy:
+              audio_session.AVAudioSessionRouteSharingPolicy.defaultPolicy,
+          avAudioSessionSetActiveOptions:
+              audio_session.AVAudioSessionSetActiveOptions.none,
+          androidAudioAttributes: const audio_session.AndroidAudioAttributes(
+            contentType: audio_session.AndroidAudioContentType.music,
+            usage: audio_session.AndroidAudioUsage.media,
+            flags: audio_session.AndroidAudioFlags.none,
+          ),
+          androidAudioFocusGainType:
+              audio_session.AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: false,
+        ),
+      );
+      await session.setActive(true);
+      debugPrint(
+        '[MeasurementPageBloc] Audio session configured for Bluetooth',
+      );
+    } catch (e) {
+      debugPrint('[MeasurementPageBloc] Failed to configure audio session: $e');
+    }
+
+    // Play the sample audio using audioplayers
+    final player = AudioPlayer();
+    try {
+      await player.setVolume(1.0);
+      await player.setSourceAsset('audio/sample.wav');
+      await player.setReleaseMode(ReleaseMode.stop);
+      debugPrint('[MeasurementPageBloc] Playing debug audio...');
+      await player.resume();
+
+      // Wait for playback to complete
+      await player.onPlayerComplete.first;
+      debugPrint('[MeasurementPageBloc] Debug audio playback finished');
+    } catch (e, stackTrace) {
+      debugPrint('[MeasurementPageBloc] Debug audio playback failed: $e');
+      debugPrint('[MeasurementPageBloc] Stack trace: $stackTrace');
+    } finally {
+      await player.dispose();
+    }
+  }
 }

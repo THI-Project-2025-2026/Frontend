@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audio_session/audio_session.dart' as audio_session;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
@@ -116,6 +117,10 @@ class AudioPlaybackService {
       '[AudioPlaybackService] _cachedAudioBytes: ${_cachedAudioBytes?.length ?? 0} bytes',
     );
     debugPrint('[AudioPlaybackService] _cachedAudioPath: $_cachedAudioPath');
+
+    // Configure audio session for media playback with Bluetooth support.
+    // This ensures audio routes to Bluetooth speakers when connected.
+    await _configureAudioSession();
 
     // Set volume to max
     await _player.setVolume(1.0);
@@ -264,6 +269,62 @@ class AudioPlaybackService {
   /// Set the playback volume (0.0 to 1.0).
   Future<void> setVolume(double volume) async {
     await _player.setVolume(volume.clamp(0.0, 1.0));
+  }
+
+  /// Configure the audio session for media playback with Bluetooth support.
+  ///
+  /// This is required for audio to route correctly to Bluetooth speakers.
+  /// Without this configuration, audio may only play through built-in speakers
+  /// even when a Bluetooth speaker is connected.
+  Future<void> _configureAudioSession() async {
+    if (kIsWeb) {
+      // Audio session configuration is not needed on web
+      debugPrint('[AudioPlaybackService] Skipping audio session config on web');
+      return;
+    }
+
+    try {
+      final session = await audio_session.AudioSession.instance;
+
+      // Configure for media playback (music-like audio)
+      // This enables Bluetooth speaker routing on both iOS and Android
+      await session.configure(
+        audio_session.AudioSessionConfiguration(
+          // iOS configuration
+          avAudioSessionCategory: audio_session.AVAudioSessionCategory.playback,
+          avAudioSessionCategoryOptions:
+              audio_session.AVAudioSessionCategoryOptions.allowBluetooth |
+              audio_session.AVAudioSessionCategoryOptions.allowBluetoothA2dp |
+              audio_session.AVAudioSessionCategoryOptions.allowAirPlay,
+          avAudioSessionMode: audio_session.AVAudioSessionMode.defaultMode,
+          avAudioSessionRouteSharingPolicy:
+              audio_session.AVAudioSessionRouteSharingPolicy.defaultPolicy,
+          avAudioSessionSetActiveOptions:
+              audio_session.AVAudioSessionSetActiveOptions.none,
+          // Android configuration
+          androidAudioAttributes: const audio_session.AndroidAudioAttributes(
+            contentType: audio_session.AndroidAudioContentType.music,
+            usage: audio_session.AndroidAudioUsage.media,
+            flags: audio_session.AndroidAudioFlags.none,
+          ),
+          androidAudioFocusGainType:
+              audio_session.AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: false,
+        ),
+      );
+
+      // Activate the audio session
+      final activated = await session.setActive(true);
+      debugPrint(
+        '[AudioPlaybackService] Audio session configured and activated: $activated',
+      );
+    } catch (e, stackTrace) {
+      // Log but don't fail - audio may still work without explicit session config
+      debugPrint(
+        '[AudioPlaybackService] Failed to configure audio session: $e',
+      );
+      debugPrint('[AudioPlaybackService] Stack trace: $stackTrace');
+    }
   }
 
   /// Release resources.

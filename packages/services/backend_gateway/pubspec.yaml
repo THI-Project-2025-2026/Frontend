@@ -20,6 +20,7 @@ dependencies:
   crypto: ^3.0.3
   # Measurement session dependencies
   audioplayers: ^6.0.0
+  audio_session: ^0.2.2
   path_provider: ^2.1.2
   recording_service:
     path: ../recording

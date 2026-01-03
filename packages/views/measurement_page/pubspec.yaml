@@ -25,6 +25,7 @@ dependencies:
   recording_service:
     path: ../../services/recording
   audioplayers: ^6.0.0
+  audio_session: ^0.2.2
   get_it: ^7.7.0
   uuid: ^4.5.1
 

@@ -190,3 +190,8 @@ class _ProfileUpdateReceived extends MeasurementPageEvent {
 class _BroadcastCurrentState extends MeasurementPageEvent {
   const _BroadcastCurrentState();
 }
+
+/// Plays debug audio to test Bluetooth speaker connectivity.
+class MeasurementDebugAudioRequested extends MeasurementPageEvent {
+  const MeasurementDebugAudioRequested();
+}
