@@ -1,6 +1,10 @@
 {
     "common": {
-        "back": "Zurück"
+        "back": "Zurück",
+        "cancel": "Abbrechen",
+        "close": "Schließen",
+        "join": "Beitreten",
+        "retry": "Erneut versuchen"
     },
     "app": {
         "loading_title": "Sonalyze wird geladen",
@@ -114,7 +118,12 @@
                 "create": "Lobby erstellen",
                 "refresh": "Code aktualisieren",
                 "copy": "Link kopieren",
-                "toggle_qr": "QR-Vorschau umschalten"
+                "toggle_qr": "QR-Vorschau umschalten",
+                "join": "Beitreten"
+            },
+            "join_dialog": {
+                "title": "Lobby beitreten",
+                "code_label": "Lobby-Code"
             },
             "code_label": "Lobby-Code",
             "link_label": "Einladungslink",
@@ -128,6 +137,8 @@
         "roles": {
             "title": "Rolle dieses Geräts",
             "helper": "Wähle, ob dieses Gerät während der Messung als Mikrofon oder Lautsprecher fungiert.",
+            "loudspeaker_label": "Lautsprecher",
+            "microphone_label": "Mikrofon",
             "none": "Keine",
             "microphone": "Mikrofon",
             "loudspeaker": "Lautsprecher",
@@ -145,6 +156,7 @@
             "empty": "Noch keine Geräte verbunden.",
             "demo_join": "Demo-Gerät hinzufügen",
             "demo_leave": "Letztes Remote-Gerät entfernen",
+            "local_name": "Dieses Gerät",
             "local_badge": "Dieses Gerät",
             "headers": {
                 "device": "Gerät",
@@ -175,28 +187,67 @@
         "timeline": {
             "title": "Mess-Ablauf",
             "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um Geräte zu platzieren.",
+            "assign_roles_hint": "Weise jedem Lautsprecher- und Mikrofon-Slot ein verbundenes Gerät zu.",
             "steps": {
                 "0": {
-                    "title": "Geräte verbinden",
-                    "description": "Alle Messgeräte mit der Lobby verbinden und Konnektivität prüfen."
+                    "title": "Mess-Lobby erstellen",
+                    "description": "Lobby erstellen oder beitreten, um Geräte für die Sitzung zu koordinieren."
                 },
                 "1": {
-                    "title": "Raum modellieren",
-                    "description": "Raumgeometrie definieren und Mikrofone sowie Lautsprecher positionieren."
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
                 },
                 "2": {
-                    "title": "Geräte synchronisieren",
-                    "description": "Timing aller verbundenen Geräte für präzise Messungen kalibrieren."
+                    "title": "Raum einrichten",
+                    "description": "Möbel und Öffnungen im modellierten Raum platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon im Raum hinzu, bevor du fortfährst."
                 },
                 "3": {
-                    "title": "Sweep starten",
-                    "description": "Synchronisierte Sweeps auslösen und Headroom sowie Clipping überwachen."
+                    "title": "Geräterollen festlegen",
+                    "description": "Mikrofon- und Lautsprecherrollen für alle verbundenen Geräte zuweisen."
                 },
-                "4": {
+                "5": {
+                    "title": "Sweep starten",
+                    "description": "Wiedergabe und Aufnahme koordinieren. Lautsprecher spielen das Messsignal ab, während Mikrofone aufnehmen. Die Synchronisation erfolgt automatisch."
+                },
+                "6": {
                     "title": "Impulsergebnisse prüfen",
                     "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
                 }
-            }
+            },
+            "demo_button": "Demo-Audio abspielen"
+        },
+        "sweep": {
+            "dialog_title": "Messung läuft",
+            "copy_logs": "Debug-Logs kopieren",
+            "toggle_debug": "Debug-Log umschalten",
+            "logs_copied": "Debug-Logs in Zwischenablage kopiert",
+            "copy_all_logs": "Alle Logs kopieren"
+        },
+        "results": {
+            "title": "Impulsantwort-Analyse",
+            "subtitle": "Akustische Kennzahlen aus der gemessenen Impulsantwort berechnet.",
+            "no_metrics": "Keine Messwerte verfügbar",
+            "rt60_desc": "Nachhallzeit (60 dB Abfall)",
+            "edt_desc": "Frühe Abklingzeit",
+            "sti_desc": "Sprachübertragungsindex",
+            "c50_desc": "Deutlichkeit für Sprache",
+            "c80_desc": "Deutlichkeit für Musik",
+            "d50_desc": "Definition (Sprachverständlichkeit)",
+            "drr_desc": "Direkt-zu-Nachhall-Verhältnis",
+            "snr_desc": "Signal-Rausch-Verhältnis"
+        },
+        "profile": {
+            "label": "Messprofil",
+            "high_end": "High-End-Ausrüstung",
+            "high_end_description": "Voller Frequenzbereich (20 Hz – 20 kHz) für professionelle Audio-Ausrüstung mit hochwertigen Lautsprechern und Mikrofonen.",
+            "smartphone": "Smartphone",
+            "smartphone_description": "Optimierter Frequenzbereich (400 Hz – 10 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
         }
     },
     "simulation_page": {
@@ -260,8 +311,40 @@
                 "unit": "Verhältnis"
             }
         },
+        "room_type_selector": {
+            "label": "Raumtyp"
+        },
+        "room_type": {
+            "classroom": "Klassenzimmer",
+            "concertHall": "Konzertsaal",
+            "homeTheater": "Heimkino",
+            "recordingStudio": "Tonstudio",
+            "office": "Büro"
+        },
+        "legend": {
+            "measured": "Gemessen",
+            "ideal": "Ideal"
+        },
         "results": {
-            "title": "Simulationsergebnisse"
+            "title": "Simulationsergebnisse",
+            "warnings": "Warnungen",
+            "raytracing_button": "Experimentelle Raytracing-Simulation",
+            "raytracing_badge": "Experimentell",
+            "legend_measured": "Gemessene Simulation",
+            "legend_ideal": "Idealbereich",
+            "legend_raytracing": "Raytracing-Simulation",
+            "measured": "Gemessen",
+            "ideal": "Ideal",
+            "raytracing": "Raytracing",
+            "raytracing_performance": {
+                "fast": "Schnell",
+                "medium": "Mittel",
+                "high": "Hoch",
+                "extreme": "Extrem",
+                "bonkers": "Bonkers",
+                "bonkersPlus": "Bonkers+",
+                "serverCrasher": "Servercrasher"
+            }
         },
         "progress": {
             "title": "Simulation läuft",
@@ -272,6 +355,7 @@
             "advance": "Nächster Schritt",
             "back": "Vorheriger Schritt",
             "close_room_hint": "Schließe den Wandverlauf, um zum nächsten Schritt zu gelangen.",
+            "place_devices_hint": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren.",
             "steps": {
                 "0": {
                     "title": "Wandstruktur konstruieren",
@@ -280,6 +364,10 @@
                 "1": {
                     "title": "Raum einrichten",
                     "description": "Möbel, Öffnungen und akustische Behandlungen platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon hinzu, bevor du die Simulation startest."
                 },
                 "2": {
                     "title": "Simulation starten",
@@ -299,6 +387,9 @@
                 "structure": "Struktur",
                 "furnishing": "Einrichtung"
             },
+            "audio": {
+                "helper": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren."
+            },
             "close_room_hint": "Schließe den Wandverlauf, um Einrichtungsobjekte freizuschalten.",
             "construction_title": "Wandkonstruktion",
             "construction_helper": "Tippe auf die Fläche, um Wände zu ziehen. Schließe den Verlauf, um den Grundriss zu fixieren.",
@@ -310,6 +401,7 @@
                 "openings": "Öffnungen",
                 "furniture": "Möbel",
                 "bath_kitchen": "Bad & Küche",
+                "audio": "Audio",
                 "placeholder": "Objekt wählen",
                 "items": {
                     "door": "Tür",
@@ -327,12 +419,17 @@
                         "shelf": "Regal",
                         "stove": "Herd",
                         "fridge": "Kühlschrank",
-                        "shower": "Dusche"
+                        "shower": "Dusche",
+                        "speaker": "Lautsprecher",
+                        "microphone": "Mikrofon"
                 }
             }
         },
         "structure": {
-            "options_title": "Raumhöhe",
+            "options_title": "Raumstruktur",
+            "wall_material_label": "Wandmaterial",
+            "floor_material_label": "Bodenmaterial",
+            "ceiling_material_label": "Deckenmaterial",
             "room_height_label": "Deckenhöhe",
             "room_height_helper": "Standard: {value} m"
         },

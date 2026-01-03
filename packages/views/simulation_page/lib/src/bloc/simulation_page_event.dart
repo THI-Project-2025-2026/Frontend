@@ -58,3 +58,16 @@ class SimulationTimelineAdvanced extends SimulationPageEvent {
 class SimulationTimelineStepBack extends SimulationPageEvent {
   const SimulationTimelineStepBack();
 }
+
+/// Stores the raw payload from a completed simulation run.
+class SimulationResultReceived extends SimulationPageEvent {
+  const SimulationResultReceived(this.payload, {this.isRaytracing = false});
+
+  final Map<String, dynamic>? payload;
+  final bool isRaytracing;
+}
+
+/// Requests baseline room reference profiles from the backend.
+class SimulationReferenceProfilesRequested extends SimulationPageEvent {
+  const SimulationReferenceProfilesRequested();
+}

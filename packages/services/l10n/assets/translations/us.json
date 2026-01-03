@@ -1,6 +1,10 @@
 {
     "common": {
-        "back": "Back"
+        "back": "Back",
+        "cancel": "Cancel",
+        "close": "Close",
+        "join": "Join",
+        "retry": "Retry"
     },
     "app": {
         "loading_title": "Loading Sonalyze",
@@ -114,7 +118,12 @@
                 "create": "Create lobby",
                 "refresh": "Refresh code",
                 "copy": "Copy invite link",
-                "toggle_qr": "Toggle QR preview"
+                "toggle_qr": "Toggle QR preview",
+                "join": "Join"
+            },
+            "join_dialog": {
+                "title": "Join lobby",
+                "code_label": "Lobby code"
             },
             "code_label": "Lobby code",
             "link_label": "Invite link",
@@ -128,6 +137,8 @@
         "roles": {
             "title": "Your device role",
             "helper": "Select whether this device acts as a microphone or loudspeaker during the measurement.",
+            "loudspeaker_label": "Loudspeaker",
+            "microphone_label": "Microphone",
             "none": "None",
             "microphone": "Microphone",
             "loudspeaker": "Loudspeaker",
@@ -145,6 +156,7 @@
             "empty": "No devices connected yet.",
             "demo_join": "Add demo device",
             "demo_leave": "Remove last remote",
+            "local_name": "This device",
             "local_badge": "This device",
             "headers": {
                 "device": "Device",
@@ -175,28 +187,67 @@
         "timeline": {
             "title": "Measurement timeline",
             "advance": "Next step",
+            "back": "Previous step",
+            "close_room_hint": "Close the wall loop to place devices.",
+            "assign_roles_hint": "Assign every speaker and microphone slot to a connected device.",
             "steps": {
                 "0": {
-                    "title": "Connect devices",
-                    "description": "Join all measurement devices to the lobby and verify connectivity."
+                    "title": "Create measurement lobby",
+                    "description": "Create or join a lobby to coordinate devices for the session."
                 },
                 "1": {
-                    "title": "Model room",
-                    "description": "Define room geometry and place microphones and speakers in position."
+                    "title": "Construct wall structure",
+                    "description": "Draw and define the room's wall layout and boundaries."
                 },
                 "2": {
-                    "title": "Synchronize devices",
-                    "description": "Calibrate timing across all connected devices for accurate measurements."
+                    "title": "Furnish the room",
+                    "description": "Place furniture and openings in the modeled space."
+                },
+                "devices": {
+                    "title": "Place speakers and microphones",
+                    "description": "Add at least one speaker and one microphone inside the room before proceeding."
                 },
                 "3": {
-                    "title": "Run sweep",
-                    "description": "Trigger synchronized sweeps while monitoring headroom and clipping indicators."
+                    "title": "Set connected device roles",
+                    "description": "Assign microphone and loudspeaker roles for all connected devices."
                 },
-                "4": {
+                "5": {
+                    "title": "Run sweep",
+                    "description": "Coordinate playback and recording. Speakers play the measurement signal while microphones record. Synchronization happens automatically."
+                },
+                "6": {
                     "title": "Review impulse results",
                     "description": "Validate energy decay curves and analyze impulse response data."
                 }
-            }
+            },
+            "demo_button": "Play demo audio"
+        },
+        "sweep": {
+            "dialog_title": "Measurement in Progress",
+            "copy_logs": "Copy debug logs",
+            "toggle_debug": "Toggle debug log",
+            "logs_copied": "Debug logs copied to clipboard",
+            "copy_all_logs": "Copy All Logs"
+        },
+        "results": {
+            "title": "Impulse Response Analysis",
+            "subtitle": "Acoustic metrics calculated from the measured impulse response.",
+            "no_metrics": "No metrics available",
+            "rt60_desc": "Reverberation time (60 dB decay)",
+            "edt_desc": "Early decay time",
+            "sti_desc": "Speech transmission index",
+            "c50_desc": "Clarity for speech",
+            "c80_desc": "Clarity for music",
+            "d50_desc": "Definition (speech intelligibility)",
+            "drr_desc": "Direct-to-reverberant ratio",
+            "snr_desc": "Signal-to-noise ratio"
+        },
+        "profile": {
+            "label": "Measurement Profile",
+            "high_end": "High-End Equipment",
+            "high_end_description": "Full frequency range (20 Hz – 20 kHz) for professional audio equipment with high-quality speakers and microphones.",
+            "smartphone": "Smartphone",
+            "smartphone_description": "Optimized frequency range (400 Hz – 10 kHz) for typical smartphone speakers and microphones."
         }
     },
     "simulation_page": {
@@ -260,8 +311,40 @@
                 "unit": "ratio"
             }
         },
+        "room_type_selector": {
+            "label": "Room Type"
+        },
+        "room_type": {
+            "classroom": "Classroom",
+            "concertHall": "Concert Hall",
+            "homeTheater": "Home Theater",
+            "recordingStudio": "Recording Studio",
+            "office": "Office"
+        },
+        "legend": {
+            "measured": "Measured",
+            "ideal": "Ideal"
+        },
         "results": {
-            "title": "Simulation results"
+            "title": "Simulation results",
+            "warnings": "Warnings",
+            "raytracing_button": "Experimental Raytracing Simulation",
+            "raytracing_badge": "Experimental",
+            "legend_measured": "Measured simulation",
+            "legend_ideal": "Ideal range",
+            "legend_raytracing": "Raytracing simulation",
+            "measured": "Measured",
+            "ideal": "Ideal",
+            "raytracing": "Raytracing",
+            "raytracing_performance": {
+                "fast": "Fast",
+                "medium": "Medium",
+                "high": "High",
+                "extreme": "Extreme",
+                "bonkers": "Bonkers",
+                "bonkersPlus": "Bonkers+",
+                "serverCrasher": "Servercrasher"
+            }
         },
         "progress": {
             "title": "Running simulation",
@@ -272,6 +355,7 @@
             "advance": "Next step",
             "back": "Previous step",
             "close_room_hint": "Close the wall loop to proceed to the next step.",
+            "place_devices_hint": "Place at least one speaker and one microphone to continue.",
             "steps": {
                 "0": {
                     "title": "Construct wall structure",
@@ -280,6 +364,10 @@
                 "1": {
                     "title": "Furnish the room",
                     "description": "Place furniture, openings, and acoustic treatments in the space."
+                },
+                "devices": {
+                    "title": "Place speakers and microphones",
+                    "description": "Add at least one speaker and one microphone before running the simulation."
                 },
                 "2": {
                     "title": "Start simulation",
@@ -299,6 +387,9 @@
                 "structure": "Structure",
                 "furnishing": "Furnishing"
             },
+            "audio": {
+                "helper": "Place at least one speaker and one microphone to continue."
+            },
             "close_room_hint": "Close the wall loop to unlock furnishings.",
             "construction_title": "Wall construction",
             "construction_helper": "Tap the canvas to draw walls. Close the loop to finalize the footprint.",
@@ -310,6 +401,7 @@
                 "openings": "Openings",
                 "furniture": "Furniture",
                 "bath_kitchen": "Bath & kitchen",
+                "audio": "Audio",
                 "placeholder": "Select item",
                 "items": {
                     "door": "Door",
@@ -327,12 +419,17 @@
                         "shelf": "Shelf",
                         "stove": "Stove",
                         "fridge": "Fridge",
-                        "shower": "Shower"
+                        "shower": "Shower",
+                        "speaker": "Speaker",
+                        "microphone": "Microphone"
                 }
             }
         },
         "structure": {
-            "options_title": "Room height",
+            "options_title": "Room structure",
+            "wall_material_label": "Wall material",
+            "floor_material_label": "Floor material",
+            "ceiling_material_label": "Ceiling material",
             "room_height_label": "Ceiling height",
             "room_height_helper": "Default: {value} m"
         },

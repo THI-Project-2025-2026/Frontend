@@ -12,6 +12,9 @@ class _UnsupportedRecordingService implements RecordingService {
   Future<bool> hasPermission() async => false;
 
   @override
+  Future<bool> requestPermission() async => false;
+
+  @override
   Future<void> start({required String filePath}) =>
       Future<void>.error(_unsupportedError());
 

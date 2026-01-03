@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -31,6 +31,15 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     on<CanvasPanEnd>(_onCanvasPanEnd);
     on<CanvasTap>(_onCanvasTap);
     on<ClearRoom>(_onClearRoom);
+    on<DeviceHighlightsUpdated>(_onDeviceHighlightsUpdated);
+    on<RoomPlanImported>(_onRoomPlanImported);
+    // Material events
+    on<LoadMaterials>(_onLoadMaterials);
+    on<MaterialsLoaded>(_onMaterialsLoaded);
+    on<MaterialsLoadFailed>(_onMaterialsLoadFailed);
+    on<WallMaterialChanged>(_onWallMaterialChanged);
+    on<FloorMaterialChanged>(_onFloorMaterialChanged);
+    on<CeilingMaterialChanged>(_onCeilingMaterialChanged);
   }
 
   @override
@@ -49,7 +58,9 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
   }
 
   void _onStepChanged(StepChanged event, Emitter<RoomModelingState> emit) {
-    if (event.step == RoomModelingStep.furnishing && !state.isRoomClosed) {
+    final requiresClosedRoom = event.step == RoomModelingStep.furnishing ||
+        event.step == RoomModelingStep.audio;
+    if (requiresClosedRoom && !state.isRoomClosed) {
       return;
     }
 
@@ -59,6 +70,8 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       // Default tool for furnishing could be anything, let's say door or just none/select
       // But we removed select. Let's default to door for now or keep previous if valid.
       newTool = RoomModelingTool.door;
+    } else if (event.step == RoomModelingStep.audio) {
+      newTool = RoomModelingTool.speaker;
     }
 
     emit(state.copyWith(
@@ -134,8 +147,6 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final oldDepthM = target.size.height / pixelsPerMeter;
     final oldHeightM =
         target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
-    final fid = target.id;
-    final ftype = target.type;
 
     if (event.size != null) {
       target = target.copyWith(
@@ -170,13 +181,13 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final newHeightM =
         target.heightMeters ?? _defaultFurnitureHeightMeters(target.type);
 
-    void _maybeLog(String label, double oldVal, double newVal) {
+    void maybeLog(String label, double oldVal, double newVal) {
       // console logging removed
     }
 
-    _maybeLog('width', oldWidthM, newWidthM);
-    _maybeLog('depth', oldDepthM, newDepthM);
-    _maybeLog('height', oldHeightM, newHeightM);
+    maybeLog('width', oldWidthM, newWidthM);
+    maybeLog('depth', oldDepthM, newDepthM);
+    maybeLog('height', oldHeightM, newHeightM);
 
     final updatedFurniture = [...state.furniture];
     updatedFurniture[index] = target;
@@ -188,7 +199,7 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     CanvasPanStart event,
     Emitter<RoomModelingState> emit,
   ) {
-    if (state.currentStep == RoomModelingStep.furnishing) {
+    if (state.currentStep != RoomModelingStep.structure) {
       if (state.selectedFurnitureId != null) {
         final furniture = state.furniture.firstWhere(
           (f) => f.id == state.selectedFurnitureId,
@@ -856,6 +867,12 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       case RoomModelingTool.shower:
         type = FurnitureType.shower;
         break;
+      case RoomModelingTool.speaker:
+        type = FurnitureType.speaker;
+        break;
+      case RoomModelingTool.microphone:
+        type = FurnitureType.microphone;
+        break;
       default:
         return;
     }
@@ -962,6 +979,35 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
 
   void _onClearRoom(ClearRoom event, Emitter<RoomModelingState> emit) {
     emit(const RoomModelingState());
+  }
+
+  void _onDeviceHighlightsUpdated(
+    DeviceHighlightsUpdated event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    if (mapEquals(state.deviceHighlights, event.highlights)) {
+      return;
+    }
+    emit(state.copyWith(deviceHighlights: event.highlights));
+  }
+
+  void _onRoomPlanImported(
+    RoomPlanImported event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        walls: event.plan.walls,
+        furniture: event.plan.furniture,
+        roomHeightMeters: event.plan.roomHeightMeters,
+        roomPolygon: event.plan.roomPolygon,
+        isRoomClosed: event.plan.isRoomClosed,
+        clearSelection: true,
+        clearDrag: true,
+        clearSnapGuide: true,
+        clearHighlights: true,
+      ),
+    );
   }
 
   List<Furniture> _repositionAttachedOpenings(
@@ -1211,6 +1257,10 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
         return 1.8;
       case FurnitureType.shower:
         return 2.2;
+      case FurnitureType.speaker:
+        return 1.4;
+      case FurnitureType.microphone:
+        return 1.2;
     }
   }
 
@@ -1446,17 +1496,20 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
     final halfWidth = furniture.size.width / 2;
     final halfHeight = furniture.size.height / 2;
 
+    final allowTransformHandles = !furniture.isOpening && !furniture.isDevice;
+
     // Check rotate handle (top center + 30px up)
     // In local coords, this is (0, -halfHeight - 30)
     // Allow some hit radius
-    if (!furniture.isOpening &&
+    if (allowTransformHandles &&
         (localPoint - Offset(0, -halfHeight - 30)).distance < 15.0) {
       return FurnitureInteraction.rotate;
     }
 
     // Check resize handle (bottom right)
     // In local coords, this is (halfWidth, halfHeight)
-    if ((localPoint - Offset(halfWidth, halfHeight)).distance < 15.0) {
+    if (allowTransformHandles &&
+        (localPoint - Offset(halfWidth, halfHeight)).distance < 15.0) {
       return FurnitureInteraction.resize;
     }
 
@@ -1490,5 +1543,89 @@ class RoomModelingBloc extends Bloc<RoomModelingEvent, RoomModelingState> {
       translated.dx * cosA - translated.dy * sinA,
       translated.dx * sinA + translated.dy * cosA,
     );
+  }
+
+  // Material event handlers
+
+  void _onLoadMaterials(LoadMaterials event, Emitter<RoomModelingState> emit) {
+    emit(state.copyWith(
+      isMaterialsLoading: true,
+      clearMaterialsError: true,
+    ));
+  }
+
+  void _onMaterialsLoaded(
+    MaterialsLoaded event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    // Set default selections if not already set
+    final materials = event.materials;
+    AcousticMaterial? defaultWall = state.roomMaterials.wallMaterial;
+    AcousticMaterial? defaultFloor = state.roomMaterials.floorMaterial;
+    AcousticMaterial? defaultCeiling = state.roomMaterials.ceilingMaterial;
+
+    if (materials.isNotEmpty) {
+      // Find reasonable defaults
+      final findMaterial =
+          (String id) => materials.where((m) => m.id == id).firstOrNull;
+
+      defaultWall ??=
+          findMaterial('plaster') ?? findMaterial('default') ?? materials.first;
+      defaultFloor ??= findMaterial('hardwood') ??
+          findMaterial('default') ??
+          materials.first;
+      defaultCeiling ??=
+          findMaterial('plaster') ?? findMaterial('default') ?? materials.first;
+    }
+
+    emit(state.copyWith(
+      availableMaterials: materials,
+      roomMaterials: RoomMaterials(
+        wallMaterial: defaultWall,
+        floorMaterial: defaultFloor,
+        ceilingMaterial: defaultCeiling,
+      ),
+      isMaterialsLoading: false,
+      clearMaterialsError: true,
+    ));
+  }
+
+  void _onMaterialsLoadFailed(
+    MaterialsLoadFailed event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      isMaterialsLoading: false,
+      materialsError: event.error,
+    ));
+  }
+
+  void _onWallMaterialChanged(
+    WallMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials: state.roomMaterials.copyWith(wallMaterial: event.material),
+    ));
+  }
+
+  void _onFloorMaterialChanged(
+    FloorMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials:
+          state.roomMaterials.copyWith(floorMaterial: event.material),
+    ));
+  }
+
+  void _onCeilingMaterialChanged(
+    CeilingMaterialChanged event,
+    Emitter<RoomModelingState> emit,
+  ) {
+    emit(state.copyWith(
+      roomMaterials:
+          state.roomMaterials.copyWith(ceilingMaterial: event.material),
+    ));
   }
 }

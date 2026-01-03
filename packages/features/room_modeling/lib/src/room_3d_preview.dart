@@ -247,23 +247,21 @@ class _Room3DPreviewState extends State<Room3DPreview> {
     final scriptMatch = RegExp(r'<script[^>]*>').firstMatch(html);
     if (scriptMatch != null) {
       final insertPos = scriptMatch.start;
-      return html.substring(0, insertPos) +
-          jsonScript +
-          html.substring(insertPos);
+      return '${html.substring(0, insertPos)}$jsonScript${html.substring(insertPos)}';
     }
 
     // Fallback: Insert before </body>
     if (html.contains('</body>')) {
-      return html.replaceFirst('</body>', jsonScript + '</body>');
+      return html.replaceFirst('</body>', '$jsonScript</body>');
     }
 
     // Last resort: Insert before </head>
     if (html.contains('</head>')) {
-      return html.replaceFirst('</head>', jsonScript + '</head>');
+      return html.replaceFirst('</head>', '$jsonScript</head>');
     }
 
     // Final fallback: prepend to entire HTML
-    return jsonScript + html;
+    return '$jsonScript$html';
   }
 
   String _text(String key, String fallback) {

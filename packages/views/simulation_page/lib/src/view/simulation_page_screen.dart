@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 
-import 'package:common_helpers/common_helpers.dart';
+import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:l10n_service/l10n_service.dart';
 import 'package:room_modeling/room_modeling.dart';
+import 'package:uuid/uuid.dart';
 
 import '../bloc/simulation_page_bloc.dart';
+import 'simulation_results_chart.dart';
 
 class SimulationPageScreen extends StatelessWidget {
   const SimulationPageScreen({super.key});
@@ -16,18 +20,34 @@ class SimulationPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gatewayBloc = GetIt.instance<GatewayConnectionBloc>();
+    final gatewayConfig = GetIt.instance<GatewayConfig>();
+    final httpClient = BackendHttpClient(config: gatewayConfig);
+    final referenceRepository = SimulationReferenceRepository(
+      httpClient: httpClient,
+    );
+    final materialsRepository = SimulationMaterialsRepository(
+      httpClient: httpClient,
+    );
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => SimulationPageBloc()),
+        BlocProvider(
+          create: (_) =>
+              SimulationPageBloc(referenceRepository: referenceRepository)
+                ..add(const SimulationReferenceProfilesRequested()),
+        ),
         BlocProvider(create: (_) => RoomModelingBloc()),
+        BlocProvider.value(value: gatewayBloc),
       ],
-      child: const _SimulationPageView(),
+      child: _SimulationPageView(materialsRepository: materialsRepository),
     );
   }
 }
 
 class _SimulationPageView extends StatefulWidget {
-  const _SimulationPageView();
+  const _SimulationPageView({required this.materialsRepository});
+
+  final SimulationMaterialsRepository materialsRepository;
 
   @override
   State<_SimulationPageView> createState() => _SimulationPageViewState();
@@ -37,6 +57,35 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _metricsKey = GlobalKey();
   bool _isSimulationDialogShowing = false;
+  final GatewayConnectionRepository _gatewayRepository =
+      GetIt.instance<GatewayConnectionRepository>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterials();
+  }
+
+  Future<void> _loadMaterials() async {
+    final roomBloc = context.read<RoomModelingBloc>();
+    roomBloc.add(const LoadMaterials());
+    try {
+      final materials = await widget.materialsRepository.fetchMaterials();
+      final acousticMaterials = materials
+          .map(
+            (m) => AcousticMaterial(
+              id: m.id,
+              displayName: m.displayName,
+              absorption: m.absorption,
+              scattering: m.scattering,
+            ),
+          )
+          .toList();
+      roomBloc.add(MaterialsLoaded(acousticMaterials));
+    } catch (e) {
+      roomBloc.add(MaterialsLoadFailed(e.toString()));
+    }
+  }
 
   @override
   void dispose() {
@@ -44,9 +93,15 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
     super.dispose();
   }
 
-  void _showSimulationDialog(BuildContext context) {
+  void _showSimulationDialog(
+    BuildContext context, {
+    bool useRaytracing = false,
+    int raytracingBounces = 3,
+  }) {
     if (_isSimulationDialogShowing) return;
     _isSimulationDialogShowing = true;
+    final gatewayBloc = context.read<GatewayConnectionBloc>();
+    final roomBloc = context.read<RoomModelingBloc>();
 
     showGeneralDialog(
       context: context,
@@ -55,13 +110,21 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
         return _SimulationProgressDialog(
-          onComplete: () {
+          gatewayBloc: gatewayBloc,
+          gatewayRepository: _gatewayRepository,
+          roomBloc: roomBloc,
+          useRaytracing: useRaytracing,
+          raytracingBounces: raytracingBounces,
+          onComplete: (result) {
             Navigator.of(context).pop();
-            _isSimulationDialogShowing = false;
-            // Advance to step 4 (results)
-            this.context.read<SimulationPageBloc>().add(
-              const SimulationTimelineAdvanced(),
+            final simulationBloc = this.context.read<SimulationPageBloc>();
+            simulationBloc.add(
+              SimulationResultReceived(result, isRaytracing: useRaytracing),
             );
+            // Advance to step 4 (results) only if not already there
+            if (simulationBloc.state.activeStepIndex < 4) {
+              simulationBloc.add(const SimulationTimelineAdvanced());
+            }
             // Scroll to results after a short delay
             Future.delayed(const Duration(milliseconds: 100), () {
               _scrollToMetrics();
@@ -80,7 +143,9 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
           ),
         );
       },
-    );
+    ).then((_) {
+      _isSimulationDialogShowing = false;
+    });
   }
 
   void _scrollToMetrics() {
@@ -121,12 +186,14 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
             final roomBloc = context.read<RoomModelingBloc>();
             if (state.activeStepIndex == 0) {
               roomBloc.add(const StepChanged(RoomModelingStep.structure));
-            } else if (state.activeStepIndex >= 1) {
+            } else if (state.activeStepIndex == 1) {
               roomBloc.add(const StepChanged(RoomModelingStep.furnishing));
+            } else {
+              roomBloc.add(const StepChanged(RoomModelingStep.audio));
             }
 
-            // Show simulation dialog when entering step 3 (index 2)
-            if (state.activeStepIndex == 2) {
+            // Show simulation dialog when entering step 4 (index 3)
+            if (state.activeStepIndex == 3) {
               _showSimulationDialog(context);
             }
           },
@@ -180,10 +247,10 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                       builder: (context, simulationState) {
                         // Hide tools panel in steps 3+ (simulation and results)
                         final hideToolsPanel =
-                            simulationState.activeStepIndex >= 2;
-                        // Only show metrics in step 4 (results)
+                            simulationState.activeStepIndex >= 3;
+                        // Only show metrics in step 5 (results)
                         final showMetrics =
-                            simulationState.activeStepIndex == 3;
+                            simulationState.activeStepIndex == 4;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -195,13 +262,22 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
                               child: RoomModelingWidget(
                                 bloc: context.read<RoomModelingBloc>(),
                                 hideToolsPanel: hideToolsPanel,
+                                readOnly: simulationState.activeStepIndex >= 3,
                               ),
                             ),
                             SizedBox(height: isWide ? 32 : 24),
                             const _SimulationTimelineCard(),
                             if (showMetrics) ...[
                               SizedBox(height: isWide ? 48 : 36),
-                              _SimulationMetricSection(key: _metricsKey),
+                              _SimulationMetricSection(
+                                key: _metricsKey,
+                                onRaytracingPressed: (bounces) =>
+                                    _showSimulationDialog(
+                                      context,
+                                      useRaytracing: true,
+                                      raytracingBounces: bounces,
+                                    ),
+                              ),
                             ],
                           ],
                         );
@@ -219,9 +295,21 @@ class _SimulationPageViewState extends State<_SimulationPageView> {
 }
 
 class _SimulationProgressDialog extends StatefulWidget {
-  const _SimulationProgressDialog({required this.onComplete});
+  const _SimulationProgressDialog({
+    required this.onComplete,
+    required this.gatewayBloc,
+    required this.gatewayRepository,
+    required this.roomBloc,
+    this.useRaytracing = false,
+    this.raytracingBounces = 3,
+  });
 
-  final VoidCallback onComplete;
+  final ValueChanged<Map<String, dynamic>?> onComplete;
+  final GatewayConnectionBloc gatewayBloc;
+  final GatewayConnectionRepository gatewayRepository;
+  final RoomModelingBloc roomBloc;
+  final bool useRaytracing;
+  final int raytracingBounces;
 
   @override
   State<_SimulationProgressDialog> createState() =>
@@ -229,31 +317,215 @@ class _SimulationProgressDialog extends StatefulWidget {
 }
 
 class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
-  int _countdown = 3;
-  Timer? _timer;
+  static const Duration _connectionTimeout = Duration(seconds: 12);
+  static const Duration _simulationTimeout = Duration(seconds: 45);
+  static const Uuid _uuid = Uuid();
+
+  final List<_SimulationTask> _tasks = <_SimulationTask>[
+    const _SimulationTask(label: 'Connection to backend successful'),
+    const _SimulationTask(label: 'Data sent to backend successful'),
+    const _SimulationTask(label: 'Simulation completed'),
+  ];
+
+  bool _hasError = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _startCountdown();
+    _runWorkflow();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startCountdown() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdown > 1) {
-        setState(() {
-          _countdown--;
-        });
-      } else {
-        timer.cancel();
-        widget.onComplete();
+  Future<void> _runWorkflow() async {
+    final workflowTimer = Stopwatch()..start();
+    String? requestId;
+    try {
+      await _ensureConnected();
+      requestId = _uuid.v4();
+      debugPrint('Simulation workflow started (requestId: $requestId)');
+      final responseFuture = _responseFor(requestId);
+      await _sendSimulationPayload(requestId);
+      debugPrint('Awaiting simulation response (requestId: $requestId)');
+      final envelope = await _awaitSimulationCompletion(
+        responseFuture,
+        requestId,
+      );
+      if (!mounted) {
+        return;
       }
+      debugPrint(
+        'Simulation workflow finished in ${workflowTimer.elapsedMilliseconds} ms '
+        '(requestId: $requestId)',
+      );
+      widget.onComplete(_payloadAsJsonMap(envelope.data));
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Simulation workflow failed (requestId: ${requestId ?? 'n/a'}): $error',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _hasError = true;
+        _errorMessage = error.toString();
+      });
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stackTrace),
+      );
+    }
+  }
+
+  Future<void> _ensureConnected() async {
+    final timer = Stopwatch()..start();
+    debugPrint('Ensuring gateway connection...');
+    _updateTask(0, _SimulationTaskStatus.active);
+    final bloc = widget.gatewayBloc;
+    if (bloc.state.status == GatewayConnectionStatus.connected) {
+      _updateTask(0, _SimulationTaskStatus.success);
+      debugPrint('Gateway already connected.');
+      return;
+    }
+    if (bloc.state.status == GatewayConnectionStatus.failure ||
+        bloc.state.status == GatewayConnectionStatus.disconnected ||
+        bloc.state.status == GatewayConnectionStatus.initial) {
+      bloc.add(const GatewayConnectionRequested());
+    }
+    try {
+      await bloc.stream
+          .firstWhere(
+            (state) => state.status == GatewayConnectionStatus.connected,
+          )
+          .timeout(_connectionTimeout);
+      _updateTask(0, _SimulationTaskStatus.success);
+      debugPrint('Gateway connected in ${timer.elapsedMilliseconds} ms.');
+    } on Object catch (error) {
+      _updateTask(0, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint('Gateway connection failed: $error');
+      rethrow;
+    }
+  }
+
+  Future<void> _sendSimulationPayload(String requestId) async {
+    final timer = Stopwatch()..start();
+    _updateTask(1, _SimulationTaskStatus.active);
+    try {
+      final exporter = RoomPlanExporter();
+      final roomJson = exporter.export(widget.roomBloc.state);
+      final rooms = roomJson['rooms'];
+      final roomCount = rooms is List ? rooms.length : 0;
+      final furnitureCount = rooms is List && rooms.isNotEmpty
+          ? ((rooms.first as Map<String, dynamic>)['furniture'] as List?)
+                    ?.length ??
+                0
+          : 0;
+      final payload = <String, dynamic>{
+        'event': 'simulation.run',
+        'request_id': requestId,
+        'data': {
+          'room_model': roomJson,
+          'include_rir': false,
+          'use_raytracing': widget.useRaytracing,
+          'raytracing_bounces': widget.raytracingBounces,
+        },
+      };
+      debugPrint('Simulation request payload: ${jsonEncode(payload)}');
+      await widget.gatewayRepository.sendJson(payload);
+      debugPrint(
+        'Simulation payload sent (requestId: $requestId, rooms: $roomCount, '
+        'furniture: $furnitureCount, raytracing: ${widget.useRaytracing}, '
+        'bounces: ${widget.raytracingBounces}, '
+        'elapsed: ${timer.elapsedMilliseconds} ms)',
+      );
+      _updateTask(1, _SimulationTaskStatus.success);
+    } on Object catch (error) {
+      _updateTask(1, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint(
+        'Simulation payload send failed (requestId: $requestId): $error',
+      );
+      rethrow;
+    }
+  }
+
+  Future<GatewayEnvelope> _awaitSimulationCompletion(
+    Future<GatewayEnvelope> responseFuture,
+    String requestId,
+  ) async {
+    final timer = Stopwatch()..start();
+    _updateTask(2, _SimulationTaskStatus.active);
+    try {
+      final envelope = await responseFuture;
+      if (envelope.isError) {
+        final message = jsonEncode(envelope.error ?? {'message': 'error'});
+        throw StateError('Simulation failed: $message');
+      }
+      if (envelope.data != null) {
+        debugPrint('Simulation completed result: ${jsonEncode(envelope.data)}');
+      }
+      final responseId = envelope.requestId ?? 'n/a';
+      debugPrint(
+        'Simulation completed successfully (requestId: $requestId, '
+        'responseId: $responseId, elapsed: ${timer.elapsedMilliseconds} ms)',
+      );
+      _updateTask(2, _SimulationTaskStatus.success);
+      return envelope;
+    } on Object catch (error) {
+      _updateTask(2, _SimulationTaskStatus.failure, detail: error.toString());
+      debugPrint(
+        'Simulation response wait failed (requestId: $requestId): $error',
+      );
+      rethrow;
+    }
+  }
+
+  Future<GatewayEnvelope> _responseFor(String requestId) {
+    return widget.gatewayBloc.envelopes
+        .where(
+          (envelope) =>
+              envelope.requestId == requestId &&
+              envelope.event == 'simulation.run',
+        )
+        .first
+        .timeout(_simulationTimeout);
+  }
+
+  void _retry() {
+    setState(() {
+      _hasError = false;
+      _errorMessage = null;
+      for (int i = 0; i < _tasks.length; i++) {
+        _tasks[i] = _tasks[i].copyWith(
+          status: _SimulationTaskStatus.pending,
+          resetDetail: true,
+        );
+      }
+    });
+    _runWorkflow();
+  }
+
+  Map<String, dynamic>? _payloadAsJsonMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
+  }
+
+  void _updateTask(int index, _SimulationTaskStatus status, {String? detail}) {
+    if (!mounted || index < 0 || index >= _tasks.length) {
+      return;
+    }
+    setState(() {
+      final shouldClearDetail =
+          detail == null &&
+          status != _SimulationTaskStatus.failure &&
+          status != _SimulationTaskStatus.pending;
+      _tasks[index] = _tasks[index].copyWith(
+        status: status,
+        detail: detail,
+        resetDetail: shouldClearDetail,
+      );
     });
   }
 
@@ -267,7 +539,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 460),
           margin: const EdgeInsets.all(32),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
@@ -283,23 +555,14 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 64,
-                height: 64,
-                child: CircularProgressIndicator(
-                  strokeWidth: 4,
-                  valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                ),
-              ),
-              const SizedBox(height: 28),
               Text(
                 _tr('simulation_page.progress.title'),
                 style: textTheme.titleLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
@@ -310,30 +573,158 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
                   ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '$_countdown',
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: accentColor,
-                    fontWeight: FontWeight.w700,
+              for (final task in _tasks) ...[
+                _ProgressStatusRow(task: task, accentColor: accentColor),
+                const SizedBox(height: 16),
+              ],
+              if (_hasError) ...[
+                Text(
+                  _errorMessage ?? 'Simulation failed.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SonalyzeButton(
+                      onPressed: _retry,
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Text(_tr('common.retry')),
+                    ),
+                    const SizedBox(width: 12),
+                    SonalyzeButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Text(_tr('common.close')),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProgressStatusRow extends StatelessWidget {
+  const _ProgressStatusRow({required this.task, required this.accentColor});
+
+  final _SimulationTask task;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    late final Widget icon;
+    late final Color detailColor;
+
+    switch (task.status) {
+      case _SimulationTaskStatus.success:
+        icon = Icon(Icons.check_circle, color: accentColor, size: 28);
+        detailColor = accentColor;
+        break;
+      case _SimulationTaskStatus.failure:
+        icon = Icon(Icons.error, color: colorScheme.error, size: 28);
+        detailColor = colorScheme.error;
+        break;
+      case _SimulationTaskStatus.active:
+        icon = SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          ),
+        );
+        detailColor = accentColor;
+        break;
+      case _SimulationTaskStatus.pending:
+        final faded = colorScheme.onSurface.withValues(alpha: 0.3);
+        icon = Icon(Icons.radio_button_unchecked, color: faded, size: 24);
+        detailColor = faded;
+        break;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(padding: const EdgeInsets.only(top: 4), child: icon),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                task.label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (task.detail != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    task.detail!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: detailColor.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SimulationTaskStatus { pending, active, success, failure }
+
+class _SimulationTask {
+  const _SimulationTask({
+    required this.label,
+    this.status = _SimulationTaskStatus.pending,
+    this.detail,
+  });
+
+  final String label;
+  final _SimulationTaskStatus status;
+  final String? detail;
+
+  _SimulationTask copyWith({
+    _SimulationTaskStatus? status,
+    String? detail,
+    bool resetDetail = false,
+  }) {
+    return _SimulationTask(
+      label: label,
+      status: status ?? this.status,
+      detail: resetDetail ? null : (detail ?? this.detail),
     );
   }
 }
@@ -402,15 +793,29 @@ class _SimulationHeader extends StatelessWidget {
   }
 }
 
-class _SimulationMetricSection extends StatelessWidget {
-  const _SimulationMetricSection({super.key});
+class _SimulationMetricSection extends StatefulWidget {
+  const _SimulationMetricSection({super.key, this.onRaytracingPressed});
+
+  final void Function(int bounces)? onRaytracingPressed;
+
+  @override
+  State<_SimulationMetricSection> createState() =>
+      _SimulationMetricSectionState();
+}
+
+class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
+  int _selectedBounces = 5; // Default to medium (5 bounces)
 
   @override
   Widget build(BuildContext context) {
     final panelColor = _themeColor('simulation_page.metrics_background');
+    final accentColor = _themeColor('simulation_page.timeline_active');
+    final badgeColor = _themeColor('simulation_page.header_badge_background');
+    final badgeText = _themeColor('simulation_page.header_badge_text');
 
     return BlocBuilder<SimulationPageBloc, SimulationPageState>(
       builder: (context, state) {
+        final result = state.lastResult;
         return SonalyzeSurface(
           padding: const EdgeInsets.all(28),
           backgroundColor: panelColor.withValues(alpha: 0.95),
@@ -418,33 +823,102 @@ class _SimulationMetricSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _tr('simulation_page.results.title'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _tr('simulation_page.results.title'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (widget.onRaytracingPressed != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _localizedOr(
+                              'simulation_page.results.raytracing_badge',
+                              'Experimental',
+                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: badgeText,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _RaytracingPerformanceDropdown(
+                          selectedBounces: _selectedBounces,
+                          onChanged: (bounces) {
+                            setState(() => _selectedBounces = bounces);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        SonalyzeButton(
+                          onPressed: () =>
+                              widget.onRaytracingPressed!(_selectedBounces),
+                          backgroundColor: accentColor.withValues(alpha: 0.15),
+                          foregroundColor: accentColor,
+                          borderRadius: BorderRadius.circular(12),
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          child: Text(
+                            _localizedOr(
+                              'simulation_page.results.raytracing_button',
+                              'Raytracing Simulation',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
               const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth > 1000;
-                  final itemWidth = isWide
-                      ? (constraints.maxWidth - 32) / 3
-                      : double.infinity;
-                  return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
+              if (result != null) ...[
+                SimulationResultsChart(
+                  result: result,
+                  raytracingResult: state.lastRaytracingResult,
+                  referenceProfiles: state.referenceProfiles,
+                  referenceStatus: state.referenceProfilesStatus,
+                  referenceError: state.referenceProfilesError,
+                ),
+                if (result.warnings.any((w) => !w.contains('STI'))) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    _localizedOr(
+                      'simulation_page.results.warnings',
+                      'Warnings',
+                    ),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      for (final series in state.metrics)
-                        SizedBox(
-                          width: itemWidth,
-                          child: _MetricChartCard(series: series),
-                        ),
+                      for (final warning in result.warnings.where(
+                        (w) => !w.contains('STI'),
+                      ))
+                        _ResultWarningChip(label: warning),
                     ],
-                  );
-                },
-              ),
+                  ),
+                ],
+              ] else
+                const _SimulationResultsEmptyState(),
             ],
           ),
         );
@@ -453,148 +927,137 @@ class _SimulationMetricSection extends StatelessWidget {
   }
 }
 
-class _MetricChartCard extends StatelessWidget {
-  const _MetricChartCard({required this.series});
+enum _RaytracingPerformance {
+  fast(3, 'Fast'),
+  medium(5, 'Medium'),
+  high(7, 'High'),
+  extreme(10, 'Extreme'),
+  bonkers(15, 'Bonkers'),
+  bonkersPlus(20, 'Bonkers+'),
+  serverCrasher(30, 'Servercrasher');
 
-  final SimulationMetricSeries series;
+  const _RaytracingPerformance(this.bounces, this.label);
+  final int bounces;
+  final String label;
+
+  String localizedLabel(BuildContext context) {
+    final key = 'simulation_page.results.raytracing_performance.$name';
+    return _localizedOr(key, label);
+  }
+
+  static _RaytracingPerformance fromBounces(int bounces) {
+    return _RaytracingPerformance.values.firstWhere(
+      (p) => p.bounces == bounces,
+      orElse: () => _RaytracingPerformance.medium,
+    );
+  }
+}
+
+class _RaytracingPerformanceDropdown extends StatelessWidget {
+  const _RaytracingPerformanceDropdown({
+    required this.selectedBounces,
+    required this.onChanged,
+  });
+
+  final int selectedBounces;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = _themeColor('simulation_page.graphs.card_background');
-    final axisColor = _themeColor('simulation_page.graphs.axis');
-    final lineColor = _themeColor(series.colorKey);
-    final fillColor = _themeColor('${series.colorKey}_fill');
+    final accentColor = _themeColor('simulation_page.timeline_active');
+    final selected = _RaytracingPerformance.fromBounces(selectedBounces);
 
-    final latestValue = series.values.last;
-
-    return SonalyzeSurface(
-      padding: const EdgeInsets.all(20),
-      backgroundColor: cardColor.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _tr(series.labelKey),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_RaytracingPerformance>(
+          value: selected,
+          isDense: true,
+          icon: Icon(Icons.arrow_drop_down, color: accentColor, size: 20),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: accentColor,
+            fontWeight: FontWeight.w600,
+          ),
+          dropdownColor: Theme.of(context).colorScheme.surface,
+          items: _RaytracingPerformance.values.map((performance) {
+            return DropdownMenuItem(
+              value: performance,
+              child: Text(
+                '${performance.localizedLabel(context)} (${performance.bounces})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
-              Text(
-                '${formatNumber(latestValue, fractionDigits: 2)} ${_tr(series.unitKey)}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w600,
+            );
+          }).toList(),
+          onChanged: (performance) {
+            if (performance != null) {
+              onChanged(performance.bounces);
+            }
+          },
+          selectedItemBuilder: (context) {
+            return _RaytracingPerformance.values.map((performance) {
+              return Center(
+                child: Text(
+                  performance.localizedLabel(context),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 180,
-            child: CustomPaint(
-              painter: _MetricChartPainter(
-                series: series,
-                axisColor: axisColor.withValues(alpha: 0.4),
-                lineColor: lineColor,
-                fillColor: fillColor.withValues(alpha: 0.25),
-              ),
-            ),
-          ),
-        ],
+              );
+            }).toList();
+          },
+        ),
       ),
     );
   }
 }
 
-class _MetricChartPainter extends CustomPainter {
-  _MetricChartPainter({
-    required this.series,
-    required this.axisColor,
-    required this.lineColor,
-    required this.fillColor,
-  });
+class _ResultWarningChip extends StatelessWidget {
+  const _ResultWarningChip({required this.label});
 
-  final SimulationMetricSeries series;
-  final Color axisColor;
-  final Color lineColor;
-  final Color fillColor;
+  final String label;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final padding = 12.0;
-    final chartWidth = size.width - padding * 2;
-    final chartHeight = size.height - padding * 2;
-    final origin = Offset(padding, size.height - padding);
-
-    final axisPaint = Paint()
-      ..color = axisColor
-      ..strokeWidth = 1;
-
-    canvas.drawLine(
-      origin,
-      Offset(origin.dx + chartWidth, origin.dy),
-      axisPaint,
+  Widget build(BuildContext context) {
+    final warningColor = _themeColor('simulation_page.timeline_inactive');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: warningColor.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: warningColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
-    canvas.drawLine(
-      origin,
-      Offset(origin.dx, origin.dy - chartHeight),
-      axisPaint,
-    );
-
-    final maxValue = series.values.reduce((a, b) => a > b ? a : b);
-    final minValue = series.values.reduce((a, b) => a < b ? a : b);
-    final span = (maxValue - minValue).abs() < 0.001
-        ? 1
-        : (maxValue - minValue);
-
-    final points = <Offset>[];
-    for (var i = 0; i < series.values.length; i++) {
-      final progress = i / (series.values.length - 1);
-      final x = origin.dx + chartWidth * progress;
-      final normalized = (series.values[i] - minValue) / span;
-      final y = origin.dy - normalized * chartHeight;
-      points.add(Offset(x, y));
-    }
-
-    final fillPath = Path()..moveTo(points.first.dx, origin.dy);
-    for (final point in points) {
-      fillPath.lineTo(point.dx, point.dy);
-    }
-    fillPath.lineTo(points.last.dx, origin.dy);
-    fillPath.close();
-
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(fillPath, fillPaint);
-
-    final linePaint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
-
-    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      linePath.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(linePath, linePaint);
   }
+}
+
+class _SimulationResultsEmptyState extends StatelessWidget {
+  const _SimulationResultsEmptyState();
 
   @override
-  bool shouldRepaint(covariant _MetricChartPainter oldDelegate) {
-    return oldDelegate.series != series ||
-        oldDelegate.axisColor != axisColor ||
-        oldDelegate.lineColor != lineColor ||
-        oldDelegate.fillColor != fillColor;
+  Widget build(BuildContext context) {
+    return Text(
+      _localizedOr(
+        'simulation_page.results.empty',
+        'Run a simulation to preview responses from the backend.',
+      ),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      ),
+    );
   }
 }
 
@@ -615,9 +1078,20 @@ class _SimulationTimelineCard extends StatelessWidget {
         return BlocBuilder<RoomModelingBloc, RoomModelingState>(
           builder: (context, roomState) {
             // Can only advance from step 0 to step 1 if room is closed
+            final requiresDevices = simulationState.activeStepIndex == 2;
+            final hasSpeaker = roomState.furniture.any(
+              (f) => f.type == FurnitureType.speaker,
+            );
+            final hasMic = roomState.furniture.any(
+              (f) => f.type == FurnitureType.microphone,
+            );
+            final hasRequiredDevices = hasSpeaker && hasMic;
+
             final canAdvance =
                 simulationState.steps.isNotEmpty &&
-                (simulationState.activeStepIndex > 0 || roomState.isRoomClosed);
+                ((simulationState.activeStepIndex > 0 ||
+                        roomState.isRoomClosed) &&
+                    (!requiresDevices || hasRequiredDevices));
 
             return SonalyzeSurface(
               padding: const EdgeInsets.all(28),
@@ -676,6 +1150,20 @@ class _SimulationTimelineCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Text(
                         _tr('simulation_page.timeline.close_room_hint'),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: warningColor),
+                      ),
+                    ),
+                  if (requiresDevices && !hasRequiredDevices)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Text(
+                        _tr(
+                          'simulation_page.timeline.place_devices_hint',
+                          fallback:
+                              'Place at least one speaker and one microphone to continue.',
+                        ),
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: warningColor),
@@ -784,9 +1272,18 @@ class _SimulationTimelineStepTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_tr(descriptor.titleKey), style: titleStyle),
+                Text(
+                  _tr(descriptor.titleKey, fallback: descriptor.fallbackTitle),
+                  style: titleStyle,
+                ),
                 const SizedBox(height: 6),
-                Text(_tr(descriptor.descriptionKey), style: descriptionStyle),
+                Text(
+                  _tr(
+                    descriptor.descriptionKey,
+                    fallback: descriptor.fallbackDescription,
+                  ),
+                  style: descriptionStyle,
+                ),
               ],
             ),
           ),
@@ -796,12 +1293,20 @@ class _SimulationTimelineStepTile extends StatelessWidget {
   }
 }
 
-String _tr(String keyPath) {
+String _tr(String keyPath, {String? fallback}) {
   final value = AppConstants.translation(keyPath);
-  if (value is String) {
+  if (value is String && value.isNotEmpty) {
     return value;
   }
-  return '';
+  if (fallback != null && fallback.isNotEmpty) {
+    return fallback;
+  }
+  return keyPath;
+}
+
+String _localizedOr(String keyPath, String fallback) {
+  final value = _tr(keyPath);
+  return value.isNotEmpty ? value : fallback;
 }
 
 Color _themeColor(String keyPath) {

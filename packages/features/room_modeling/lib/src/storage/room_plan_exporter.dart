@@ -113,9 +113,27 @@ class RoomPlanExporter {
     }
 
     final furnitureJson = state.furniture
-        .where((f) => !f.isOpening)
+        .where((f) => !f.isOpening && !f.isDevice)
         .map((f) => _mapFurniture(f, centroid))
         .toList();
+
+    final sources = <Map<String, dynamic>>[];
+    final microphones = <Map<String, dynamic>>[];
+
+    for (final device in state.furniture.where((f) => f.isDevice)) {
+      final posM = _toMetersCentered(device.position, centroid);
+      final heightM =
+          device.heightMeters ?? _defaultFurnitureHeightMeters(device.type);
+      final entry = {
+        'id': device.id,
+        'position_m': [posM.dx, posM.dy, heightM],
+      };
+      if (device.type == FurnitureType.speaker) {
+        sources.add(entry);
+      } else {
+        microphones.add(entry);
+      }
+    }
 
     final bbox = polygon != null && polygon.length >= 3
         ? _bboxFromPolygon(polygon)
@@ -137,9 +155,28 @@ class RoomPlanExporter {
       'ceiling': {'color': ceilingColor, 'height': state.roomHeightMeters},
     };
 
+    // Build materials map for simulation
+    final materials = <String, dynamic>{};
+    final wallMaterial = state.roomMaterials.wallMaterial;
+    final floorMaterial = state.roomMaterials.floorMaterial;
+    final ceilingMaterial = state.roomMaterials.ceilingMaterial;
+
+    if (wallMaterial != null) {
+      materials['wall'] = {'material_id': wallMaterial.id};
+    }
+    if (floorMaterial != null) {
+      materials['floor'] = {'material_id': floorMaterial.id};
+    }
+    if (ceilingMaterial != null) {
+      materials['ceiling'] = {'material_id': ceilingMaterial.id};
+    }
+
     return {
       'version': version,
       'rooms': [room],
+      'sources': sources,
+      'microphones': microphones,
+      'materials': materials,
       'metadata': {'created': now, 'modified': now},
     };
   }
@@ -199,6 +236,10 @@ class RoomPlanExporter {
         return 'fridge';
       case FurnitureType.shower:
         return 'shower';
+      case FurnitureType.speaker:
+        return 'speaker';
+      case FurnitureType.microphone:
+        return 'microphone';
     }
   }
 
@@ -235,6 +276,10 @@ class RoomPlanExporter {
         return 1.8;
       case FurnitureType.shower:
         return 2.2;
+      case FurnitureType.speaker:
+        return 1.4;
+      case FurnitureType.microphone:
+        return 1.2;
     }
   }
 
@@ -272,6 +317,10 @@ class RoomPlanExporter {
         return '#e8e8e8';
       case FurnitureType.shower:
         return '#c0c0c0';
+      case FurnitureType.speaker:
+        return '#ff9800';
+      case FurnitureType.microphone:
+        return '#2196f3';
     }
   }
 

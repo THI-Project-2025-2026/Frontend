@@ -55,11 +55,13 @@
         "panel_background": "#0B1220",
         "panel_border": "#1E293B",
         "accent": "#38BDF8",
+        "error": "#F87171",
         "role_chip_background": "#13203B",
         "role_chip_selected": "#38BDF8",
         "telemetry_background": "#0F172A",
         "timeline_active": "#38BDF8",
         "timeline_inactive": "#1E293B",
+        "timeline_back": "#1E40AF",
         "ready_badge_ready": "#22C55E",
         "ready_badge_waiting": "#FACC15",
         "qr_background": "#0F172A"

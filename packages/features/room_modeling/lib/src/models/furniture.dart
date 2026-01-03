@@ -18,6 +18,8 @@ enum FurnitureType {
   stove,
   fridge,
   shower,
+  speaker,
+  microphone,
 }
 
 class Furniture extends Equatable {
@@ -33,6 +35,9 @@ class Furniture extends Equatable {
   final double? sillHeightMeters;
   final double? heightMeters;
   final double? openingHeightMeters;
+
+  bool get isDevice =>
+      type == FurnitureType.speaker || type == FurnitureType.microphone;
 
   static bool isOpeningType(FurnitureType type) {
     return type == FurnitureType.door || type == FurnitureType.window;
@@ -112,18 +117,22 @@ class Furniture extends Equatable {
         return const Size(20, 35); // ~0.4m x 0.7m
       case FurnitureType.sink:
         return const Size(30, 25); // ~0.6m x 0.5m
-        case FurnitureType.closet:
-          return const Size(100, 30); // ~2.0m x 0.6m
-        case FurnitureType.desk:
-          return const Size(60, 40); // ~1.2m x 0.8m
-        case FurnitureType.shelf:
-          return const Size(80, 20); // ~1.6m x 0.4m
-        case FurnitureType.stove:
-          return const Size(30, 30); // ~0.6m x 0.6m
-        case FurnitureType.fridge:
-          return const Size(30, 35); // ~0.6m x 0.7m
-        case FurnitureType.shower:
-          return const Size(45, 45); // ~0.9m x 0.9m
+      case FurnitureType.closet:
+        return const Size(100, 30); // ~2.0m x 0.6m
+      case FurnitureType.desk:
+        return const Size(60, 40); // ~1.2m x 0.8m
+      case FurnitureType.shelf:
+        return const Size(80, 20); // ~1.6m x 0.4m
+      case FurnitureType.stove:
+        return const Size(30, 30); // ~0.6m x 0.6m
+      case FurnitureType.fridge:
+        return const Size(30, 35); // ~0.6m x 0.7m
+      case FurnitureType.shower:
+        return const Size(45, 45); // ~0.9m x 0.9m
+      case FurnitureType.speaker:
+        return const Size(24, 24); // ~0.48m x 0.48m
+      case FurnitureType.microphone:
+        return const Size(18, 18); // ~0.36m x 0.36m
     }
   }
 }

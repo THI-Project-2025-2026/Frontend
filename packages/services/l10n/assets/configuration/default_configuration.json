@@ -1,4 +1,12 @@
 {
   "defaultLanguage": "us",
-  "defaultTheme": "dark"
+  "defaultTheme": "dark",
+  "backend": {
+    "gateway": {
+      "scheme": "ws",
+      "host": "192.168.3.9",
+      "port": 8000,
+      "path": "/ws"
+    }
+  }
 }

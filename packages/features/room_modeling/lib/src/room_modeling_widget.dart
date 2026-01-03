@@ -8,7 +8,12 @@ import 'room_3d_preview.dart';
 import 'room_modeling_l10n.dart';
 
 class RoomModelingWidget extends StatelessWidget {
-  const RoomModelingWidget({super.key, this.bloc, this.hideToolsPanel = false});
+  const RoomModelingWidget({
+    super.key,
+    this.bloc,
+    this.hideToolsPanel = false,
+    this.readOnly = false,
+  });
 
   /// Optional external bloc. If not provided, creates its own.
   final RoomModelingBloc? bloc;
@@ -16,25 +21,38 @@ class RoomModelingWidget extends StatelessWidget {
   /// Whether to hide the tools panel and show only the canvas.
   final bool hideToolsPanel;
 
+  /// When true, disables editing interactions (placing/moving/resizing) while
+  /// still rendering the room model.
+  final bool readOnly;
+
   @override
   Widget build(BuildContext context) {
     if (bloc != null) {
       return BlocProvider<RoomModelingBloc>.value(
         value: bloc!,
-        child: RoomModelingView(hideToolsPanel: hideToolsPanel),
+        child: RoomModelingView(
+          hideToolsPanel: hideToolsPanel,
+          readOnly: readOnly,
+        ),
       );
     }
     return BlocProvider(
       create: (context) => RoomModelingBloc(),
-      child: RoomModelingView(hideToolsPanel: hideToolsPanel),
+      child:
+          RoomModelingView(hideToolsPanel: hideToolsPanel, readOnly: readOnly),
     );
   }
 }
 
 class RoomModelingView extends StatelessWidget {
-  const RoomModelingView({super.key, this.hideToolsPanel = false});
+  const RoomModelingView({
+    super.key,
+    this.hideToolsPanel = false,
+    this.readOnly = false,
+  });
 
   final bool hideToolsPanel;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +83,7 @@ class RoomModelingView extends StatelessWidget {
           child: SonalyzeSurface(
             child: Stack(
               children: [
-                const RoomPlanCanvas(),
+                RoomPlanCanvas(enabled: !readOnly),
                 Positioned(
                   top: 16,
                   right: 16,

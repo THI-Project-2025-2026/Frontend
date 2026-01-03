@@ -9,7 +9,9 @@ import 'models/wall.dart';
 import 'room_modeling_l10n.dart';
 
 class RoomPlanCanvas extends StatelessWidget {
-  const RoomPlanCanvas({super.key});
+  const RoomPlanCanvas({super.key, this.enabled = true});
+
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -28,28 +30,38 @@ class RoomPlanCanvas extends StatelessWidget {
             final canvasSize = Size(width, height);
 
             return GestureDetector(
-              onPanStart: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasPanStart(details.localPosition, canvasSize),
-                    );
-              },
-              onPanUpdate: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasPanUpdate(details.localPosition, canvasSize),
-                    );
-              },
-              onPanEnd: (details) {
-                context.read<RoomModelingBloc>().add(const CanvasPanEnd());
-              },
-              onTapUp: (details) {
-                context.read<RoomModelingBloc>().add(
-                      CanvasTap(details.localPosition, canvasSize),
-                    );
-              },
+              onPanStart: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasPanStart(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
+              onPanUpdate: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasPanUpdate(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
+              onPanEnd: enabled
+                  ? (details) {
+                      context
+                          .read<RoomModelingBloc>()
+                          .add(const CanvasPanEnd());
+                    }
+                  : null,
+              onTapUp: enabled
+                  ? (details) {
+                      context.read<RoomModelingBloc>().add(
+                            CanvasTap(details.localPosition, canvasSize),
+                          );
+                    }
+                  : null,
               child: Container(
                 color: palette.background,
                 child: CustomPaint(
-                  painter: RoomPainter(
+                  painter: _RoomPainter(
                     walls: state.walls,
                     tempWall: state.tempWall,
                     dragCurrent: state.dragCurrent,
@@ -59,6 +71,7 @@ class RoomPlanCanvas extends StatelessWidget {
                     selectedFurnitureId: state.selectedFurnitureId,
                     snapGuides: state.snapGuides,
                     roomPolygon: state.roomPolygon,
+                    deviceHighlights: state.deviceHighlights,
                     palette: palette,
                   ),
                   size: canvasSize,
@@ -72,7 +85,7 @@ class RoomPlanCanvas extends StatelessWidget {
   }
 }
 
-class RoomPainter extends CustomPainter {
+class _RoomPainter extends CustomPainter {
   final List<Wall> walls;
   final List<Furniture> furniture;
   final Wall? tempWall;
@@ -85,8 +98,9 @@ class RoomPainter extends CustomPainter {
   final _RoomCanvasPalette palette;
   final String metersSuffix;
   final String degreesSuffix;
+  final Map<String, Color> deviceHighlights;
 
-  RoomPainter({
+  _RoomPainter({
     required this.walls,
     this.furniture = const [],
     this.tempWall,
@@ -97,6 +111,7 @@ class RoomPainter extends CustomPainter {
     this.snapGuides = const [],
     this.roomPolygon,
     required this.palette,
+    this.deviceHighlights = const {},
   })  : metersSuffix = RoomModelingL10n.metersSuffix(),
         degreesSuffix = RoomModelingL10n.degreesSuffix();
 
@@ -437,13 +452,19 @@ class RoomPainter extends CustomPainter {
     final halfWidth = width / 2;
     final halfHeight = height / 2;
 
+    final highlight = deviceHighlights[item.id];
+    final baseFill = highlight ?? palette.furnitureFill;
     final strokePaint = Paint()
-      ..color = palette.furnitureStroke
+      ..color = highlight != null
+          ? highlight.withValues(alpha: 0.9)
+          : palette.furnitureStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
     final fillPaint = Paint()
-      ..color = palette.furnitureFill
+      ..color = baseFill.withValues(
+        alpha: highlight != null ? 0.28 : 1.0,
+      )
       ..style = PaintingStyle.fill;
 
     switch (item.type) {
@@ -762,13 +783,49 @@ class RoomPainter extends CustomPainter {
           strokePaint,
         );
         break;
+      case FurnitureType.speaker:
+        // Speaker: filled circle with wave arcs
+        final radius = min(width, height) * 0.35;
+        canvas.drawCircle(Offset.zero, radius, fillPaint);
+        canvas.drawCircle(Offset.zero, radius, strokePaint);
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius * 1.5),
+          -pi / 4,
+          pi / 2,
+          false,
+          strokePaint,
+        );
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius * 1.9),
+          -pi / 4,
+          pi / 2,
+          false,
+          strokePaint,
+        );
+        break;
+      case FurnitureType.microphone:
+        // Microphone: small circle with stem
+        final radius = min(width, height) * 0.35;
+        canvas.drawCircle(Offset.zero, radius, fillPaint);
+        canvas.drawCircle(Offset.zero, radius, strokePaint);
+        canvas.drawLine(
+          Offset(0, radius),
+          Offset(0, radius + height * 0.4),
+          strokePaint,
+        );
+        canvas.drawLine(
+          Offset(-radius * 0.6, radius + height * 0.35),
+          Offset(radius * 0.6, radius + height * 0.35),
+          strokePaint,
+        );
+        break;
     }
 
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant RoomPainter oldDelegate) {
+  bool shouldRepaint(covariant _RoomPainter oldDelegate) {
     return oldDelegate.walls != walls ||
         oldDelegate.furniture != furniture ||
         oldDelegate.tempWall != tempWall ||
@@ -777,7 +834,8 @@ class RoomPainter extends CustomPainter {
         oldDelegate.selectedWallId != selectedWallId ||
         oldDelegate.selectedFurnitureId != selectedFurnitureId ||
         oldDelegate.snapGuides != snapGuides ||
-        oldDelegate.roomPolygon != roomPolygon;
+        oldDelegate.roomPolygon != roomPolygon ||
+        oldDelegate.deviceHighlights != deviceHighlights;
   }
 }
 
