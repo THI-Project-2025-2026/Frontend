@@ -4,7 +4,7 @@
   "backend": {
     "gateway": {
       "scheme": "ws",
-      "host": "192.168.3.9",
+      "host": "152.53.160.24",
       "port": 8000,
       "path": "/ws"
     }
