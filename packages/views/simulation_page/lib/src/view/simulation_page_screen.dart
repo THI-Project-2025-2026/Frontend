@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -423,7 +424,7 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
         'request_id': requestId,
         'data': {
           'room_model': roomJson,
-          'include_rir': false,
+          'include_rir': true,
           'use_raytracing': widget.useRaytracing,
           'raytracing_bounces': widget.raytracingBounces,
         },
@@ -816,6 +817,15 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
     return BlocBuilder<SimulationPageBloc, SimulationPageState>(
       builder: (context, state) {
         final result = state.lastResult;
+        final rayResult = state.lastRaytracingResult;
+        final rirPairs = result?.pairs
+            .where((p) => p.rir != null && p.rir!.isNotEmpty)
+            .toList(growable: false) ??
+          const <SimulationResultPair>[];
+        final raytracingPairs = rayResult?.pairs
+            .where((p) => p.rir != null && p.rir!.isNotEmpty)
+            .toList(growable: false) ??
+          const <SimulationResultPair>[];
         return SonalyzeSurface(
           padding: const EdgeInsets.all(28),
           backgroundColor: panelColor.withValues(alpha: 0.95),
@@ -893,6 +903,16 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
                   referenceStatus: state.referenceProfilesStatus,
                   referenceError: state.referenceProfilesError,
                 ),
+                if (rirPairs.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _RirPreview(
+                    pairs: rirPairs,
+                    sampleRateHz: result.sampleRateHz,
+                    raytracingPairs: raytracingPairs,
+                    raytracingSampleRateHz: rayResult?.sampleRateHz,
+                    accentColor: accentColor,
+                  ),
+                ],
                 if (result.warnings.any((w) => !w.contains('STI'))) ...[
                   const SizedBox(height: 24),
                   Text(
@@ -1041,6 +1061,393 @@ class _ResultWarningChip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _RirPreview extends StatefulWidget {
+  const _RirPreview({
+    required this.pairs,
+    required this.sampleRateHz,
+    this.raytracingPairs = const <SimulationResultPair>[],
+    this.raytracingSampleRateHz,
+    required this.accentColor,
+  });
+
+  final List<SimulationResultPair> pairs;
+  final int sampleRateHz;
+  final List<SimulationResultPair> raytracingPairs;
+  final int? raytracingSampleRateHz;
+  final Color accentColor;
+
+  @override
+  State<_RirPreview> createState() => _RirPreviewState();
+}
+
+class _RirPreviewState extends State<_RirPreview> {
+  int _selectedIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _RirPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedIndex >= widget.pairs.length) {
+      _selectedIndex = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = widget.pairs[_selectedIndex];
+    final raytracingMap = {
+      for (final p in widget.raytracingPairs)
+        '${p.sourceId}:${p.microphoneId}': p,
+    };
+    final raytracingPair = raytracingMap['${pair.sourceId}:${pair.microphoneId}'];
+    final edcDb = pair.edcDb ?? const <double>[];
+    final idealEdcDb = pair.idealEdcDb ?? const <double>[];
+    final raytracingEdcDb = raytracingPair?.edcDb ?? const <double>[];
+    final sampleRate = widget.sampleRateHz > 0 ? widget.sampleRateHz : 1;
+    final raytracingSampleRateRaw =
+      widget.raytracingSampleRateHz ?? widget.sampleRateHz;
+    final raytracingSampleRate = raytracingSampleRateRaw > 0
+      ? raytracingSampleRateRaw
+      : 1;
+    final edcSpots = _downsampleEdc(edcDb, sampleRate);
+    final idealEdcSpots = _downsampleEdc(idealEdcDb, sampleRate);
+    final raytracingEdcSpots = _downsampleEdc(raytracingEdcDb, raytracingSampleRate);
+    const measuredColor = Color(0xFF3B82F6); // Blue for measured
+    const idealColor = Color(0xFF22C55E); // Green for ideal
+    const raytracingColor = Color(0xFFEF4444); // Red for raytracing
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.9),
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHigh
+                .withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 35,
+            offset: const Offset(0, 25),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  'Schroeder-Kurve',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (widget.pairs.length > 1)
+                DropdownButton<int>(
+                  value: _selectedIndex,
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedIndex = value);
+                    }
+                  },
+                  items: [
+                    for (var i = 0; i < widget.pairs.length; i++)
+                      DropdownMenuItem(
+                        value: i,
+                        child: Text(
+                          '${widget.pairs[i].sourceId} -> ${widget.pairs[i].microphoneId}',
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 240,
+            child: edcSpots.isEmpty
+                ? Center(
+                    child: Text(
+                      _localizedOr(
+                        'simulation_page.results.edc_empty',
+                        'No energy decay curve available',
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  )
+                : LineChart(
+                    _buildEdcChart(
+                      measuredSpots: edcSpots,
+                      idealSpots: idealEdcSpots,
+                      raytracingSpots: raytracingEdcSpots,
+                      measuredColor: measuredColor,
+                      idealColor: idealColor,
+                      raytracingColor: raytracingColor,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<FlSpot> _downsample(List<double> rir, int sampleRateHz) {
+    if (rir.isEmpty) {
+      return const <FlSpot>[];
+    }
+
+    const targetPoints = 400;
+    final rawStep = (rir.length / targetPoints).ceil();
+    final step = rawStep < 1 ? 1 : rawStep;
+
+    final spots = <FlSpot>[];
+    for (var i = 0; i < rir.length; i += step) {
+      var end = i + step;
+      if (end > rir.length) {
+        end = rir.length;
+      }
+      final window = rir.sublist(i, end);
+      final avg = window.reduce((a, b) => a + b) / window.length;
+      final time = i / sampleRateHz;
+      spots.add(FlSpot(time, avg));
+    }
+    return spots;
+  }
+
+  List<FlSpot> _downsampleEdc(List<double> edcDb, int sampleRateHz) {
+    if (edcDb.isEmpty) {
+      return const <FlSpot>[];
+    }
+
+    const targetPoints = 400;
+    final rawStep = (edcDb.length / targetPoints).ceil();
+    final step = rawStep < 1 ? 1 : rawStep;
+
+    final spots = <FlSpot>[];
+    for (var i = 0; i < edcDb.length; i += step) {
+      final value = edcDb[i];
+      if (value.isFinite) {
+        final time = i / sampleRateHz;
+        spots.add(FlSpot(time, value));
+      }
+    }
+    return spots;
+  }
+
+  LineChartData _buildRirChart(List<FlSpot> spots) {
+    var maxAbs = 0.0;
+    for (final spot in spots) {
+      final magnitude = spot.y.abs();
+      if (magnitude > maxAbs) {
+        maxAbs = magnitude;
+      }
+    }
+    final range = maxAbs == 0 ? 1.0 : maxAbs * 1.1;
+
+    return LineChartData(
+      minY: -range,
+      maxY: range,
+      clipData: const FlClipData.all(),
+      gridData: const FlGridData(show: false),
+      titlesData: const FlTitlesData(
+        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(show: false),
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: false,
+          color: widget.accentColor,
+          barWidth: 2,
+          dotData: const FlDotData(show: false),
+        ),
+      ],
+    );
+  }
+
+  LineChartData _buildEdcChart({
+    required List<FlSpot> measuredSpots,
+    required List<FlSpot> idealSpots,
+    required List<FlSpot> raytracingSpots,
+    required Color measuredColor,
+    required Color idealColor,
+    required Color raytracingColor,
+  }) {
+    final allSpots = <FlSpot>[...measuredSpots, ...idealSpots, ...raytracingSpots];
+    var minDb = 0.0;
+    var maxDb = 0.0;
+
+    for (final spot in allSpots) {
+      if (spot.y < minDb) minDb = spot.y;
+      if (spot.y > maxDb) maxDb = spot.y;
+    }
+
+    final padding = (maxDb - minDb) * 0.1;
+    minDb -= padding;
+    maxDb += padding;
+
+    final lineBars = <LineChartBarData>[];
+    final labels = <String>[];
+
+    lineBars.add(
+      LineChartBarData(
+        spots: measuredSpots,
+        isCurved: true,
+        color: measuredColor,
+        barWidth: 2.5,
+        dotData: const FlDotData(show: false),
+        belowBarData: BarAreaData(
+          show: true,
+          color: measuredColor.withValues(alpha: 0.15),
+        ),
+      ),
+    );
+    labels.add('Measured');
+
+    if (idealSpots.isNotEmpty) {
+      lineBars.add(
+        LineChartBarData(
+          spots: idealSpots,
+          isCurved: true,
+          color: idealColor,
+          barWidth: 2.0,
+          dashArray: [5, 5],
+          dotData: const FlDotData(show: false),
+        ),
+      );
+      labels.add('Ideal');
+    }
+
+    if (raytracingSpots.isNotEmpty) {
+      lineBars.add(
+        LineChartBarData(
+          spots: raytracingSpots,
+          isCurved: true,
+          color: raytracingColor,
+          barWidth: 2.5,
+          dashArray: [4, 4],
+          dotData: const FlDotData(show: false),
+        ),
+      );
+      labels.add('Raytracing');
+    }
+
+    return LineChartData(
+      minY: minDb,
+      maxY: maxDb,
+      clipData: const FlClipData.all(),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: 10, // Grid line every 10 dB
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: measuredColor.withValues(alpha: 0.15),
+            strokeWidth: 1,
+          );
+        },
+      ),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipItems: (touchedSpots) {
+            return touchedSpots.map((spot) {
+              final timeStr = _formatTime(spot.x);
+              final dbStr = spot.y.toStringAsFixed(1);
+              final label = (spot.barIndex < labels.length)
+                  ? labels[spot.barIndex]
+                  : 'Curve';
+              return LineTooltipItem(
+                '$label\n$timeStr\n$dbStr dB',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 32,
+            interval: measuredSpots.isEmpty ? 0.1 : null,
+            getTitlesWidget: (value, meta) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  _formatTime(value),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: measuredColor.withValues(alpha: 0.7),
+                        fontSize: 10,
+                      ),
+                ),
+              );
+            },
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 44,
+            getTitlesWidget: (value, meta) {
+              return Text(
+                '${value.toInt()} dB',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: measuredColor.withValues(alpha: 0.7),
+                      fontSize: 10,
+                    ),
+              );
+            },
+          ),
+        ),
+      ),
+      borderData: FlBorderData(show: false),
+      lineBarsData: lineBars,
+    );
+  }
+
+  String _formatTime(double seconds) {
+    if (seconds < 0.001) {
+      return '0ms';
+    } else if (seconds < 1.0) {
+      final ms = (seconds * 1000).round();
+      return '${ms}ms';
+    } else if (seconds < 10.0) {
+      return '${seconds.toStringAsFixed(1)}s';
+    } else {
+      return '${seconds.toStringAsFixed(0)}s';
+    }
   }
 }
 
