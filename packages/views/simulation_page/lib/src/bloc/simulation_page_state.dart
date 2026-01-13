@@ -164,12 +164,21 @@ class SimulationResultPair {
     required this.sourceId,
     required this.microphoneId,
     required this.metrics,
+    List<double>? rir,
+    List<double>? edcDb,
+    List<double>? idealEdcDb,
     required List<String> warnings,
-  }) : warnings = List.unmodifiable(warnings);
+  })  : rir = rir == null ? null : List.unmodifiable(rir),
+        edcDb = edcDb == null ? null : List.unmodifiable(edcDb),
+        idealEdcDb = idealEdcDb == null ? null : List.unmodifiable(idealEdcDb),
+        warnings = List.unmodifiable(warnings);
 
   final String sourceId;
   final String microphoneId;
   final SimulationResultMetrics metrics;
+  final List<double>? rir;
+  final List<double>? edcDb;
+  final List<double>? idealEdcDb;
   final List<String> warnings;
 
   static SimulationResultPair? tryParse(dynamic raw) {
@@ -181,6 +190,9 @@ class SimulationResultPair {
     if (sourceId == null || microphoneId == null) {
       return null;
     }
+    final rir = _doubleList(raw['rir']);
+    final edcDb = _doubleList(raw['edc_db']);
+    final idealEdcDb = _doubleList(raw['ideal_edc_db']);
     final metrics = SimulationResultMetrics.fromJson(
       raw['metrics'] as Map<String, dynamic>?,
     );
@@ -188,6 +200,9 @@ class SimulationResultPair {
       sourceId: sourceId,
       microphoneId: microphoneId,
       metrics: metrics,
+      rir: rir,
+      edcDb: edcDb,
+      idealEdcDb: idealEdcDb,
       warnings: _stringList(raw['warnings']),
     );
   }
@@ -252,6 +267,22 @@ double? _asDouble(dynamic value) {
   }
   if (value is String) {
     return double.tryParse(value);
+  }
+  return null;
+}
+
+List<double>? _doubleList(dynamic value) {
+  if (value is List) {
+    final parsed = <double>[];
+    for (final entry in value) {
+      final v = _asDouble(entry);
+      if (v != null && v.isFinite) {
+        parsed.add(v);
+      }
+    }
+    if (parsed.isNotEmpty) {
+      return parsed;
+    }
   }
   return null;
 }

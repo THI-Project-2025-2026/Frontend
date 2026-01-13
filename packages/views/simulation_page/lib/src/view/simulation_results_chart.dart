@@ -399,38 +399,52 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     final raytracingAverages = widget.raytracingResult != null
         ? _averageMetrics(widget.raytracingResult!)
         : <String, double>{};
+    // Merge metrics from profile with any metrics present in results
+    final Map<String, SimulationReferenceMetric> merged = {
+      for (final m in profile.metrics) m.key: m,
+    };
 
-    return profile.metrics
-        .map((metric) {
-          final double? measured = averages[metric.key];
-          final double? raytracing = raytracingAverages[metric.key];
-          final hasMeasurement = measured != null;
-          final hasRaytracing = raytracing != null;
+    final allKeys = <String>{
+      ...merged.keys,
+      ...averages.keys,
+      ...raytracingAverages.keys,
+    };
 
-          // Include raytracing value when computing bounds
-          final allValues = [metric.value];
-          if (measured != null) allValues.add(measured);
-          if (raytracing != null) allValues.add(raytracing);
-          final bounds = _resolveRangeWithValues(metric, allValues);
+    return allKeys.map((key) {
+      final metric = merged[key] ?? SimulationReferenceMetric(
+        key: key,
+        label: key,
+        value: averages[key] ?? raytracingAverages[key] ?? 0,
+      );
 
-          return _MetricChartEntry(
-            title: metric.label,
-            unit: metric.unit,
-            measuredValue: measured,
-            idealValue: metric.value,
-            raytracingValue: raytracing,
-            normalizedMeasured: measured == null
-                ? 0
-                : _normalize(measured, bounds.start, bounds.end),
-            normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
-            normalizedRaytracing: raytracing == null
-                ? 0
-                : _normalize(raytracing, bounds.start, bounds.end),
-            hasMeasurement: hasMeasurement,
-            hasRaytracing: hasRaytracing,
-          );
-        })
-        .toList(growable: false);
+      final double? measured = averages[key];
+      final double? raytracing = raytracingAverages[key];
+      final hasMeasurement = measured != null;
+      final hasRaytracing = raytracing != null;
+
+      // Include raytracing value when computing bounds
+      final allValues = [metric.value];
+      if (measured != null) allValues.add(measured);
+      if (raytracing != null) allValues.add(raytracing);
+      final bounds = _resolveRangeWithValues(metric, allValues);
+
+      return _MetricChartEntry(
+        title: metric.label,
+        unit: metric.unit,
+        measuredValue: measured,
+        idealValue: metric.value,
+        raytracingValue: raytracing,
+        normalizedMeasured: measured == null
+            ? 0
+            : _normalize(measured, bounds.start, bounds.end),
+        normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
+        normalizedRaytracing: raytracing == null
+            ? 0
+            : _normalize(raytracing, bounds.start, bounds.end),
+        hasMeasurement: hasMeasurement,
+        hasRaytracing: hasRaytracing,
+      );
+    }).toList(growable: false);
   }
 
   Map<String, double> _averageMetrics(SimulationResult result) {
