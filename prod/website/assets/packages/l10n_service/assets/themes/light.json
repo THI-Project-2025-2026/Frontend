@@ -1,0 +1,175 @@
+{
+    "app": {
+        "primary": "#0F172A",
+        "on_primary": "#FFFFFF",
+        "secondary": "#2563EB",
+        "on_secondary": "#FFFFFF",
+        "background": "#F8FAFC",
+        "on_background": "#0F172A",
+        "surface": "#FFFFFF",
+        "on_surface": "#1E293B",
+        "error": "#DC2626",
+        "on_error": "#FFFFFF"
+    },
+    "loader": {
+        "background": "#F8FAFC",
+        "text": "#0F172A",
+        "accent": "#2563EB",
+        "spinner_base": "#CBD5F5",
+        "shadow": "rgba(148, 163, 184, 0.35)"
+    },
+    "landing_page": {
+        "background_gradient": ["#F8FAFC", "#E2E8F0"],
+        "hero_badge_background": "#DBEAFE",
+        "hero_badge_text": "#1D4ED8",
+        "hero_primary_button_background": "#2563EB",
+        "hero_primary_button_text": "#FFFFFF",
+        "hero_secondary_button_border": "#2563EB",
+        "hero_secondary_button_text": "#1D4ED8",
+        "feature_card_background": "#FFFFFF",
+        "feature_card_selected_border": "#2563EB",
+        "feature_card_icon_background": "#DBEAFE",
+        "feature_card_gradients": {
+            "0": ["#3B82F6", "#60A5FA"],
+            "1": ["#A855F7", "#C084FC"],
+            "2": ["#0EA5E9", "#22D3EE"]
+        },
+        "metric_card_background": "#FFFFFF",
+        "metric_card_text_muted": "#64748B",
+        "workflow_card_background": "#FFFFFF",
+        "workflow_timeline_color": "#2563EB",
+        "contact_card_background": "#FFFFFF",
+        "contact_input_background": "#F1F5F9",
+        "contact_input_border": "#CBD5F5",
+        "contact_button_background": "#CBD5F5",
+        "contact_button_text": "#FFFFFF",
+        "faq_item_background": "#FFFFFF",
+        "faq_item_border": "#CBD5F5",
+        "scrollbar_thumb": "#94A3B8"
+    },
+    "measurement_page": {
+        "background_gradient": ["#F8FAFC", "#E2E8F0"],
+        "scrollbar_thumb": "#CBD5F5",
+        "header_badge_background": "#DBEAFE",
+        "header_badge_text": "#1D4ED8",
+        "panel_background": "#FFFFFF",
+        "panel_border": "#CBD5F5",
+        "accent": "#2563EB",
+        "error": "#DC2626",
+        "role_chip_background": "#DBEAFE",
+        "role_chip_selected": "#1E3A8A",
+        "telemetry_background": "#FFFFFF",
+        "timeline_active": "#2563EB",
+        "timeline_inactive": "#E2E8F0",
+        "timeline_back": "#3B82F6",
+        "ready_badge_ready": "#16A34A",
+        "ready_badge_waiting": "#F59E0B",
+        "qr_background": "#FFFFFF"
+    },
+    "simulation_page": {
+        "background_gradient": ["#F8FAFC", "#E2E8F0"],
+        "scrollbar_thumb": "#CBD5F5",
+        "header_badge_background": "#DBEAFE",
+        "header_badge_text": "#1D4ED8",
+        "panel_background": "#FFFFFF",
+        "panel_border": "#CBD5F5",
+        "slider_active": "#2563EB",
+        "palette": {
+            "chip_selected_bg": "#2563EB",
+            "chip_selected_text": "#FFFFFF",
+            "chip_unselected_bg": "#EFF6FF",
+            "chip_unselected_text": "#1E3A8A",
+            "clear_text": "#DC2626"
+        },
+        "grid_background": "#FFFFFF",
+        "grid_border": "#CBD5F5",
+        "grid_line": "#E2E8F0",
+        "grid_cell_active": "#2563EB",
+        "grid_cell_hover": "#60A5FA",
+        "furniture": {
+            "absorber": "#2563EB",
+            "diffuser": "#A855F7",
+            "seating": "#F97316",
+            "stage": "#0EA5E9"
+        },
+        "metrics_background": "#FFFFFF",
+        "graphs": {
+            "card_background": "#FFFFFF",
+            "axis": "#CBD5F5",
+            "rt60_line": "#F97316",
+            "rt60_line_fill": "#F9731633",
+            "sti_line": "#2563EB",
+            "sti_line_fill": "#2563EB33",
+            "d50_line": "#A855F7",
+            "d50_line_fill": "#A855F733"
+        },
+        "timeline_active": "#2563EB",
+        "timeline_inactive": "#94A3B8",
+        "timeline_back": "#3B82F6"
+    },
+    "room_modeling": {
+        "stepper": {
+            "warning_text": "#DC2626",
+            "background": "#E2E8F0",
+            "selected_background": "#2563EB",
+            "unselected_background": "#CBD5F5",
+            "selected_text": "#FFFFFF",
+            "text": "#1E293B",
+            "disabled_text": "#94A3B8"
+        },
+        "section": {
+            "title": "#1E293B"
+        },
+        "menu": {
+            "background": "#F8FAFC",
+            "border": "#CBD5F5",
+            "header_text": "#475569",
+            "icon": "#64748B",
+            "text": "#1E293B",
+            "active_background": "#DBEAFE",
+            "active_border": "#2563EB",
+            "active_icon": "#2563EB",
+            "active_text": "#1E3A8A"
+        },
+        "card": {
+            "background": "#FFFFFF",
+            "border": "#E2E8F0"
+        },
+        "canvas": {
+            "background": "#F8FAFC",
+            "outside": "#E2E8F0",
+            "inside": "#FFFFFF",
+            "wall": "#1E293B",
+            "wall_selected": "#2563EB",
+            "temp_wall": "#94A3B8",
+            "selection_handle": "#2563EB",
+            "selection_handle_center": "#FFFFFF",
+            "snap_line": "#93C5FD",
+            "snap_text": "#1E293B",
+            "snap_background": "#DBEAFE",
+            "drag_indicator": "#38BDF8",
+            "dimension_text": "#0F172A",
+            "dimension_background": "#E2E8F0",
+            "angle_arc": "#F97316",
+            "angle_text": "#7C2D12",
+            "angle_background": "#FFEDD5",
+            "selection_fill": "#2563EB1A",
+            "selection_border": "#2563EB",
+            "rotate_handle_line": "#2563EB",
+            "rotate_handle_fill": "#E0F2FE",
+            "rotate_handle_center": "#2563EB",
+            "furniture_stroke": "#1E293B",
+            "furniture_fill": "#FFFFFF"
+        },
+        "preview": {
+            "button_background": "#FFFFFF",
+            "button_foreground": "#0F172A",
+            "panel_background": "#FFFFFF",
+            "loading_background": "#0F172A",
+            "webview_background": "#000000"
+        }
+    },
+    "sonalyze_webview": {
+        "background": "#00000000"
+    }
+}

@@ -1,0 +1,461 @@
+{
+    "common": {
+        "back": "Zurück",
+        "cancel": "Abbrechen",
+        "close": "Schließen",
+        "join": "Beitreten",
+        "retry": "Erneut versuchen"
+    },
+    "app": {
+        "loading_title": "Sonalyze wird geladen",
+        "loading_message": "Akustische Arbeitsumgebung wird vorbereitet..."
+    },
+    "landing_page": {
+        "hero": {
+            "badge": "Akustische Intelligenz",
+            "title": "Verstehe den Klang jedes Raums",
+            "subtitle": "Sonalyze hilft dir, Raumakustik zu modellieren, Mehrgeräte-Messungen zu koordinieren und akustische Antworten zu simulieren — alles in einer App.",
+            "primary_cta": "Simulation starten",
+            "secondary_cta": "Messwerkzeuge ansehen"
+        },
+        "metrics": {
+            "title": "Was du tun kannst",
+            "items": {
+                "0": {
+                    "label": "Räume in 2D und 3D mit Wänden, Möbeln und Öffnungen modellieren",
+                    "value": "Design"
+                },
+                "1": {
+                    "label": "Mehrgeräte-Messungen mit Echtzeit-Synchronisation koordinieren",
+                    "value": "Messen"
+                },
+                "2": {
+                    "label": "RT60, STI und D50 Akustikmetriken sofort simulieren",
+                    "value": "Simulieren"
+                }
+            }
+        },
+        "features": {
+            "0": {
+                "title": "Raummodellierung",
+                "description": "Zeichne Wände, platziere Möbel und Öffnungen und visualisiere deinen Raum in einer interaktiven 3D-Vorschau vor der Simulation.",
+                "metric_label": "Interaktive Vorschau",
+                "metric_value": "3D"
+            },
+            "1": {
+                "title": "Kooperative Messung",
+                "description": "Erstelle Lobbys, weise Geräterollen zu (Mikrofon oder Lautsprecher) und überwache den Verbindungsstatus während dein Team Impulsantworten erfasst.",
+                "metric_label": "Echtzeit-Sync",
+                "metric_value": "Live"
+            },
+            "2": {
+                "title": "Akustiksimulation",
+                "description": "Führe Simulationen an deinem Raummodell durch, um Nachhallzeit (RT60), Sprachübertragungsindex (STI) und Deutlichkeitsmaß (D50) vorherzusagen.",
+                "metric_label": "Schlüsselmetriken",
+                "metric_value": "RT60"
+            }
+        },
+        "workflow": {
+            "title": "So funktioniert es",
+            "steps": {
+                "0": {
+                    "title": "Raum modellieren",
+                    "description": "Zeichne Wände, lege die Deckenhöhe fest und platziere Möbel wie Sofas, Tische sowie Öffnungen wie Türen und Fenster."
+                },
+                "1": {
+                    "title": "Simulieren oder messen",
+                    "description": "Führe eine Akustiksimulation an deinem Modell durch oder koordiniere eine echte Messung mit mehreren Geräten in einer gemeinsamen Lobby."
+                },
+                "2": {
+                    "title": "Ergebnisse prüfen",
+                    "description": "Analysiere Akustikmetriken wie RT60, STI und D50, um zu verstehen, wie dein Raum klingt."
+                }
+            }
+        },
+        "contact": {
+            "title": "Fragen oder Feedback?",
+            "subtitle": "Wir freuen uns von dir zu hören. Schreib uns eine Nachricht und wir melden uns bald.",
+            "email_label": "Deine E-Mail",
+            "message_label": "Deine Nachricht",
+            "submit": "Nachricht senden",
+            "success": "Danke! Wir melden uns kurzfristig."
+        },
+        "faq": {
+            "title": "Häufig gestellte Fragen",
+            "items": {
+                "0": {
+                    "question": "Wofür ist Sonalyze gedacht?",
+                    "answer": "Sonalyze ist ein Akustikanalyse-Tool zum Modellieren von Räumen, Simulieren akustischer Antworten und Koordinieren von Mehrgeräte-Messungen. Perfekt für Studios, Heimkinos, Wohnzimmer, Klassenzimmer, Konferenzräume und jeden Raum, in dem Klangqualität wichtig ist."
+                },
+                "1": {
+                    "question": "Für wen ist Sonalyze?",
+                    "answer": "Sonalyze ist für Studierende der Akustik, Audio-Enthusiasten die ihre Hörräume verbessern möchten, Architekten und Innenarchitekten die Räume planen, und alle die neugierig sind wie Schall sich in verschiedenen Umgebungen verhält."
+                },
+                "2": {
+                    "question": "Wie werden meine Daten verarbeitet?",
+                    "answer": "Deine Daten werden 100% DSGVO-konform auf Servern in Deutschland verarbeitet. Wir nehmen Datenschutz ernst und stellen sicher, dass deine Raummodelle und Messungen sicher behandelt werden."
+                },
+                "3": {
+                    "question": "Auf welchen Geräten kann ich Sonalyze nutzen?",
+                    "answer": "Sonalyze ist verfügbar für iOS, Android, Windows und macOS. Du kannst es auf deinem Handy, Tablet oder Desktop nutzen — und sogar Messungen über mehrere Geräte gleichzeitig koordinieren."
+                }
+            }
+        }
+    },
+    "measurement_page": {
+        "badge": "Kooperative Messung",
+        "title": "Feldmessungen in Echtzeit koordinieren",
+        "subtitle": "Starte eine Sonalyze-Lobby, weise Geräte-Rollen zu und überwache die Verbindung, während dein Team gemeinsam Impulsantworten erfasst.",
+        "lobby": {
+            "title": "Lobby-Steuerung",
+            "status_idle": "Lobby inaktiv – generiere einen Code, um Geräte einzuladen.",
+            "status_active": "Lobby aktiv. Teile Code oder Einladungslink.",
+            "code_refreshed": "Lobby-Code erneuert.",
+            "link_copied": "Einladungslink kopiert.",
+            "device_joined": "Neues Gerät ist der Lobby beigetreten.",
+            "device_left": "Ein Gerät hat die Lobby verlassen.",
+            "actions": {
+                "create": "Lobby erstellen",
+                "refresh": "Code aktualisieren",
+                "copy": "Link kopieren",
+                "toggle_qr": "QR-Vorschau umschalten",
+                "join": "Beitreten"
+            },
+            "join_dialog": {
+                "title": "Lobby beitreten",
+                "code_label": "Lobby-Code"
+            },
+            "code_label": "Lobby-Code",
+            "link_label": "Einladungslink",
+            "link_placeholder": "Lobby erstellen, um einen teilbaren Link zu erhalten"
+        },
+        "qr_panel": {
+            "title": "QR-Code",
+            "helper": "Teile die Einladung als QR-Code für schnelle Teilnahme vor Ort.",
+            "placeholder": "Lobby erstellen, um den QR-Code zu erzeugen"
+        },
+        "roles": {
+            "title": "Rolle dieses Geräts",
+            "helper": "Wähle, ob dieses Gerät während der Messung als Mikrofon oder Lautsprecher fungiert.",
+            "loudspeaker_label": "Lautsprecher",
+            "microphone_label": "Mikrofon",
+            "none": "Keine",
+            "microphone": "Mikrofon",
+            "loudspeaker": "Lautsprecher",
+            "updated": "Geräterolle aktualisiert."
+        },
+        "scanning": {
+            "title": "Erkennungs-Scan",
+            "toggle": "Scan umschalten",
+            "active": "Suche nach Sonalyze-Beacons...",
+            "inactive": "Scan pausiert"
+        },
+        "devices": {
+            "title": "Verbundene Geräte",
+            "helper": "Schalte die Bereitschaft um, um Bestätigungen vor jeder Aufnahme zu simulieren.",
+            "empty": "Noch keine Geräte verbunden.",
+            "demo_join": "Demo-Gerät hinzufügen",
+            "demo_leave": "Letztes Remote-Gerät entfernen",
+            "local_name": "Dieses Gerät",
+            "local_badge": "Dieses Gerät",
+            "headers": {
+                "device": "Gerät",
+                "role": "Rolle",
+                "latency": "Latenz",
+                "battery": "Akku",
+                "ready": "Bereit"
+            },
+            "ready": "Bereit",
+            "not_ready": "Wartet"
+        },
+        "telemetry": {
+            "title": "Sitzungs-Telemetrie",
+            "last_updated": "Letzte Aktualisierung",
+            "uplink": {
+                "label": "Uplink-RSSI",
+                "unit": "dBm"
+            },
+            "downlink": {
+                "label": "Downlink-RSSI",
+                "unit": "dBm"
+            },
+            "jitter": {
+                "label": "Netzwerk-Jitter",
+                "unit": "ms"
+            }
+        },
+        "timeline": {
+            "title": "Mess-Ablauf",
+            "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um Geräte zu platzieren.",
+            "assign_roles_hint": "Weise jedem Lautsprecher- und Mikrofon-Slot ein verbundenes Gerät zu.",
+            "steps": {
+                "0": {
+                    "title": "Mess-Lobby erstellen",
+                    "description": "Lobby erstellen oder beitreten, um Geräte für die Sitzung zu koordinieren."
+                },
+                "1": {
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
+                },
+                "2": {
+                    "title": "Raum einrichten",
+                    "description": "Möbel und Öffnungen im modellierten Raum platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon im Raum hinzu, bevor du fortfährst."
+                },
+                "3": {
+                    "title": "Geräterollen festlegen",
+                    "description": "Mikrofon- und Lautsprecherrollen für alle verbundenen Geräte zuweisen."
+                },
+                "5": {
+                    "title": "Sweep starten",
+                    "description": "Wiedergabe und Aufnahme koordinieren. Lautsprecher spielen das Messsignal ab, während Mikrofone aufnehmen. Die Synchronisation erfolgt automatisch."
+                },
+                "6": {
+                    "title": "Impulsergebnisse prüfen",
+                    "description": "Energieabfall validieren und Impulsantwort-Daten analysieren."
+                }
+            },
+            "demo_button": "Demo-Audio abspielen"
+        },
+        "sweep": {
+            "dialog_title": "Messung läuft",
+            "copy_logs": "Debug-Logs kopieren",
+            "toggle_debug": "Debug-Log umschalten",
+            "logs_copied": "Debug-Logs in Zwischenablage kopiert",
+            "copy_all_logs": "Alle Logs kopieren"
+        },
+        "results": {
+            "title": "Impulsantwort-Analyse",
+            "subtitle": "Akustische Kennzahlen aus der gemessenen Impulsantwort berechnet.",
+            "no_metrics": "Keine Messwerte verfügbar",
+            "rt60_desc": "Nachhallzeit (60 dB Abfall)",
+            "edt_desc": "Frühe Abklingzeit",
+            "sti_desc": "Sprachübertragungsindex",
+            "c50_desc": "Deutlichkeit für Sprache",
+            "c80_desc": "Deutlichkeit für Musik",
+            "d50_desc": "Definition (Sprachverständlichkeit)",
+            "drr_desc": "Direkt-zu-Nachhall-Verhältnis",
+            "snr_desc": "Signal-Rausch-Verhältnis"
+        },
+        "profile": {
+            "label": "Messprofil",
+            "high_end": "High-End-Ausrüstung",
+            "high_end_description": "Voller Frequenzbereich (20 Hz – 20 kHz) für professionelle Audio-Ausrüstung mit hochwertigen Lautsprechern und Mikrofonen.",
+            "smartphone": "Smartphone",
+            "smartphone_description": "Optimierter Frequenzbereich (400 Hz – 10 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
+        }
+    },
+    "simulation_page": {
+        "badge": "Akustik-Sandbox",
+        "title": "Gestalte den Raum, höre die Zukunft",
+        "subtitle": "Modelliere Geometrie, platziere Behandlungen und erhalte Sonalyze-Prognosen in Echtzeit, bevor Hardware aufgebaut wird.",
+        "presets": {
+            "title": "Raum-Presets",
+            "items": {
+                "0": {
+                    "label": "Projektstudio",
+                    "description": "Kompakter Regieraum für Nahfeldabhören"
+                },
+                "1": {
+                    "label": "Konzertsaal",
+                    "description": "Tiefe Bühne mit gestaffelten Rängen"
+                },
+                "2": {
+                    "label": "Hörsaal",
+                    "description": "Fächerförmige Bestuhlung"
+                }
+            }
+        },
+        "dimensions": {
+            "title": "Raumgeometrie",
+            "width": "Breite",
+            "length": "Länge",
+            "height": "Höhe",
+            "unit": "m"
+        },
+        "palette": {
+            "title": "Behandlungs-Palette",
+            "absorber": "Breitbandabsorber",
+            "diffuser": "Diffusor-Array",
+            "seating": "Publikumsbestuhlung",
+            "stage": "Bühnenpodest",
+            "clear": "Layout zurücksetzen"
+        },
+        "grid": {
+            "title": "Draufsicht",
+            "helper": "Tippe ein Feld, um die ausgewählte Behandlung zu platzieren. Erneut tippen, um sie zu entfernen.",
+            "legend": {
+                "absorber": "Absorber",
+                "diffuser": "Diffusor",
+                "seating": "Bestuhlung",
+                "stage": "Bühne"
+            }
+        },
+        "metrics": {
+            "title": "Prognostizierte Kennzahlen",
+            "rt60": {
+                "label": "RT60",
+                "unit": "s"
+            },
+            "sti": {
+                "label": "STI",
+                "unit": "Index"
+            },
+            "d50": {
+                "label": "D50",
+                "unit": "Verhältnis"
+            }
+        },
+        "room_type_selector": {
+            "label": "Raumtyp"
+        },
+        "room_type": {
+            "classroom": "Klassenzimmer",
+            "concertHall": "Konzertsaal",
+            "homeTheater": "Heimkino",
+            "recordingStudio": "Tonstudio",
+            "office": "Büro"
+        },
+        "legend": {
+            "measured": "Gemessen",
+            "ideal": "Ideal"
+        },
+        "results": {
+            "title": "Simulationsergebnisse",
+            "warnings": "Warnungen",
+            "raytracing_button": "Experimentelle Raytracing-Simulation",
+            "raytracing_badge": "Experimentell",
+            "legend_measured": "Gemessene Simulation",
+            "legend_ideal": "Idealbereich",
+            "legend_raytracing": "Raytracing-Simulation",
+            "measured": "Gemessen",
+            "ideal": "Ideal",
+            "raytracing": "Raytracing",
+            "raytracing_performance": {
+                "fast": "Schnell",
+                "medium": "Mittel",
+                "high": "Hoch",
+                "extreme": "Extrem",
+                "bonkers": "Bonkers",
+                "bonkersPlus": "Bonkers+",
+                "serverCrasher": "Servercrasher"
+            }
+        },
+        "progress": {
+            "title": "Simulation läuft",
+            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment."
+        },
+        "timeline": {
+            "title": "Simulations-Ablauf",
+            "advance": "Nächster Schritt",
+            "back": "Vorheriger Schritt",
+            "close_room_hint": "Schließe den Wandverlauf, um zum nächsten Schritt zu gelangen.",
+            "place_devices_hint": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren.",
+            "steps": {
+                "0": {
+                    "title": "Wandstruktur konstruieren",
+                    "description": "Raumwände und Grenzen zeichnen und definieren."
+                },
+                "1": {
+                    "title": "Raum einrichten",
+                    "description": "Möbel, Öffnungen und akustische Behandlungen platzieren."
+                },
+                "devices": {
+                    "title": "Lautsprecher und Mikrofone platzieren",
+                    "description": "Füge mindestens einen Lautsprecher und ein Mikrofon hinzu, bevor du die Simulation startest."
+                },
+                "2": {
+                    "title": "Simulation starten",
+                    "description": "Akustiksimulation mit der aktuellen Raumkonfiguration durchführen."
+                },
+                "3": {
+                    "title": "Simulationsergebnisse prüfen",
+                    "description": "Prognostizierte akustische Kennzahlen und Antwortkurven analysieren."
+                }
+            }
+        }
+    },
+    "room_modeling": {
+        "tools": {
+            "title": "Werkzeuge zur Raummodellierung",
+            "steps": {
+                "structure": "Struktur",
+                "furnishing": "Einrichtung"
+            },
+            "audio": {
+                "helper": "Platziere mindestens einen Lautsprecher und ein Mikrofon, um fortzufahren."
+            },
+            "close_room_hint": "Schließe den Wandverlauf, um Einrichtungsobjekte freizuschalten.",
+            "construction_title": "Wandkonstruktion",
+            "construction_helper": "Tippe auf die Fläche, um Wände zu ziehen. Schließe den Verlauf, um den Grundriss zu fixieren.",
+            "delete_wall": "Ausgewählte Wand löschen",
+            "delete_item": "Löschen",
+            "clear_room": "Raum zurücksetzen",
+            "selected_furniture": "Ausgewähltes Objekt",
+            "menu": {
+                "openings": "Öffnungen",
+                "furniture": "Möbel",
+                "bath_kitchen": "Bad & Küche",
+                "audio": "Audio",
+                "placeholder": "Objekt wählen",
+                "items": {
+                    "door": "Tür",
+                    "window": "Fenster",
+                        "chair": "Stuhl",
+                        "deskchair": "Bürostuhl",
+                    "table": "Tisch",
+                    "sofa": "Sofa",
+                    "bed": "Bett",
+                    "bathtub": "Badewanne",
+                    "toilet": "Toilette",
+                        "sink": "Waschbecken",
+                        "closet": "Schrank",
+                        "desk": "Schreibtisch",
+                        "shelf": "Regal",
+                        "stove": "Herd",
+                        "fridge": "Kühlschrank",
+                        "shower": "Dusche",
+                        "speaker": "Lautsprecher",
+                        "microphone": "Mikrofon"
+                }
+            }
+        },
+        "structure": {
+            "options_title": "Raumstruktur",
+            "wall_material_label": "Wandmaterial",
+            "floor_material_label": "Bodenmaterial",
+            "ceiling_material_label": "Deckenmaterial",
+            "room_height_label": "Deckenhöhe",
+            "room_height_helper": "Standard: {value} m"
+        },
+        "editor": {
+            "length": "Länge",
+            "width": "Breite",
+            "height": "Höhe",
+            "opening_hint": "Öffnungen bieten Breite sowie optional Brüstung und Öffnungshöhe.",
+            "sill_height": "Brüstungshöhe",
+            "window_height": "Öffnungshöhe",
+            "apply": "Übernehmen"
+        },
+        "units": {
+            "meters_suffix": "m",
+            "degrees_suffix": "°"
+        },
+        "preview": {
+            "tooltip": "3D-Vorschau öffnen",
+            "dialog_title": "Interaktive Raumvorschau",
+            "dialog_subtitle": "Rendere die eingebettete Sandbox, um Layouts in Echtzeit zu prüfen.",
+            "unsupported": "Diese Vorschau ist unter Linux nicht verfügbar.",
+            "error": "Room-Creator-Bundle konnte nicht geladen werden.",
+            "empty": "Keine Webinhalte verfügbar."
+        }
+    },
+    "sonalyze_webview": {
+        "unsupported": "Sonalyze WebView wird auf Linux-Zielen nicht unterstützt."
+    }
+}

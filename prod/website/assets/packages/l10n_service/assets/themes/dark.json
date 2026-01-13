@@ -1,0 +1,175 @@
+{
+    "app": {
+        "primary": "#38BDF8",
+        "on_primary": "#010B19",
+        "secondary": "#F97316",
+        "on_secondary": "#0F172A",
+        "background": "#020617",
+        "on_background": "#E2E8F0",
+        "surface": "#0F172A",
+        "on_surface": "#CBD5F5",
+        "error": "#F87171",
+        "on_error": "#0F172A"
+    },
+    "loader": {
+        "background": "#020617",
+        "text": "#E2E8F0",
+        "accent": "#38BDF8",
+        "spinner_base": "#1E293B",
+        "shadow": "rgba(15, 23, 42, 0.45)"
+    },
+    "landing_page": {
+        "background_gradient": ["#020617", "#0F172A"],
+        "hero_badge_background": "#1E293B",
+        "hero_badge_text": "#38BDF8",
+        "hero_primary_button_background": "#38BDF8",
+        "hero_primary_button_text": "#010B19",
+        "hero_secondary_button_border": "#38BDF8",
+        "hero_secondary_button_text": "#38BDF8",
+        "feature_card_background": "#0B1220",
+        "feature_card_selected_border": "#38BDF8",
+        "feature_card_icon_background": "#172554",
+        "feature_card_gradients": {
+            "0": ["#1D4ED8", "#38BDF8"],
+            "1": ["#7C3AED", "#C026D3"],
+            "2": ["#0EA5E9", "#22D3EE"]
+        },
+        "metric_card_background": "#111B2D",
+        "metric_card_text_muted": "#94A3B8",
+        "workflow_card_background": "#0B1220",
+        "workflow_timeline_color": "#1E40AF",
+        "contact_card_background": "#0B1220",
+        "contact_input_background": "#111B2D",
+        "contact_input_border": "#1E3A8A",
+        "contact_button_background": "#F97316",
+        "contact_button_text": "#0F172A",
+        "faq_item_background": "#0B1220",
+        "faq_item_border": "#1E293B",
+        "scrollbar_thumb": "#1E3A8A"
+    },
+    "measurement_page": {
+        "background_gradient": ["#020617", "#0B1220"],
+        "scrollbar_thumb": "#1E3A8A",
+        "header_badge_background": "#13203B",
+        "header_badge_text": "#38BDF8",
+        "panel_background": "#0B1220",
+        "panel_border": "#1E293B",
+        "accent": "#38BDF8",
+        "error": "#F87171",
+        "role_chip_background": "#13203B",
+        "role_chip_selected": "#38BDF8",
+        "telemetry_background": "#0F172A",
+        "timeline_active": "#38BDF8",
+        "timeline_inactive": "#1E293B",
+        "timeline_back": "#1E40AF",
+        "ready_badge_ready": "#22C55E",
+        "ready_badge_waiting": "#FACC15",
+        "qr_background": "#0F172A"
+    },
+    "simulation_page": {
+        "background_gradient": ["#020617", "#0B1220"],
+        "scrollbar_thumb": "#1E3A8A",
+        "header_badge_background": "#13203B",
+        "header_badge_text": "#38BDF8",
+        "panel_background": "#0B1220",
+        "panel_border": "#1E293B",
+        "slider_active": "#38BDF8",
+        "palette": {
+            "chip_selected_bg": "#1E3A8A",
+            "chip_selected_text": "#E2E8F0",
+            "chip_unselected_bg": "#111C31",
+            "chip_unselected_text": "#BFDBFE",
+            "clear_text": "#FCA5A5"
+        },
+        "grid_background": "#070C16",
+        "grid_border": "#1E293B",
+        "grid_line": "#1E293B",
+        "grid_cell_active": "#38BDF8",
+        "grid_cell_hover": "#0EA5E9",
+        "furniture": {
+            "absorber": "#3B82F6",
+            "diffuser": "#8B5CF6",
+            "seating": "#F97316",
+            "stage": "#22D3EE"
+        },
+        "metrics_background": "#0B1220",
+        "graphs": {
+            "card_background": "#0F172A",
+            "axis": "#1F2A44",
+            "rt60_line": "#F97316",
+            "rt60_line_fill": "#F9731633",
+            "sti_line": "#38BDF8",
+            "sti_line_fill": "#38BDF833",
+            "d50_line": "#8B5CF6",
+            "d50_line_fill": "#8B5CF633"
+        },
+        "timeline_active": "#38BDF8",
+        "timeline_inactive": "#475569",
+        "timeline_back": "#1E40AF"
+    },
+    "room_modeling": {
+        "stepper": {
+            "warning_text": "#F87171",
+            "background": "#111B2D",
+            "selected_background": "#2563EB",
+            "unselected_background": "#0B1220",
+            "selected_text": "#FFFFFF",
+            "text": "#E2E8F0",
+            "disabled_text": "#475569"
+        },
+        "section": {
+            "title": "#BFDBFE"
+        },
+        "menu": {
+            "background": "#0F172A",
+            "border": "#1E293B",
+            "header_text": "#E2E8F0",
+            "icon": "#94A3B8",
+            "text": "#CBD5F5",
+            "active_background": "#1E3A8A",
+            "active_border": "#38BDF8",
+            "active_icon": "#38BDF8",
+            "active_text": "#E0F2FE"
+        },
+        "card": {
+            "background": "#0F172A",
+            "border": "#1E293B"
+        },
+        "canvas": {
+            "background": "#111B2D",
+            "outside": "#0B1220",
+            "inside": "#111B2D",
+            "wall": "#E2E8F0",
+            "wall_selected": "#38BDF8",
+            "temp_wall": "#475569",
+            "selection_handle": "#38BDF8",
+            "selection_handle_center": "#0B1220",
+            "snap_line": "#38BDF8",
+            "snap_text": "#E2E8F0",
+            "snap_background": "#172554",
+            "drag_indicator": "#38BDF8",
+            "dimension_text": "#E2E8F0",
+            "dimension_background": "#1E293B",
+            "angle_arc": "#F97316",
+            "angle_text": "#FFE4C7",
+            "angle_background": "#7C2D12",
+            "selection_fill": "#38BDF826",
+            "selection_border": "#38BDF8",
+            "rotate_handle_line": "#38BDF8",
+            "rotate_handle_fill": "#38BDF8",
+            "rotate_handle_center": "#0B1220",
+            "furniture_stroke": "#E2E8F0",
+            "furniture_fill": "#0F172A"
+        },
+        "preview": {
+            "button_background": "#0F172A",
+            "button_foreground": "#E2E8F0",
+            "panel_background": "#0B1220",
+            "loading_background": "#000000",
+            "webview_background": "#000000"
+        }
+    },
+    "sonalyze_webview": {
+        "background": "#00000000"
+    }
+}
