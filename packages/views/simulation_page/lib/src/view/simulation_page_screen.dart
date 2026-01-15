@@ -835,78 +835,6 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _tr('simulation_page.results.title'),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (widget.onRaytracingPressed != null) ...[
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: badgeColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _localizedOr(
-                                  'simulation_page.results.raytracing_badge',
-                                  'Experimental',
-                                ),
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: badgeText,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _RaytracingPerformanceDropdown(
-                              selectedBounces: _selectedBounces,
-                              onChanged: (bounces) {
-                                setState(() => _selectedBounces = bounces);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            SonalyzeButton(
-                              onPressed: () =>
-                                  widget.onRaytracingPressed!(_selectedBounces),
-                              backgroundColor: accentColor.withValues(
-                                alpha: 0.15,
-                              ),
-                              foregroundColor: accentColor,
-                              borderRadius: BorderRadius.circular(12),
-                              icon: const Icon(Icons.auto_awesome, size: 18),
-                              child: Text(
-                                _localizedOr(
-                                  'simulation_page.results.raytracing_button',
-                                  'Raytracing Simulation',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 24),
               if (result != null) ...[
                 SimulationResultsChart(
                   result: result,
@@ -914,6 +842,61 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
                   referenceProfiles: state.referenceProfiles,
                   referenceStatus: state.referenceProfilesStatus,
                   referenceError: state.referenceProfilesError,
+                  headerLeading: [
+                    Text(
+                      _tr('simulation_page.results.title'),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (widget.onRaytracingPressed != null) ...[
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _localizedOr(
+                            'simulation_page.results.raytracing_badge',
+                            'Experimental',
+                          ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: badgeText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _RaytracingPerformanceDropdown(
+                        selectedBounces: _selectedBounces,
+                        onChanged: (bounces) {
+                          setState(() => _selectedBounces = bounces);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      SonalyzeButton(
+                        onPressed: () =>
+                            widget.onRaytracingPressed!(_selectedBounces),
+                        backgroundColor: accentColor.withValues(alpha: 0.15),
+                        foregroundColor: accentColor,
+                        borderRadius: BorderRadius.circular(12),
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        child: Text(
+                          _localizedOr(
+                            'simulation_page.results.raytracing_button',
+                            'Raytracing Simulation',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (rirPairs.isNotEmpty) ...[
                   const SizedBox(height: 24),

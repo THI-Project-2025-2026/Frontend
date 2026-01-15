@@ -1002,7 +1002,7 @@ class _DeviceHeaderRow extends StatelessWidget {
             style: style,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 24),
         Expanded(
           child: _RoleColumn(
             child: Padding(
@@ -1091,7 +1091,7 @@ class _DeviceDataRow extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 24),
         Expanded(
           child: _RoleColumn(
             child: Padding(

@@ -395,9 +395,14 @@ class _HeroSection extends StatelessWidget {
                       ),
               ),
               Positioned(
-                top: 8,
-                right: 8,
+                top: 12,
+                right: 12,
                 child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   icon: Icon(
                     Icons.settings,
                     color: Theme.of(

@@ -15,6 +15,7 @@ class SimulationResultsChart extends StatefulWidget {
     required this.referenceProfiles,
     required this.referenceStatus,
     this.referenceError,
+    this.headerLeading = const <Widget>[],
   });
 
   final SimulationResult result;
@@ -22,6 +23,7 @@ class SimulationResultsChart extends StatefulWidget {
   final List<SimulationReferenceProfile> referenceProfiles;
   final SimulationReferenceProfilesStatus referenceStatus;
   final String? referenceError;
+  final List<Widget> headerLeading;
 
   @override
   State<SimulationResultsChart> createState() => _SimulationResultsChartState();
@@ -64,53 +66,40 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                colorScheme.surface.withValues(alpha: 0.95),
-                colorScheme.surfaceVariant.withValues(alpha: 0.7),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: widget.headerLeading,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _tr(
+                      'simulation_page.room_type_selector.label',
+                      fallback: 'Reference profile',
+                    ),
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 320,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildReferenceSelector(context, selectedProfile),
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _tr(
-                    'simulation_page.room_type_selector.label',
-                    fallback: 'Reference profile',
-                  ),
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 320,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _buildReferenceSelector(context, selectedProfile),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
         if (selectedProfile?.notes?.isNotEmpty == true) ...[

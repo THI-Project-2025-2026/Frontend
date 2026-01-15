@@ -328,7 +328,7 @@
         "results": {
             "title": "Simulation results",
             "warnings": "Warnings",
-            "raytracing_button": "Experimental Raytracing Simulation",
+            "raytracing_button": "Start Raytracing Simulation",
             "raytracing_badge": "Experimental",
             "legend_measured": "Measured simulation",
             "legend_ideal": "Ideal range",
