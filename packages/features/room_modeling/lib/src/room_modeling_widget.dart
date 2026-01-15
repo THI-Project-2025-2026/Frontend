@@ -89,6 +89,9 @@ class _RoomModelingViewState extends State<RoomModelingView> {
       return;
     }
     setState(() => _pageIndex = index);
+    if (!_pageController.hasClients) {
+      return;
+    }
     if (animate) {
       _pageController.animateToPage(
         index,
