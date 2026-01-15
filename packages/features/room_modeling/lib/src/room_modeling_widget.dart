@@ -44,7 +44,7 @@ class RoomModelingWidget extends StatelessWidget {
   }
 }
 
-class RoomModelingView extends StatelessWidget {
+class RoomModelingView extends StatefulWidget {
   const RoomModelingView({
     super.key,
     this.hideToolsPanel = false,
@@ -55,35 +55,103 @@ class RoomModelingView extends StatelessWidget {
   final bool readOnly;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Left Tools Panel with animated size
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: hideToolsPanel ? 0.0 : 1.0,
-            child: SizedBox(
-              width: hideToolsPanel ? 0 : 250,
-              child: hideToolsPanel
-                  ? null
-                  : SonalyzeSurface(child: const ToolsPanel()),
+  State<RoomModelingView> createState() => _RoomModelingViewState();
+}
+
+class _RoomModelingViewState extends State<RoomModelingView> {
+  static const double _minSideBySideWidth = 900;
+  late final PageController _pageController;
+  int _pageIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageIndex = widget.hideToolsPanel ? 1 : 0;
+    _pageController = PageController(initialPage: _pageIndex);
+  }
+
+  @override
+  void didUpdateWidget(covariant RoomModelingView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.hideToolsPanel && _pageIndex != 1) {
+      _setPage(1, animate: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _setPage(int index, {bool animate = true}) {
+    if (_pageIndex == index) {
+      return;
+    }
+    setState(() => _pageIndex = index);
+    if (animate) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _pageController.jumpToPage(index);
+    }
+  }
+
+  Widget _buildToggle(BuildContext context) {
+    final activeColor = RoomModelingColors.color('preview.button_foreground');
+    return ToggleButtons(
+      isSelected: [_pageIndex == 0, _pageIndex == 1],
+      onPressed: (index) => _setPage(index),
+      constraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+      borderRadius: BorderRadius.circular(999),
+      selectedColor: activeColor,
+      color: activeColor.withValues(alpha: 0.6),
+      fillColor: activeColor.withValues(alpha: 0.12),
+      borderColor: Colors.transparent,
+      selectedBorderColor: Colors.transparent,
+      children: const [
+        Tooltip(message: 'Tools', child: Icon(Icons.tune_outlined, size: 18)),
+        Tooltip(
+            message: 'Canvas', child: Icon(Icons.grid_on_outlined, size: 18)),
+      ],
+    );
+  }
+
+  Widget _buildToolsPanel({required bool showToggle}) {
+    return SonalyzeSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showToggle)
+            Align(
+              alignment: Alignment.center,
+              child: _buildToggle(context),
             ),
-          ),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          child: SizedBox(width: hideToolsPanel ? 0 : 16),
-        ),
-        // Right Room Plan
-        Expanded(
-          child: SonalyzeSurface(
+          if (showToggle) const SizedBox(height: 12),
+          const Expanded(child: ToolsPanel()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCanvas({required bool showToggle}) {
+    return SonalyzeSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showToggle)
+            Align(
+              alignment: Alignment.center,
+              child: _buildToggle(context),
+            ),
+          if (showToggle) const SizedBox(height: 12),
+          Expanded(
             child: Stack(
               children: [
-                RoomPlanCanvas(enabled: !readOnly),
+                RoomPlanCanvas(enabled: !widget.readOnly),
                 Positioned(
                   top: 16,
                   right: 16,
@@ -119,8 +187,41 @@ class RoomModelingView extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= _minSideBySideWidth;
+        final showToggle = !isWide && !widget.hideToolsPanel;
+
+        if (widget.hideToolsPanel) {
+          return _buildCanvas(showToggle: false);
+        }
+
+        if (isWide) {
+          return Row(
+            children: [
+              SizedBox(width: 250, child: _buildToolsPanel(showToggle: false)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildCanvas(showToggle: false)),
+            ],
+          );
+        }
+
+        return PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildToolsPanel(showToggle: showToggle),
+            _buildCanvas(showToggle: showToggle),
+          ],
+        );
+      },
     );
   }
 }

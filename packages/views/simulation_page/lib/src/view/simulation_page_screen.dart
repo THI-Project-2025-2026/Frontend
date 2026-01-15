@@ -818,14 +818,16 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
       builder: (context, state) {
         final result = state.lastResult;
         final rayResult = state.lastRaytracingResult;
-        final rirPairs = result?.pairs
-            .where((p) => p.rir != null && p.rir!.isNotEmpty)
-            .toList(growable: false) ??
-          const <SimulationResultPair>[];
-        final raytracingPairs = rayResult?.pairs
-            .where((p) => p.rir != null && p.rir!.isNotEmpty)
-            .toList(growable: false) ??
-          const <SimulationResultPair>[];
+        final rirPairs =
+            result?.pairs
+                .where((p) => p.rir != null && p.rir!.isNotEmpty)
+                .toList(growable: false) ??
+            const <SimulationResultPair>[];
+        final raytracingPairs =
+            rayResult?.pairs
+                .where((p) => p.rir != null && p.rir!.isNotEmpty)
+                .toList(growable: false) ??
+            const <SimulationResultPair>[];
         return SonalyzeSurface(
           padding: const EdgeInsets.all(28),
           backgroundColor: panelColor.withValues(alpha: 0.95),
@@ -834,64 +836,74 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _tr('simulation_page.results.title'),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Text(
+                      _tr('simulation_page.results.title'),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  if (widget.onRaytracingPressed != null)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _localizedOr(
-                              'simulation_page.results.raytracing_badge',
-                              'Experimental',
-                            ),
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: badgeText,
-                                  fontWeight: FontWeight.w600,
+                  if (widget.onRaytracingPressed != null) ...[
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: badgeColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _localizedOr(
+                                  'simulation_page.results.raytracing_badge',
+                                  'Experimental',
                                 ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _RaytracingPerformanceDropdown(
-                          selectedBounces: _selectedBounces,
-                          onChanged: (bounces) {
-                            setState(() => _selectedBounces = bounces);
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        SonalyzeButton(
-                          onPressed: () =>
-                              widget.onRaytracingPressed!(_selectedBounces),
-                          backgroundColor: accentColor.withValues(alpha: 0.15),
-                          foregroundColor: accentColor,
-                          borderRadius: BorderRadius.circular(12),
-                          icon: const Icon(Icons.auto_awesome, size: 18),
-                          child: Text(
-                            _localizedOr(
-                              'simulation_page.results.raytracing_button',
-                              'Raytracing Simulation',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: badgeText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            _RaytracingPerformanceDropdown(
+                              selectedBounces: _selectedBounces,
+                              onChanged: (bounces) {
+                                setState(() => _selectedBounces = bounces);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            SonalyzeButton(
+                              onPressed: () =>
+                                  widget.onRaytracingPressed!(_selectedBounces),
+                              backgroundColor: accentColor.withValues(
+                                alpha: 0.15,
+                              ),
+                              foregroundColor: accentColor,
+                              borderRadius: BorderRadius.circular(12),
+                              icon: const Icon(Icons.auto_awesome, size: 18),
+                              child: Text(
+                                _localizedOr(
+                                  'simulation_page.results.raytracing_button',
+                                  'Raytracing Simulation',
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 24),
@@ -1101,19 +1113,23 @@ class _RirPreviewState extends State<_RirPreview> {
       for (final p in widget.raytracingPairs)
         '${p.sourceId}:${p.microphoneId}': p,
     };
-    final raytracingPair = raytracingMap['${pair.sourceId}:${pair.microphoneId}'];
+    final raytracingPair =
+        raytracingMap['${pair.sourceId}:${pair.microphoneId}'];
     final edcDb = pair.edcDb ?? const <double>[];
     final idealEdcDb = pair.idealEdcDb ?? const <double>[];
     final raytracingEdcDb = raytracingPair?.edcDb ?? const <double>[];
     final sampleRate = widget.sampleRateHz > 0 ? widget.sampleRateHz : 1;
     final raytracingSampleRateRaw =
-      widget.raytracingSampleRateHz ?? widget.sampleRateHz;
+        widget.raytracingSampleRateHz ?? widget.sampleRateHz;
     final raytracingSampleRate = raytracingSampleRateRaw > 0
-      ? raytracingSampleRateRaw
-      : 1;
+        ? raytracingSampleRateRaw
+        : 1;
     final edcSpots = _downsampleEdc(edcDb, sampleRate);
     final idealEdcSpots = _downsampleEdc(idealEdcDb, sampleRate);
-    final raytracingEdcSpots = _downsampleEdc(raytracingEdcDb, raytracingSampleRate);
+    final raytracingEdcSpots = _downsampleEdc(
+      raytracingEdcDb,
+      raytracingSampleRate,
+    );
     const measuredColor = Color(0xFF3B82F6); // Blue for measured
     const idealColor = Color(0xFF22C55E); // Green for ideal
     const raytracingColor = Color(0xFFEF4444); // Red for raytracing
@@ -1123,24 +1139,21 @@ class _RirPreviewState extends State<_RirPreview> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withValues(alpha: 0.9),
-            Theme.of(context)
-                .colorScheme
-                .surfaceContainerHigh
-                .withValues(alpha: 0.8),
+            Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+            Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: Theme.of(context)
-              .colorScheme
-              .outlineVariant
-              .withValues(alpha: 0.25),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
@@ -1214,29 +1227,6 @@ class _RirPreviewState extends State<_RirPreview> {
     );
   }
 
-  List<FlSpot> _downsample(List<double> rir, int sampleRateHz) {
-    if (rir.isEmpty) {
-      return const <FlSpot>[];
-    }
-
-    const targetPoints = 400;
-    final rawStep = (rir.length / targetPoints).ceil();
-    final step = rawStep < 1 ? 1 : rawStep;
-
-    final spots = <FlSpot>[];
-    for (var i = 0; i < rir.length; i += step) {
-      var end = i + step;
-      if (end > rir.length) {
-        end = rir.length;
-      }
-      final window = rir.sublist(i, end);
-      final avg = window.reduce((a, b) => a + b) / window.length;
-      final time = i / sampleRateHz;
-      spots.add(FlSpot(time, avg));
-    }
-    return spots;
-  }
-
   List<FlSpot> _downsampleEdc(List<double> edcDb, int sampleRateHz) {
     if (edcDb.isEmpty) {
       return const <FlSpot>[];
@@ -1257,40 +1247,6 @@ class _RirPreviewState extends State<_RirPreview> {
     return spots;
   }
 
-  LineChartData _buildRirChart(List<FlSpot> spots) {
-    var maxAbs = 0.0;
-    for (final spot in spots) {
-      final magnitude = spot.y.abs();
-      if (magnitude > maxAbs) {
-        maxAbs = magnitude;
-      }
-    }
-    final range = maxAbs == 0 ? 1.0 : maxAbs * 1.1;
-
-    return LineChartData(
-      minY: -range,
-      maxY: range,
-      clipData: const FlClipData.all(),
-      gridData: const FlGridData(show: false),
-      titlesData: const FlTitlesData(
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      ),
-      borderData: FlBorderData(show: false),
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: false,
-          color: widget.accentColor,
-          barWidth: 2,
-          dotData: const FlDotData(show: false),
-        ),
-      ],
-    );
-  }
-
   LineChartData _buildEdcChart({
     required List<FlSpot> measuredSpots,
     required List<FlSpot> idealSpots,
@@ -1299,7 +1255,11 @@ class _RirPreviewState extends State<_RirPreview> {
     required Color idealColor,
     required Color raytracingColor,
   }) {
-    final allSpots = <FlSpot>[...measuredSpots, ...idealSpots, ...raytracingSpots];
+    final allSpots = <FlSpot>[
+      ...measuredSpots,
+      ...idealSpots,
+      ...raytracingSpots,
+    ];
     var minDb = 0.0;
     var maxDb = 0.0;
 
@@ -1396,7 +1356,9 @@ class _RirPreviewState extends State<_RirPreview> {
       ),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -1408,9 +1370,9 @@ class _RirPreviewState extends State<_RirPreview> {
                 child: Text(
                   _formatTime(value),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: measuredColor.withValues(alpha: 0.7),
-                        fontSize: 10,
-                      ),
+                    color: measuredColor.withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
                 ),
               );
             },
@@ -1424,9 +1386,9 @@ class _RirPreviewState extends State<_RirPreview> {
               return Text(
                 '${value.toInt()} dB',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: measuredColor.withValues(alpha: 0.7),
-                      fontSize: 10,
-                    ),
+                  color: measuredColor.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
               );
             },
           ),
@@ -1507,49 +1469,47 @@ class _SimulationTimelineCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _tr('simulation_page.timeline.title'),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontWeight: FontWeight.w700,
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _tr('simulation_page.timeline.title'),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SonalyzeButton(
-                            onPressed: simulationState.activeStepIndex > 0
-                                ? () => context.read<SimulationPageBloc>().add(
-                                    const SimulationTimelineStepBack(),
-                                  )
-                                : null,
-                            backgroundColor: backColor,
-                            foregroundColor: onPrimary,
-                            borderRadius: BorderRadius.circular(18),
-                            icon: const Icon(Icons.fast_rewind_outlined),
-                            child: Text(_tr('simulation_page.timeline.back')),
-                          ),
-                          const SizedBox(width: 12),
-                          SonalyzeButton(
-                            onPressed: canAdvance
-                                ? () => context.read<SimulationPageBloc>().add(
-                                    const SimulationTimelineAdvanced(),
-                                  )
-                                : null,
-                            backgroundColor: activeColor,
-                            foregroundColor: onPrimary,
-                            borderRadius: BorderRadius.circular(18),
-                            icon: const Icon(Icons.fast_forward_outlined),
-                            child: Text(
-                              _tr('simulation_page.timeline.advance'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(width: 20),
+                        SonalyzeButton(
+                          onPressed: simulationState.activeStepIndex > 0
+                              ? () => context.read<SimulationPageBloc>().add(
+                                  const SimulationTimelineStepBack(),
+                                )
+                              : null,
+                          backgroundColor: backColor,
+                          foregroundColor: onPrimary,
+                          borderRadius: BorderRadius.circular(18),
+                          icon: const Icon(Icons.fast_rewind_outlined),
+                          child: Text(_tr('simulation_page.timeline.back')),
+                        ),
+                        const SizedBox(width: 12),
+                        SonalyzeButton(
+                          onPressed: canAdvance
+                              ? () => context.read<SimulationPageBloc>().add(
+                                  const SimulationTimelineAdvanced(),
+                                )
+                              : null,
+                          backgroundColor: activeColor,
+                          foregroundColor: onPrimary,
+                          borderRadius: BorderRadius.circular(18),
+                          icon: const Icon(Icons.fast_forward_outlined),
+                          child: Text(_tr('simulation_page.timeline.advance')),
+                        ),
+                      ],
+                    ),
                   ),
                   if (simulationState.activeStepIndex == 0 &&
                       !roomState.isRoomClosed)

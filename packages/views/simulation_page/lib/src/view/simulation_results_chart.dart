@@ -87,25 +87,30 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
               ),
             ],
           ),
-          child: Row(
-            children: [
-              Text(
-                _tr(
-                  'simulation_page.room_type_selector.label',
-                  fallback: 'Reference profile',
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _tr(
+                    'simulation_page.room_type_selector.label',
+                    fallback: 'Reference profile',
+                  ),
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 320,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _buildReferenceSelector(context, selectedProfile),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _buildReferenceSelector(context, selectedProfile),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (selectedProfile?.notes?.isNotEmpty == true) ...[
@@ -358,37 +363,40 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
     required bool showRaytracing,
   }) {
     final bodyStyle = Theme.of(context).textTheme.bodyMedium;
-    return Wrap(
-      spacing: 24,
-      runSpacing: 12,
-      alignment: WrapAlignment.center,
-      children: [
-        _LegendItem(
-          color: measuredColor,
-          label: _tr(
-            'simulation_page.results.legend_measured',
-            fallback: 'Measured value',
-          ),
-          style: bodyStyle,
-        ),
-        _LegendItem(
-          color: referenceColor,
-          label: _tr(
-            'simulation_page.results.legend_ideal',
-            fallback: 'Reference value (simulation)',
-          ),
-          style: bodyStyle,
-        ),
-        if (showRaytracing)
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
           _LegendItem(
-            color: raytracingColor,
+            color: measuredColor,
             label: _tr(
-              'simulation_page.results.legend_raytracing',
-              fallback: 'Raytracing simulation',
+              'simulation_page.results.legend_measured',
+              fallback: 'Measured value',
             ),
             style: bodyStyle,
           ),
-      ],
+          const SizedBox(width: 24),
+          _LegendItem(
+            color: referenceColor,
+            label: _tr(
+              'simulation_page.results.legend_ideal',
+              fallback: 'Reference value (simulation)',
+            ),
+            style: bodyStyle,
+          ),
+          if (showRaytracing) ...[
+            const SizedBox(width: 24),
+            _LegendItem(
+              color: raytracingColor,
+              label: _tr(
+                'simulation_page.results.legend_raytracing',
+                fallback: 'Raytracing simulation',
+              ),
+              style: bodyStyle,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -410,41 +418,45 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
       ...raytracingAverages.keys,
     };
 
-    return allKeys.map((key) {
-      final metric = merged[key] ?? SimulationReferenceMetric(
-        key: key,
-        label: key,
-        value: averages[key] ?? raytracingAverages[key] ?? 0,
-      );
+    return allKeys
+        .map((key) {
+          final metric =
+              merged[key] ??
+              SimulationReferenceMetric(
+                key: key,
+                label: key,
+                value: averages[key] ?? raytracingAverages[key] ?? 0,
+              );
 
-      final double? measured = averages[key];
-      final double? raytracing = raytracingAverages[key];
-      final hasMeasurement = measured != null;
-      final hasRaytracing = raytracing != null;
+          final double? measured = averages[key];
+          final double? raytracing = raytracingAverages[key];
+          final hasMeasurement = measured != null;
+          final hasRaytracing = raytracing != null;
 
-      // Include raytracing value when computing bounds
-      final allValues = [metric.value];
-      if (measured != null) allValues.add(measured);
-      if (raytracing != null) allValues.add(raytracing);
-      final bounds = _resolveRangeWithValues(metric, allValues);
+          // Include raytracing value when computing bounds
+          final allValues = [metric.value];
+          if (measured != null) allValues.add(measured);
+          if (raytracing != null) allValues.add(raytracing);
+          final bounds = _resolveRangeWithValues(metric, allValues);
 
-      return _MetricChartEntry(
-        title: metric.label,
-        unit: metric.unit,
-        measuredValue: measured,
-        idealValue: metric.value,
-        raytracingValue: raytracing,
-        normalizedMeasured: measured == null
-            ? 0
-            : _normalize(measured, bounds.start, bounds.end),
-        normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
-        normalizedRaytracing: raytracing == null
-            ? 0
-            : _normalize(raytracing, bounds.start, bounds.end),
-        hasMeasurement: hasMeasurement,
-        hasRaytracing: hasRaytracing,
-      );
-    }).toList(growable: false);
+          return _MetricChartEntry(
+            title: metric.label,
+            unit: metric.unit,
+            measuredValue: measured,
+            idealValue: metric.value,
+            raytracingValue: raytracing,
+            normalizedMeasured: measured == null
+                ? 0
+                : _normalize(measured, bounds.start, bounds.end),
+            normalizedIdeal: _normalize(metric.value, bounds.start, bounds.end),
+            normalizedRaytracing: raytracing == null
+                ? 0
+                : _normalize(raytracing, bounds.start, bounds.end),
+            hasMeasurement: hasMeasurement,
+            hasRaytracing: hasRaytracing,
+          );
+        })
+        .toList(growable: false);
   }
 
   Map<String, double> _averageMetrics(SimulationResult result) {
@@ -615,38 +627,44 @@ class _MetricComparisonRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                entry.title,
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 240,
+                child: Text(
+                  entry.title,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            _MetricValueChip(
-              label: measuredLabel,
-              valueText: measuredValueText,
-              color: measuredColor,
-              dimmed: !entry.hasMeasurement,
-            ),
-            const SizedBox(width: 8),
-            _MetricValueChip(
-              label: idealLabel,
-              valueText: idealValueText,
-              color: idealColor,
-            ),
-            if (showRaytracing) ...[
+              _MetricValueChip(
+                label: measuredLabel,
+                valueText: measuredValueText,
+                color: measuredColor,
+                dimmed: !entry.hasMeasurement,
+              ),
               const SizedBox(width: 8),
               _MetricValueChip(
-                label: raytracingLabel,
-                valueText: raytracingValueText,
-                color: raytracingColor,
-                dimmed: !entry.hasRaytracing,
+                label: idealLabel,
+                valueText: idealValueText,
+                color: idealColor,
               ),
+              if (showRaytracing) ...[
+                const SizedBox(width: 8),
+                _MetricValueChip(
+                  label: raytracingLabel,
+                  valueText: raytracingValueText,
+                  color: raytracingColor,
+                  dimmed: !entry.hasRaytracing,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         const SizedBox(height: 12),
         _MetricBarTrack(
