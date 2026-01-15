@@ -935,15 +935,17 @@ class _DeviceListCard extends StatelessWidget {
                     : MediaQuery.sizeOf(context).width;
                 final minTableWidth =
                     _deviceNameColumnWidth + _roleColumnMinWidth + 16;
-                final tableWidth = minTableWidth;
+                final tableWidth = availableWidth < minTableWidth
+                    ? minTableWidth
+                    : availableWidth;
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minWidth: tableWidth),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        width: tableWidth,
+                    child: SizedBox(
+                      width: tableWidth,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -1000,12 +1002,15 @@ class _DeviceHeaderRow extends StatelessWidget {
             style: style,
           ),
         ),
-        _RoleColumn(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Text(
-              _tr('measurement_page.devices.headers.role'),
-              style: style,
+        const SizedBox(width: 16),
+        Expanded(
+          child: _RoleColumn(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                _tr('measurement_page.devices.headers.role'),
+                style: style,
+              ),
             ),
           ),
         ),
@@ -1086,95 +1091,102 @@ class _DeviceDataRow extends StatelessWidget {
             ],
           ),
         ),
-        _RoleColumn(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withValues(alpha: 0.25)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<_AudioRoleSlot?>(
-                  value: dropdownChoices.contains(selectedSlot)
-                      ? selectedSlot
-                      : null,
-                  isExpanded: true,
-                  isDense: false,
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    color: onBackground.withValues(alpha: 0.6),
-                    size: 20,
-                  ),
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: onBackground.withValues(alpha: 0.85),
-                  ),
-                  dropdownColor: _themeColor(
-                    'measurement_page.panel_background',
-                  ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _RoleColumn(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  items: dropdownChoices
-                      .map(
-                        (slot) => DropdownMenuItem<_AudioRoleSlot?>(
-                          value: slot,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: slot == null
-                                ? Text(_roleLabel(MeasurementDeviceRole.none))
-                                : Row(
-                                    children: [
-                                      _RoleColorDot(color: slot.color),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: Text(slot.label)),
-                                    ],
-                                  ),
+                  border: Border.all(color: accent.withValues(alpha: 0.25)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<_AudioRoleSlot?>(
+                    value: dropdownChoices.contains(selectedSlot)
+                        ? selectedSlot
+                        : null,
+                    isExpanded: true,
+                    isDense: false,
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: onBackground.withValues(alpha: 0.6),
+                      size: 20,
+                    ),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: onBackground.withValues(alpha: 0.85),
+                    ),
+                    dropdownColor: _themeColor(
+                      'measurement_page.panel_background',
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    items: dropdownChoices
+                        .map(
+                          (slot) => DropdownMenuItem<_AudioRoleSlot?>(
+                            value: slot,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: slot == null
+                                  ? Text(_roleLabel(MeasurementDeviceRole.none))
+                                  : Row(
+                                      children: [
+                                        _RoleColorDot(color: slot.color),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(slot.label)),
+                                      ],
+                                    ),
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
-                  selectedItemBuilder: (context) {
-                    return dropdownChoices.map((slot) {
-                      if (slot == null) {
-                        final customLabel =
-                            device.role != MeasurementDeviceRole.none
-                            ? device.roleLabel
-                            : null;
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            customLabel?.isNotEmpty == true
-                                ? customLabel!
-                                : _roleLabel(MeasurementDeviceRole.none),
-                          ),
-                        );
-                      }
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          children: [
-                            _RoleColorDot(color: slot.color),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(slot.label)),
-                          ],
-                        ),
-                      );
-                    }).toList();
-                  },
-                  onChanged: canEditRoles
-                      ? (newSlot) {
-                          bloc.add(
-                            MeasurementDeviceRoleChanged(
-                              deviceId: device.id,
-                              role: newSlot?.role ?? MeasurementDeviceRole.none,
-                              roleSlotId: newSlot?.id,
-                              roleLabel: newSlot?.label,
-                              roleColor: newSlot?.color,
+                        )
+                        .toList(),
+                    selectedItemBuilder: (context) {
+                      return dropdownChoices.map((slot) {
+                        if (slot == null) {
+                          final customLabel =
+                              device.role != MeasurementDeviceRole.none
+                              ? device.roleLabel
+                              : null;
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              customLabel?.isNotEmpty == true
+                                  ? customLabel!
+                                  : _roleLabel(MeasurementDeviceRole.none),
                             ),
                           );
                         }
-                      : null,
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            children: [
+                              _RoleColorDot(color: slot.color),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(slot.label)),
+                            ],
+                          ),
+                        );
+                      }).toList();
+                    },
+                    onChanged: canEditRoles
+                        ? (newSlot) {
+                            bloc.add(
+                              MeasurementDeviceRoleChanged(
+                                deviceId: device.id,
+                                role:
+                                    newSlot?.role ?? MeasurementDeviceRole.none,
+                                roleSlotId: newSlot?.id,
+                                roleLabel: newSlot?.label,
+                                roleColor: newSlot?.color,
+                              ),
+                            );
+                          }
+                        : null,
+                  ),
                 ),
               ),
             ),
@@ -1397,17 +1409,6 @@ class _MeasurementProfileSelector extends StatelessWidget {
           color: accent.withValues(alpha: 0.8),
         ),
         const SizedBox(width: 8),
-        Text(
-          _tr(
-            'measurement_page.profile.label',
-            fallback: 'Measurement Profile',
-          ),
-          style: textTheme.labelLarge?.copyWith(
-            color: onBackground.withValues(alpha: 0.8),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
