@@ -1268,22 +1268,42 @@ class _AnalysisResultsCard extends StatelessWidget {
 
           // Render metrics dynamically from universal format
           if (results.metrics.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final metric in results.metrics) ...[
-                    _ResultMetricTile(
-                      label: metric.label,
-                      value: metric.formattedValue,
-                      unit: metric.unit ?? '',
-                      description: metric.description ?? '',
-                      icon: _mapIconName(metric.icon),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : MediaQuery.sizeOf(context).width;
+                const tileWidth = 160.0;
+                const tileSpacing = 24.0;
+                final metricCount = results.metrics.length;
+                final contentWidth = metricCount == 0
+                    ? 0.0
+                    : metricCount * tileWidth + (metricCount - 1) * tileSpacing;
+                final minWidth = contentWidth > availableWidth
+                    ? contentWidth
+                    : availableWidth;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: minWidth),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < results.metrics.length; i++) ...[
+                          _ResultMetricTile(
+                            label: results.metrics[i].label,
+                            value: results.metrics[i].formattedValue,
+                            unit: results.metrics[i].unit ?? '',
+                            description: results.metrics[i].description ?? '',
+                            icon: _mapIconName(results.metrics[i].icon),
+                          ),
+                          if (i < results.metrics.length - 1)
+                            const SizedBox(width: tileSpacing),
+                        ],
+                      ],
                     ),
-                    const SizedBox(width: 24),
-                  ],
-                ],
-              ),
+                  ),
+                );
+              },
             )
           else
             Center(
