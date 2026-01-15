@@ -144,27 +144,6 @@ class _LandingPageView extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: SafeArea(
-              child: IconButton(
-                icon: Icon(
-                  Icons.settings,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  size: 28,
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const SettingsDialog(),
-                  );
-                },
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -390,26 +369,57 @@ class _HeroSection extends StatelessWidget {
         }
 
         return SonalyzeSurface(
-          padding: EdgeInsets.all(isWide ? 48 : 28),
+          padding: EdgeInsets.zero,
           backgroundColor: cardBackground,
           borderRadius: BorderRadius.circular(32),
-          child: isWide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 6, child: buildCopy()),
-                    const SizedBox(width: 32),
-                    Expanded(flex: 5, child: buildFeatureCard()),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    buildCopy(),
-                    const SizedBox(height: 28),
-                    buildFeatureCard(),
-                  ],
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(isWide ? 48 : 28),
+                child: isWide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: buildCopy()),
+                          const SizedBox(width: 32),
+                          Expanded(flex: 5, child: buildFeatureCard()),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildCopy(),
+                          const SizedBox(height: 28),
+                          buildFeatureCard(),
+                        ],
+                      ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  icon: Icon(
+                    Icons.settings,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    size: 28,
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const SettingsDialog(),
+                    );
+                  },
                 ),
+              ),
+            ],
+          ),
         );
       },
     );
