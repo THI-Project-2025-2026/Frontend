@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 class GatewayConfig {
   GatewayConfig({
     this.scheme = 'ws',
-    this.host = 'localhost', // Original: '152.53.160.24'
+    this.host = '152.53.160.24',
     this.port = 8000,
     String path = '/ws',
     Map<String, String>? queryParameters,
