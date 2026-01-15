@@ -322,10 +322,10 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
   static const Duration _simulationTimeout = Duration(seconds: 45);
   static const Uuid _uuid = Uuid();
 
-  final List<_SimulationTask> _tasks = <_SimulationTask>[
-    const _SimulationTask(label: 'Connection to backend successful'),
-    const _SimulationTask(label: 'Data sent to backend successful'),
-    const _SimulationTask(label: 'Simulation completed'),
+  late final List<_SimulationTask> _tasks = <_SimulationTask>[
+    _SimulationTask(label: _tr('simulation_page.progress.tasks.connection', fallback: 'Connection to backend successful')),
+    _SimulationTask(label: _tr('simulation_page.progress.tasks.data_sent', fallback: 'Data sent to backend successful')),
+    _SimulationTask(label: _tr('simulation_page.progress.tasks.completed', fallback: 'Simulation completed')),
   ];
 
   bool _hasError = false;
@@ -1158,7 +1158,7 @@ class _RirPreviewState extends State<_RirPreview> {
             children: [
               Expanded(
                 child: Text(
-                  'Schroeder-Kurve',
+                  _tr('simulation_page.charts.schroeder_curve', fallback: 'Schroeder-Kurve'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w700,

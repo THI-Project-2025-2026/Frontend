@@ -4,9 +4,11 @@
         "cancel": "Abbrechen",
         "close": "Schließen",
         "join": "Beitreten",
-        "retry": "Erneut versuchen"
+        "retry": "Erneut versuchen",
+        "unknown_error": "Unbekannter Fehler"
     },
     "app": {
+        "title": "sonalyze",
         "loading_title": "Sonalyze wird geladen",
         "loading_message": "Akustische Arbeitsumgebung wird vorbereitet..."
     },
@@ -79,6 +81,19 @@
             "message_label": "Deine Nachricht",
             "submit": "Nachricht senden",
             "success": "Danke! Wir melden uns kurzfristig."
+        },
+        "settings_dialog": {
+            "title": "Einstellungen",
+            "theme_section": "Design",
+            "theme": {
+                "light": "Hell",
+                "dark": "Dunkel"
+            },
+            "language_section": "Sprache",
+            "language": {
+                "english": "English",
+                "german": "Deutsch"
+            }
         },
         "faq": {
             "title": "Häufig gestellte Fragen",
@@ -227,7 +242,16 @@
             "copy_logs": "Debug-Logs kopieren",
             "toggle_debug": "Debug-Log umschalten",
             "logs_copied": "Debug-Logs in Zwischenablage kopiert",
-            "copy_all_logs": "Alle Logs kopieren"
+            "copy_all_logs": "Alle Logs kopieren",
+            "steps": {
+                "1": "Schritt 1: Messung wird initiiert",
+                "2_3": "Schritt 2-3: Server-Benachrichtigung & Bereitschaftssignale",
+                "4_6": "Schritt 4-6: Audio-Download & Überprüfung",
+                "7_8": "Schritt 7-8: Aufnahme wird gestartet",
+                "9": "Schritt 9: Audiodatei wird abgespielt",
+                "10_11": "Schritt 10-11: Aufnahmen werden hochgeladen",
+                "12": "Schritt 12: Impulsantwort wird analysiert"
+            }
         },
         "results": {
             "title": "Impulsantwort-Analyse",
@@ -248,6 +272,13 @@
             "high_end_description": "Voller Frequenzbereich (20 Hz – 20 kHz) für professionelle Audio-Ausrüstung mit hochwertigen Lautsprechern und Mikrofonen.",
             "smartphone": "Smartphone",
             "smartphone_description": "Optimierter Frequenzbereich (400 Hz – 10 kHz) für typische Smartphone-Lautsprecher und -Mikrofone."
+        },
+        "errors": {
+            "no_active_lobby": "Keine aktive Lobby",
+            "no_job_id": "Keine Job-ID verfügbar",
+            "no_results": "Keine Ergebnisse von der Analyse zurückgegeben",
+            "analysis_failed": "Analyse fehlgeschlagen: {error}",
+            "minimum_devices_required": "Mindestens ein Lautsprecher und ein Mikrofon sind erforderlich"
         }
     },
     "simulation_page": {
@@ -348,7 +379,19 @@
         },
         "progress": {
             "title": "Simulation läuft",
-            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment."
+            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment.",
+            "tasks": {
+                "connection": "Verbindung zum Backend erfolgreich",
+                "data_sent": "Daten erfolgreich an Backend gesendet",
+                "completed": "Simulation abgeschlossen"
+            }
+        },
+        "errors": {
+            "reference_repository_unavailable": "Referenz-Repository nicht verfügbar"
+        },
+        "charts": {
+            "schroeder_curve": "Schroeder-Kurve",
+            "raytracing_legend": "Raytracing"
         },
         "timeline": {
             "title": "Simulations-Ablauf",
@@ -457,5 +500,54 @@
     },
     "sonalyze_webview": {
         "unsupported": "Sonalyze WebView wird auf Linux-Zielen nicht unterstützt."
+    },
+    "materials": {
+        "concrete": "Beton",
+        "brick": "Ziegel (ungestrichen)",
+        "marble": "Marmor / Fliesen",
+        "glass": "Glas",
+        "plaster": "Putz / Gipskarton",
+        "painted_concrete": "Gestrichener Beton",
+        "hardwood": "Parkettboden",
+        "parquet": "Parkett",
+        "wood_panel": "Holzverkleidung",
+        "plywood": "Sperrholz",
+        "carpet_thin": "Dünner Teppich",
+        "carpet_thick": "Dicker Teppich",
+        "carpet_padded": "Teppich mit Unterlage",
+        "curtain_light": "Leichter Vorhang",
+        "curtain_heavy": "Schwerer Vorhang",
+        "upholstery": "Polstermöbel",
+        "acoustic_panel": "Akustikpanel",
+        "acoustic_foam": "Akustikschaumstoff",
+        "acoustic_tile": "Akustik-Deckenplatte",
+        "perforated_panel": "Perforiertes Panel",
+        "diffuser": "Diffusor-Panel",
+        "suspended_ceiling": "Abgehängte Decke",
+        "mineral_fiber": "Mineralfaser-Decke",
+        "gypsum_ceiling": "Gipskarton-Decke",
+        "default": "Standard"
+    },
+    "reference_profiles": {
+        "classroom": {
+            "name": "Klassenzimmer",
+            "notes": "Ausgewogene Klarheit für Vortragsverständlichkeit."
+        },
+        "concert_hall": {
+            "name": "Konzertsaal",
+            "notes": "Langer Nachhall für räumlichen Orchesterklang."
+        },
+        "home_theater": {
+            "name": "Heimkino",
+            "notes": "Kurzer Nachhall mit ausgeprägter Klarheit für Filmwiedergabe."
+        },
+        "recording_studio": {
+            "name": "Tonstudio",
+            "notes": "Hochgradig kontrollierter Nachhall für kritisches Hören."
+        },
+        "office": {
+            "name": "Großraumbüro",
+            "notes": "Moderater Nachhall für Privatsphäre und Verständlichkeit."
+        }
     }
 }

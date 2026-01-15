@@ -2222,23 +2222,23 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
 
                     // Progress steps
                     _ProgressStep(
-                      label: 'Step 1: Initiating measurement',
+                      label: _tr('measurement_page.sweep.steps.1', fallback: 'Step 1: Initiating measurement'),
                       isCompleted: isCreatingJob,
                       isActive: state.sweepStatus == SweepStatus.creatingJob,
                     ),
                     _ProgressStep(
-                      label: 'Step 2-3: Server notification & ready signals',
+                      label: _tr('measurement_page.sweep.steps.2_3', fallback: 'Step 2-3: Server notification & ready signals'),
                       isCompleted: isReceived,
                       isActive:
                           state.sweepStatus == SweepStatus.creatingSession,
                     ),
                     _ProgressStep(
-                      label: 'Step 4-6: Audio download & verification',
+                      label: _tr('measurement_page.sweep.steps.4_6', fallback: 'Step 4-6: Audio download & verification'),
                       isCompleted: isVerified,
                       isActive: false,
                     ),
                     _ProgressStep(
-                      label: 'Step 7-8: Starting recording',
+                      label: _tr('measurement_page.sweep.steps.7_8', fallback: 'Step 7-8: Starting recording'),
                       isCompleted: isPlayingMeasurement || isRecordingDone,
                       isActive:
                           isVerified &&
@@ -2247,7 +2247,7 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                           !isFailed,
                     ),
                     _ProgressStep(
-                      label: 'Step 9: Playing audiofile',
+                      label: _tr('measurement_page.sweep.steps.9', fallback: 'Step 9: Playing audiofile'),
                       isCompleted: isRecordingDone,
                       isActive: isPlayingMeasurement,
                       trailing: isPlayingMeasurement || isRecordingDone
@@ -2259,12 +2259,12 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                           : null,
                     ),
                     _ProgressStep(
-                      label: 'Step 10-11: Uploading recordings',
+                      label: _tr('measurement_page.sweep.steps.10_11', fallback: 'Step 10-11: Uploading recordings'),
                       isCompleted: isRecordingDone,
                       isActive: false,
                     ),
                     _ProgressStep(
-                      label: 'Step 12: Analyzing impulse response',
+                      label: _tr('measurement_page.sweep.steps.12', fallback: 'Step 12: Analyzing impulse response'),
                       isCompleted: isCompleted,
                       isActive: isAnalyzing,
                     ),
@@ -2289,7 +2289,7 @@ class _SweepProgressDialogState extends State<_SweepProgressDialog> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                state.sweepError ?? 'Unknown error',
+                                state.sweepError ?? _tr('common.unknown_error', fallback: 'Unknown error'),
                                 style: TextStyle(
                                   color: _themeColor('app.error'),
                                 ),

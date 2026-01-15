@@ -69,7 +69,10 @@ class RoomModelingView extends StatelessWidget {
               width: hideToolsPanel ? 0 : 250,
               child: hideToolsPanel
                   ? null
-                  : SonalyzeSurface(child: const ToolsPanel()),
+                  : SonalyzeSurface(
+                      backgroundColor: RoomModelingColors.color('menu.background'),
+                      child: const ToolsPanel(),
+                    ),
             ),
           ),
         ),
@@ -81,6 +84,7 @@ class RoomModelingView extends StatelessWidget {
         // Right Room Plan
         Expanded(
           child: SonalyzeSurface(
+            backgroundColor: RoomModelingColors.color('canvas.background'),
             child: Stack(
               children: [
                 RoomPlanCanvas(enabled: !readOnly),

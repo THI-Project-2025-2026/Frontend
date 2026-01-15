@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:l10n_service/l10n_service.dart';
 
 part 'measurement_page_event.dart';
 part 'measurement_page_state.dart';
@@ -639,7 +640,7 @@ class MeasurementPageBloc
       emit(
         state.copyWith(
           sweepStatus: SweepStatus.failed,
-          sweepError: 'No active lobby',
+          sweepError: AppConstants.translation('measurement_page.errors.no_active_lobby') as String? ?? 'No active lobby',
         ),
       );
       return;
@@ -766,7 +767,7 @@ class MeasurementPageBloc
       );
 
       if (speakers.isEmpty || microphones.isEmpty) {
-        throw Exception('At least one speaker and one microphone are required');
+        throw Exception(AppConstants.translation('measurement_page.errors.minimum_devices_required') as String? ?? 'At least one speaker and one microphone are required');
       }
 
       // Create and configure the measurement session BLoC
@@ -1035,7 +1036,7 @@ class MeasurementPageBloc
   ) async {
     if (state.jobId == null) {
       debugPrint('[MeasurementPageBloc] ERROR: No job ID for analysis');
-      add(const _AnalysisFailed(error: 'No job ID available'));
+      add(_AnalysisFailed(error: AppConstants.translation('measurement_page.errors.no_job_id') as String? ?? 'No job ID available'));
       return;
     }
 
@@ -1079,7 +1080,7 @@ class MeasurementPageBloc
 
       if (resultsData == null) {
         debugPrint('[MeasurementPageBloc] No results in analysis response');
-        add(const _AnalysisFailed(error: 'No results returned from analysis'));
+        add(_AnalysisFailed(error: AppConstants.translation('measurement_page.errors.no_results') as String? ?? 'No results returned from analysis'));
         return;
       }
 

@@ -24,6 +24,16 @@ class RoomModelingL10n {
   static String metersSuffix() => text('units.meters_suffix');
 
   static String degreesSuffix() => text('units.degrees_suffix');
+
+  /// Translate material display name using material ID.
+  /// Falls back to original displayName if translation not found.
+  static String translateMaterial(String materialId, String displayName) {
+    final value = AppConstants.translation('materials.$materialId');
+    if (value is String && value.isNotEmpty) {
+      return value;
+    }
+    return displayName;
+  }
 }
 
 /// Wrapper for fetching room modeling palette colors.

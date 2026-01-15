@@ -111,7 +111,7 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
         if (selectedProfile?.notes?.isNotEmpty == true) ...[
           const SizedBox(height: 8),
           Text(
-            selectedProfile!.notes!,
+            _translateProfileNotes(selectedProfile!.id, selectedProfile.notes),
             style: textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -245,7 +245,7 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
           .map(
             (profile) => DropdownMenuItem(
               value: profile.id,
-              child: Text(profile.displayName, overflow: TextOverflow.ellipsis),
+              child: Text(_translateProfileName(profile.id, profile.displayName), overflow: TextOverflow.ellipsis),
             ),
           )
           .toList(growable: false),
@@ -821,4 +821,20 @@ String _tr(String keyPath, {String? fallback}) {
     return fallback;
   }
   return keyPath;
+}
+
+String _translateProfileName(String profileId, String displayName) {
+  final value = AppConstants.translation('reference_profiles.$profileId.name');
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  return displayName;
+}
+
+String _translateProfileNotes(String profileId, String? notes) {
+  final value = AppConstants.translation('reference_profiles.$profileId.notes');
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  return notes ?? '';
 }

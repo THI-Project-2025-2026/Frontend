@@ -4,9 +4,11 @@
         "cancel": "Cancel",
         "close": "Close",
         "join": "Join",
-        "retry": "Retry"
+        "retry": "Retry",
+        "unknown_error": "Unknown error"
     },
     "app": {
+        "title": "sonalyze",
         "loading_title": "Loading Sonalyze",
         "loading_message": "Preparing your acoustic workspace..."
     },
@@ -79,6 +81,19 @@
             "message_label": "Your message",
             "submit": "Send message",
             "success": "Thanks! We will reach out shortly."
+        },
+        "settings_dialog": {
+            "title": "Settings",
+            "theme_section": "Theme",
+            "theme": {
+                "light": "Light",
+                "dark": "Dark"
+            },
+            "language_section": "Language",
+            "language": {
+                "english": "English",
+                "german": "Deutsch"
+            }
         },
         "faq": {
             "title": "Frequently asked questions",
@@ -227,7 +242,16 @@
             "copy_logs": "Copy debug logs",
             "toggle_debug": "Toggle debug log",
             "logs_copied": "Debug logs copied to clipboard",
-            "copy_all_logs": "Copy All Logs"
+            "copy_all_logs": "Copy All Logs",
+            "steps": {
+                "1": "Step 1: Initiating measurement",
+                "2_3": "Step 2-3: Server notification & ready signals",
+                "4_6": "Step 4-6: Audio download & verification",
+                "7_8": "Step 7-8: Starting recording",
+                "9": "Step 9: Playing audiofile",
+                "10_11": "Step 10-11: Uploading recordings",
+                "12": "Step 12: Analyzing impulse response"
+            }
         },
         "results": {
             "title": "Impulse Response Analysis",
@@ -248,6 +272,13 @@
             "high_end_description": "Full frequency range (20 Hz – 20 kHz) for professional audio equipment with high-quality speakers and microphones.",
             "smartphone": "Smartphone",
             "smartphone_description": "Optimized frequency range (400 Hz – 10 kHz) for typical smartphone speakers and microphones."
+        },
+        "errors": {
+            "no_active_lobby": "No active lobby",
+            "no_job_id": "No job ID available",
+            "no_results": "No results returned from analysis",
+            "analysis_failed": "Analysis failed: {error}",
+            "minimum_devices_required": "At least one speaker and one microphone are required"
         }
     },
     "simulation_page": {
@@ -348,7 +379,19 @@
         },
         "progress": {
             "title": "Running simulation",
-            "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment."
+            "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment.",
+            "tasks": {
+                "connection": "Connection to backend successful",
+                "data_sent": "Data sent to backend successful",
+                "completed": "Simulation completed"
+            }
+        },
+        "errors": {
+            "reference_repository_unavailable": "Reference repository unavailable"
+        },
+        "charts": {
+            "schroeder_curve": "Schroeder-Kurve",
+            "raytracing_legend": "Raytracing"
         },
         "timeline": {
             "title": "Simulation timeline",
@@ -457,5 +500,54 @@
     },
     "sonalyze_webview": {
         "unsupported": "Sonalyze WebView is not supported on Linux targets."
+    },
+    "materials": {
+        "concrete": "Concrete",
+        "brick": "Brick (unpainted)",
+        "marble": "Marble / Tile",
+        "glass": "Glass",
+        "plaster": "Plaster / Drywall",
+        "painted_concrete": "Painted Concrete",
+        "hardwood": "Hardwood Floor",
+        "parquet": "Parquet Floor",
+        "wood_panel": "Wood Paneling",
+        "plywood": "Plywood",
+        "carpet_thin": "Thin Carpet",
+        "carpet_thick": "Thick Carpet",
+        "carpet_padded": "Carpet with Underlay",
+        "curtain_light": "Light Curtain",
+        "curtain_heavy": "Heavy Curtain",
+        "upholstery": "Upholstered Furniture",
+        "acoustic_panel": "Acoustic Panel",
+        "acoustic_foam": "Acoustic Foam",
+        "acoustic_tile": "Acoustic Ceiling Tile",
+        "perforated_panel": "Perforated Panel",
+        "diffuser": "Diffuser Panel",
+        "suspended_ceiling": "Suspended Ceiling",
+        "mineral_fiber": "Mineral Fiber Ceiling",
+        "gypsum_ceiling": "Gypsum Board Ceiling",
+        "default": "Default"
+    },
+    "reference_profiles": {
+        "classroom": {
+            "name": "Classroom",
+            "notes": "Balanced clarity suited for lecture intelligibility."
+        },
+        "concert_hall": {
+            "name": "Concert Hall",
+            "notes": "Long decay that preserves envelopment for orchestral work."
+        },
+        "home_theater": {
+            "name": "Home Theater",
+            "notes": "Short decay with pronounced clarity for cinematic playback."
+        },
+        "recording_studio": {
+            "name": "Recording Studio",
+            "notes": "Highly controlled decay to support critical listening."
+        },
+        "office": {
+            "name": "Open Office",
+            "notes": "Moderate decay to balance privacy and intelligibility."
+        }
     }
 }
