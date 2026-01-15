@@ -323,23 +323,40 @@ class _SimulationResultsChartState extends State<SimulationResultsChart>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: List.generate(entries.length, (index) {
-          final entry = entries[index];
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: index == entries.length - 1 ? 0 : 24,
-            ),
-            child: _MetricComparisonRow(
-              entry: entry,
-              measuredColor: measuredColor,
-              idealColor: referenceColor,
-              raytracingColor: raytracingColor,
-              showRaytracing: showRaytracing,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          const minTableWidth = 760.0;
+          final tableWidth = availableWidth < minTableWidth
+              ? minTableWidth
+              : availableWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(entries.length, (index) {
+                  final entry = entries[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == entries.length - 1 ? 0 : 24,
+                    ),
+                    child: _MetricComparisonRow(
+                      entry: entry,
+                      measuredColor: measuredColor,
+                      idealColor: referenceColor,
+                      raytracingColor: raytracingColor,
+                      showRaytracing: showRaytracing,
+                    ),
+                  );
+                }),
+              ),
             ),
           );
-        }),
+        },
       ),
     );
   }
@@ -616,44 +633,42 @@ class _MetricComparisonRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 240,
-                child: Text(
-                  entry.title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            SizedBox(
+              width: 240,
+              child: Text(
+                entry.title,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
-              _MetricValueChip(
-                label: measuredLabel,
-                valueText: measuredValueText,
-                color: measuredColor,
-                dimmed: !entry.hasMeasurement,
-              ),
+            ),
+            const Spacer(),
+            _MetricValueChip(
+              label: measuredLabel,
+              valueText: measuredValueText,
+              color: measuredColor,
+              dimmed: !entry.hasMeasurement,
+            ),
+            const SizedBox(width: 8),
+            _MetricValueChip(
+              label: idealLabel,
+              valueText: idealValueText,
+              color: idealColor,
+            ),
+            if (showRaytracing) ...[
               const SizedBox(width: 8),
               _MetricValueChip(
-                label: idealLabel,
-                valueText: idealValueText,
-                color: idealColor,
+                label: raytracingLabel,
+                valueText: raytracingValueText,
+                color: raytracingColor,
+                dimmed: !entry.hasRaytracing,
               ),
-              if (showRaytracing) ...[
-                const SizedBox(width: 8),
-                _MetricValueChip(
-                  label: raytracingLabel,
-                  valueText: raytracingValueText,
-                  color: raytracingColor,
-                  dimmed: !entry.hasRaytracing,
-                ),
-              ],
             ],
-          ),
+          ],
         ),
         const SizedBox(height: 12),
         _MetricBarTrack(

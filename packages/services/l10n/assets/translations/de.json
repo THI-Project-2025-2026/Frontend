@@ -328,6 +328,7 @@
         "results": {
             "title": "Simulationsergebnisse",
             "warnings": "Warnungen",
+            "not_available": "n. a.",
             "raytracing_button": "Starte Raytracing-Simulation",
             "raytracing_badge": "Experimentell",
             "legend_measured": "Gemessene Simulation",
