@@ -41,7 +41,8 @@ unlinked_spec.ds
 .pub-cache/
 /build/
 /coverage/
-
+# Production build artifacts
+/prod/
 # Symbolication related
 app.*.symbols
 

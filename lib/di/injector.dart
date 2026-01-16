@@ -46,13 +46,28 @@ void _registerGatewayDependencies() {
 
 GatewayConfig _buildGatewayConfig() {
   final dynamic rawGateway = AppConstants.config('backend.gateway');
+  GatewayConfig config;
+  
   if (rawGateway is Map<String, dynamic>) {
-    return GatewayConfig.fromJson(rawGateway);
-  }
-  if (rawGateway is Map) {
-    return GatewayConfig.fromJson(
+    config = GatewayConfig.fromJson(rawGateway);
+  } else if (rawGateway is Map) {
+    config = GatewayConfig.fromJson(
       rawGateway.map((key, value) => MapEntry(key.toString(), value)),
     );
+  } else {
+    config = GatewayConfig();
   }
-  return GatewayConfig();
+
+  // For web builds, use secure WebSocket through nginx proxy
+  if (kIsWeb) {
+    return GatewayConfig(
+      scheme: 'wss',
+      host: Uri.base.host, // Use current domain (sonalyze.de)
+      port: null, // No explicit port = uses default HTTPS port (443)
+      path: '/ws',
+      deviceId: config.deviceId,
+    );
+  }
+
+  return config;
 }
