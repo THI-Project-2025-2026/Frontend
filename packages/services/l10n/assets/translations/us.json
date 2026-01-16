@@ -141,11 +141,11 @@
                 "code_label": "Lobby code"
             },
             "code_label": "Lobby code",
-            "link_label": "Invite link",
+            "link_label": "Invite link (WIP)",
             "link_placeholder": "Create a lobby to generate a shareable link"
         },
         "qr_panel": {
-            "title": "QR Code",
+            "title": "QR Code (WIP)",
             "helper": "Share the invite as a QR code for on-site quick joins.",
             "placeholder": "Generate a lobby to render the QR"
         },

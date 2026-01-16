@@ -141,11 +141,11 @@
                 "code_label": "Lobby-Code"
             },
             "code_label": "Lobby-Code",
-            "link_label": "Einladungslink",
+            "link_label": "Einladungslink (WIP)",
             "link_placeholder": "Lobby erstellen, um einen teilbaren Link zu erhalten"
         },
         "qr_panel": {
-            "title": "QR-Code",
+            "title": "QR-Code (WIP)",
             "helper": "Teile die Einladung als QR-Code für schnelle Teilnahme vor Ort.",
             "placeholder": "Lobby erstellen, um den QR-Code zu erzeugen"
         },
