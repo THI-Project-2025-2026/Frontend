@@ -607,6 +607,41 @@ class _MeasurementHeader extends StatelessWidget {
             height: 1.6,
           ),
         ),
+        const SizedBox(height: 16),
+        // GDPR Notice: Inform users about audio file storage
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: _themeColor('measurement_page.accent').withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _themeColor('measurement_page.accent').withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 20,
+                color: _themeColor('measurement_page.accent'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _tr(
+                    'measurement_page.gdpr_notice',
+                    fallback: 'Note: Audio files will be recorded and stored during measurement sessions.',
+                  ),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
