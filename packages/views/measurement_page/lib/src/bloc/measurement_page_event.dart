@@ -195,3 +195,28 @@ class _BroadcastCurrentState extends MeasurementPageEvent {
 class MeasurementDebugAudioRequested extends MeasurementPageEvent {
   const MeasurementDebugAudioRequested();
 }
+
+/// Request to run a validation simulation using the room data from measurement.
+/// This allows comparing measurement results with simulation results.
+class MeasurementValidationSimulationRequested extends MeasurementPageEvent {
+  const MeasurementValidationSimulationRequested();
+}
+
+/// Internal event when validation simulation completes successfully.
+class _ValidationSimulationCompleted extends MeasurementPageEvent {
+  const _ValidationSimulationCompleted({required this.result});
+
+  final Map<String, dynamic> result;
+}
+
+/// Internal event when validation simulation fails.
+class _ValidationSimulationFailed extends MeasurementPageEvent {
+  const _ValidationSimulationFailed({required this.error});
+
+  final String error;
+}
+
+/// Resets the validation simulation state.
+class MeasurementValidationSimulationReset extends MeasurementPageEvent {
+  const MeasurementValidationSimulationReset();
+}

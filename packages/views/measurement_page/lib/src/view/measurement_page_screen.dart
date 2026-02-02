@@ -694,6 +694,20 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
           _AnalysisResultsCard(
             key: analysisResultsKey,
             results: state.analysisResults!,
+            validationStatus: state.validationSimulationStatus,
+            validationResult: state.validationSimulationResult,
+            validationError: state.validationSimulationError,
+            hasRoomData: state.sharedRoomPlan != null,
+            onValidatePressed: () {
+              context
+                  .read<MeasurementPageBloc>()
+                  .add(const MeasurementValidationSimulationRequested());
+            },
+            onResetValidation: () {
+              context
+                  .read<MeasurementPageBloc>()
+                  .add(const MeasurementValidationSimulationReset());
+            },
           ),
         ],
       ],
@@ -1250,10 +1264,26 @@ IconData _mapIconName(String? iconName) {
 /// Card displaying full analysis results on step 7 (Review impulse results).
 ///
 /// Uses a universal format - renders whatever metrics the backend provides.
+/// Includes validation simulation functionality to compare measurement with simulation.
 class _AnalysisResultsCard extends StatelessWidget {
-  const _AnalysisResultsCard({super.key, required this.results});
+  const _AnalysisResultsCard({
+    super.key,
+    required this.results,
+    required this.validationStatus,
+    this.validationResult,
+    this.validationError,
+    required this.hasRoomData,
+    required this.onValidatePressed,
+    required this.onResetValidation,
+  });
 
   final AnalysisResults results;
+  final ValidationSimulationStatus validationStatus;
+  final ValidationSimulationResult? validationResult;
+  final String? validationError;
+  final bool hasRoomData;
+  final VoidCallback onValidatePressed;
+  final VoidCallback onResetValidation;
 
   @override
   Widget build(BuildContext context) {
@@ -1357,10 +1387,499 @@ class _AnalysisResultsCard extends StatelessWidget {
                 ),
               ),
             ),
+
+          // Validation simulation section
+          const SizedBox(height: 32),
+          Divider(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+          ),
+          const SizedBox(height: 24),
+
+          // Validation header
+          Row(
+            children: [
+              Icon(Icons.compare_arrows, color: accent, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _tr(
+                    'measurement_page.validation.title',
+                    fallback: 'Simulation Validation',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (validationStatus == ValidationSimulationStatus.completed)
+                TextButton.icon(
+                  onPressed: onResetValidation,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(
+                    _tr(
+                      'measurement_page.validation.reset',
+                      fallback: 'Reset',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _tr(
+              'measurement_page.validation.description',
+              fallback:
+                  'Compare your measurement results with a simulation using the same room configuration.',
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Validation button or status
+          _buildValidationContent(context, accent),
         ],
       ),
     );
   }
+
+  Widget _buildValidationContent(BuildContext context, Color accent) {
+    switch (validationStatus) {
+      case ValidationSimulationStatus.idle:
+        return _buildValidateButton(context);
+
+      case ValidationSimulationStatus.connecting:
+      case ValidationSimulationStatus.sending:
+      case ValidationSimulationStatus.running:
+        return _buildValidationProgress(context);
+
+      case ValidationSimulationStatus.completed:
+        return _buildValidationComparison(context, accent);
+
+      case ValidationSimulationStatus.failed:
+        return _buildValidationError(context);
+    }
+  }
+
+  Widget _buildValidateButton(BuildContext context) {
+    final isEnabled = hasRoomData;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ElevatedButton.icon(
+          onPressed: isEnabled ? onValidatePressed : null,
+          icon: const Icon(Icons.science_outlined),
+          label: Text(
+            _tr(
+              'measurement_page.validation.run_button',
+              fallback: 'Run Validation Simulation',
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          ),
+        ),
+        if (!isEnabled) ...[
+          const SizedBox(height: 8),
+          Text(
+            _tr(
+              'measurement_page.validation.no_room_data',
+              fallback: 'Room data is required to run validation simulation.',
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildValidationProgress(BuildContext context) {
+    String statusText;
+    switch (validationStatus) {
+      case ValidationSimulationStatus.connecting:
+        statusText = _tr(
+          'measurement_page.validation.status.connecting',
+          fallback: 'Connecting to backend...',
+        );
+      case ValidationSimulationStatus.sending:
+        statusText = _tr(
+          'measurement_page.validation.status.sending',
+          fallback: 'Sending simulation request...',
+        );
+      case ValidationSimulationStatus.running:
+        statusText = _tr(
+          'measurement_page.validation.status.running',
+          fallback: 'Running simulation...',
+        );
+      default:
+        statusText = _tr(
+          'measurement_page.validation.status.processing',
+          fallback: 'Processing...',
+        );
+    }
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          statusText,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildValidationError(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _tr(
+                  'measurement_page.validation.error_title',
+                  fallback: 'Validation simulation failed',
+                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (validationError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            validationError!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: onValidatePressed,
+          icon: const Icon(Icons.refresh),
+          label: Text(
+            _tr(
+              'measurement_page.validation.retry',
+              fallback: 'Retry',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildValidationComparison(BuildContext context, Color accent) {
+    final simResult = validationResult;
+    if (simResult == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Create comparison data by matching metric keys
+    final comparisonRows = <_ComparisonRow>[];
+
+    for (final measuredMetric in results.metrics) {
+      final simValue = simResult.metrics[measuredMetric.key];
+      comparisonRows.add(_ComparisonRow(
+        label: measuredMetric.label,
+        key: measuredMetric.key,
+        measuredValue: measuredMetric.value,
+        measuredFormatted: measuredMetric.formattedValue,
+        simulatedValue: simValue,
+        unit: measuredMetric.unit ?? '',
+        icon: _mapIconName(measuredMetric.icon),
+      ));
+    }
+
+    // Add any simulation metrics not in measurement
+    for (final entry in simResult.metrics.entries) {
+      final alreadyIncluded = comparisonRows.any((r) => r.key == entry.key);
+      if (!alreadyIncluded) {
+        comparisonRows.add(_ComparisonRow(
+          label: _formatMetricLabel(entry.key),
+          key: entry.key,
+          measuredValue: null,
+          measuredFormatted: null,
+          simulatedValue: entry.value,
+          unit: _guessUnit(entry.key),
+          icon: Icons.analytics_outlined,
+        ));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Success indicator
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                _tr(
+                  'measurement_page.validation.completed',
+                  fallback: 'Validation simulation completed',
+                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.green.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Warnings if any
+        if (simResult.warnings.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...simResult.warnings.map(
+            (w) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.warning_amber,
+                    color: Colors.orange.shade700,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      w,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 20),
+
+        // Comparison table header
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                _tr(
+                  'measurement_page.validation.metric',
+                  fallback: 'Metric',
+                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                _tr(
+                  'measurement_page.validation.measured',
+                  fallback: 'Measured',
+                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFF3B82F6),
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                _tr(
+                  'measurement_page.validation.simulated',
+                  fallback: 'Simulated',
+                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFF22C55E),
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                _tr(
+                  'measurement_page.validation.difference',
+                  fallback: 'Diff',
+                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+        Divider(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
+
+        // Comparison rows
+        ...comparisonRows.map((row) => _buildComparisonRow(context, row)),
+      ],
+    );
+  }
+
+  Widget _buildComparisonRow(BuildContext context, _ComparisonRow row) {
+    final measuredStr = row.measuredFormatted ?? '-';
+    final simulatedStr = row.simulatedValue != null
+        ? row.simulatedValue!.toStringAsFixed(2)
+        : '-';
+
+    String diffStr = '-';
+    Color? diffColor;
+
+    if (row.measuredValue != null && row.simulatedValue != null) {
+      final diff = row.simulatedValue! - row.measuredValue!;
+      final percentDiff = row.measuredValue != 0
+          ? (diff / row.measuredValue!.abs()) * 100
+          : 0.0;
+      diffStr = '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(2)}';
+      if (percentDiff.abs() <= 10) {
+        diffColor = Colors.green;
+      } else if (percentDiff.abs() <= 25) {
+        diffColor = Colors.orange;
+      } else {
+        diffColor = Colors.red;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: [
+                Icon(row.icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    row.label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '$measuredStr${row.unit.isNotEmpty ? ' ${row.unit}' : ''}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF3B82F6),
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '$simulatedStr${row.unit.isNotEmpty ? ' ${row.unit}' : ''}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF22C55E),
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              diffStr,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: diffColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatMetricLabel(String key) {
+    // Convert snake_case to Title Case
+    return key
+        .split('_')
+        .map((word) => word.isNotEmpty
+            ? '${word[0].toUpperCase()}${word.substring(1)}'
+            : '')
+        .join(' ');
+  }
+
+  String _guessUnit(String key) {
+    if (key.contains('rt60') || key.contains('edt')) return 's';
+    if (key.contains('c50') || key.contains('c80') || key.contains('drr')) return 'dB';
+    if (key.contains('sti')) return '';
+    return '';
+  }
+}
+
+/// Helper class for comparison table rows
+class _ComparisonRow {
+  const _ComparisonRow({
+    required this.label,
+    required this.key,
+    required this.measuredValue,
+    required this.measuredFormatted,
+    required this.simulatedValue,
+    required this.unit,
+    required this.icon,
+  });
+
+  final String label;
+  final String key;
+  final double? measuredValue;
+  final String? measuredFormatted;
+  final double? simulatedValue;
+  final String unit;
+  final IconData icon;
 }
 
 /// Individual metric tile for the results card.
