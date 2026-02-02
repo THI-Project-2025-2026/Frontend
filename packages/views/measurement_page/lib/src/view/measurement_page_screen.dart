@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -660,6 +661,25 @@ class _MeasurementPrimaryLayout extends StatelessWidget {
             key: analysisResultsKey,
             results: state.analysisResults!,
           ),
+          // Impulse Response Time-Domain Chart
+          if (state.analysisResults!.impulseResponseTimeMs != null &&
+              state.analysisResults!.impulseResponseAmplitude != null) ...[
+            const SizedBox(height: 28),
+            _ImpulseResponseChart(
+              timeMs: state.analysisResults!.impulseResponseTimeMs!,
+              amplitude: state.analysisResults!.impulseResponseAmplitude!,
+            ),
+          ],
+          // 1/3-Octave Frequency Response Chart
+          if (state.analysisResults!.thirdOctaveCenterFrequenciesHz != null &&
+              state.analysisResults!.thirdOctaveMagnitudeDb != null) ...[
+            const SizedBox(height: 28),
+            _ThirdOctaveChart(
+              centerFrequenciesHz:
+                  state.analysisResults!.thirdOctaveCenterFrequenciesHz!,
+              magnitudeDb: state.analysisResults!.thirdOctaveMagnitudeDb!,
+            ),
+          ],
         ],
       ],
     );
@@ -2642,6 +2662,399 @@ class _ProgressStep extends StatelessWidget {
             ),
           ),
           if (trailing != null) trailing!,
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget displaying impulse response time-domain plot.
+class _ImpulseResponseChart extends StatelessWidget {
+  const _ImpulseResponseChart({
+    required this.timeMs,
+    required this.amplitude,
+  });
+
+  final List<double> timeMs;
+  final List<double> amplitude;
+
+  @override
+  Widget build(BuildContext context) {
+    final panelColor = _themeColor('measurement_page.panel_background');
+    final accent = _themeColor('measurement_page.accent');
+
+    // Prepare data for chart (downsample if necessary)
+    final spots = <FlSpot>[];
+    const maxPoints = 800;
+    final step = (timeMs.length / maxPoints).ceil().clamp(1, timeMs.length);
+
+    for (var i = 0; i < timeMs.length; i += step) {
+      if (i < timeMs.length && i < amplitude.length) {
+        spots.add(FlSpot(timeMs[i], amplitude[i]));
+      }
+    }
+
+    if (spots.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Find min/max for y-axis
+    var minAmp = amplitude[0];
+    var maxAmp = amplitude[0];
+    for (final amp in amplitude) {
+      if (amp < minAmp) minAmp = amp;
+      if (amp > maxAmp) maxAmp = amp;
+    }
+    final padding = (maxAmp - minAmp) * 0.1;
+    minAmp -= padding;
+    maxAmp += padding;
+
+    return SonalyzeSurface(
+      padding: const EdgeInsets.all(28),
+      backgroundColor: panelColor.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.graphic_eq_outlined, color: accent, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _tr(
+                    'measurement_page.impulse_response.title',
+                    fallback: 'Impulsantwort (Zeit-Bereich)',
+                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _tr(
+              'measurement_page.impulse_response.subtitle',
+              fallback: 'Time-Domain-Darstellung der gemessenen Impulsantwort',
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 240,
+            child: LineChart(
+              LineChartData(
+                minY: minAmp,
+                maxY: maxAmp,
+                clipData: const FlClipData.all(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: true,
+                  horizontalInterval: (maxAmp - minAmp) / 5,
+                  verticalInterval: (timeMs.last - timeMs.first) / 10,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: accent.withValues(alpha: 0.1),
+                      strokeWidth: 1,
+                    );
+                  },
+                  getDrawingVerticalLine: (value) {
+                    return FlLine(
+                      color: accent.withValues(alpha: 0.1),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      getTitlesWidget: (value, meta) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            '${value.toStringAsFixed(1)} ms',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: accent.withValues(alpha: 0.7),
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(2),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: accent.withValues(alpha: 0.7),
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: false,
+                    color: accent,
+                    barWidth: 1.5,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: accent.withValues(alpha: 0.15),
+                    ),
+                  ),
+                ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          '${spot.x.toStringAsFixed(2)} ms\n${spot.y.toStringAsFixed(3)}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget displaying 1/3-octave frequency response.
+class _ThirdOctaveChart extends StatelessWidget {
+  const _ThirdOctaveChart({
+    required this.centerFrequenciesHz,
+    required this.magnitudeDb,
+  });
+
+  final List<double> centerFrequenciesHz;
+  final List<double> magnitudeDb;
+
+  @override
+  Widget build(BuildContext context) {
+    final panelColor = _themeColor('measurement_page.panel_background');
+    final accent = _themeColor('measurement_page.accent');
+
+    if (centerFrequenciesHz.isEmpty || magnitudeDb.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Prepare bar groups
+    final barGroups = <BarChartGroupData>[];
+    for (var i = 0; i < centerFrequenciesHz.length; i++) {
+      if (i < magnitudeDb.length) {
+        barGroups.add(
+          BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: magnitudeDb[i],
+                color: accent,
+                width: 8,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // Find min/max for y-axis
+    var minDb = magnitudeDb[0];
+    var maxDb = magnitudeDb[0];
+    for (final db in magnitudeDb) {
+      if (db < minDb) minDb = db;
+      if (db > maxDb) maxDb = db;
+    }
+    final padding = (maxDb - minDb) * 0.1;
+    minDb -= padding;
+    maxDb += padding;
+
+    return SonalyzeSurface(
+      padding: const EdgeInsets.all(28),
+      backgroundColor: panelColor.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.equalizer_outlined, color: accent, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _tr(
+                    'measurement_page.third_octave.title',
+                    fallback: 'Frequenzantwort (1/3-Oktavbänder)',
+                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _tr(
+              'measurement_page.third_octave.subtitle',
+              fallback:
+                  'Frequenzantwort in 1/3-Oktavband-Auflösung nach IEC 61260 (20 Hz – 20 kHz)',
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 280,
+            child: BarChart(
+              BarChartData(
+                minY: minDb,
+                maxY: maxDb,
+                barGroups: barGroups,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 5,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: accent.withValues(alpha: 0.1),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= centerFrequenciesHz.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final freq = centerFrequenciesHz[index];
+                        // Show labels for selected frequencies
+                        final showLabel = freq == 31.5 ||
+                            freq == 63 ||
+                            freq == 125 ||
+                            freq == 250 ||
+                            freq == 500 ||
+                            freq == 1000 ||
+                            freq == 2000 ||
+                            freq == 4000 ||
+                            freq == 8000 ||
+                            freq == 16000;
+                        if (!showLabel) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            freq >= 1000
+                                ? '${(freq / 1000).toStringAsFixed(freq >= 1000 && freq < 2000 ? 1 : 0)}k'
+                                : freq.toStringAsFixed(freq < 100 ? 1 : 0),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: accent.withValues(alpha: 0.7),
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          '${value.toInt()} dB',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: accent.withValues(alpha: 0.7),
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      if (groupIndex >= centerFrequenciesHz.length) {
+                        return null;
+                      }
+                      final freq = centerFrequenciesHz[groupIndex];
+                      final freqStr = freq >= 1000
+                          ? '${(freq / 1000).toStringAsFixed(1)} kHz'
+                          : '${freq.toStringAsFixed(0)} Hz';
+                      return BarTooltipItem(
+                        '$freqStr\n${rod.toY.toStringAsFixed(1)} dB',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -91,7 +91,14 @@ class DisplayMetric {
 /// Uses a universal format where the backend defines what metrics to display.
 /// The frontend does not need to know about specific metric types.
 class AnalysisResults {
-  const AnalysisResults({required this.samplerateHz, required this.metrics});
+  const AnalysisResults({
+    required this.samplerateHz,
+    required this.metrics,
+    this.impulseResponseTimeMs,
+    this.impulseResponseAmplitude,
+    this.thirdOctaveCenterFrequenciesHz,
+    this.thirdOctaveMagnitudeDb,
+  });
 
   factory AnalysisResults.fromJson(Map<String, dynamic> json) {
     final metricsJson = json['display_metrics'] as List<dynamic>? ?? [];
@@ -102,9 +109,39 @@ class AnalysisResults {
     // Sort metrics by sortOrder
     metrics.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
+    // Parse impulse response data
+    final irData = json['impulse_response'] as Map<String, dynamic>?;
+    List<double>? irTimeMs;
+    List<double>? irAmplitude;
+    if (irData != null) {
+      irTimeMs = (irData['time_ms'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList();
+      irAmplitude = (irData['amplitude'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList();
+    }
+
+    // Parse 1/3-octave data
+    final thirdOctData = json['third_octave_response'] as Map<String, dynamic>?;
+    List<double>? thirdOctFreqs;
+    List<double>? thirdOctMags;
+    if (thirdOctData != null) {
+      thirdOctFreqs = (thirdOctData['center_frequencies_hz'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList();
+      thirdOctMags = (thirdOctData['magnitude_db'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList();
+    }
+
     return AnalysisResults(
       samplerateHz: (json['samplerate_hz'] as num?)?.toInt() ?? 48000,
       metrics: metrics,
+      impulseResponseTimeMs: irTimeMs,
+      impulseResponseAmplitude: irAmplitude,
+      thirdOctaveCenterFrequenciesHz: thirdOctFreqs,
+      thirdOctaveMagnitudeDb: thirdOctMags,
     );
   }
 
@@ -112,6 +149,14 @@ class AnalysisResults {
 
   /// Universal list of metrics to display - backend defines what's shown
   final List<DisplayMetric> metrics;
+
+  /// Impulse response time-domain data
+  final List<double>? impulseResponseTimeMs;
+  final List<double>? impulseResponseAmplitude;
+
+  /// 1/3-octave frequency response data
+  final List<double>? thirdOctaveCenterFrequenciesHz;
+  final List<double>? thirdOctaveMagnitudeDb;
 }
 
 /// Metadata for the measurement step timeline.

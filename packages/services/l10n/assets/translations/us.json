@@ -337,6 +337,13 @@
             "measured": "Measured",
             "ideal": "Ideal",
             "raytracing": "Raytracing",
+            "edc_empty": "No energy decay curve available",
+            "impulse_response_title": "Impulse Response (Time Domain)",
+            "frequency_response_title": "Frequency Response (1/3-Octave Bands)",
+            "amplitude": "Amplitude",
+            "ideal_label": "Ideal (0 dB)",
+            "schroeder_title": "Schroeder Curve",
+            "curve": "Curve",
             "raytracing_performance": {
                 "fast": "Fast",
                 "medium": "Medium",
@@ -349,7 +356,13 @@
         },
         "progress": {
             "title": "Running simulation",
-            "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment."
+            "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment.",
+            "error": "Simulation failed.",
+            "tasks": {
+                "connection": "Connection to backend successful",
+                "payload": "Data sent to backend successfully",
+                "completed": "Simulation completed"
+            }
         },
         "timeline": {
             "title": "Simulation timeline",

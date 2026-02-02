@@ -337,6 +337,13 @@
             "measured": "Gemessen",
             "ideal": "Ideal",
             "raytracing": "Raytracing",
+            "edc_empty": "Keine Energie-Abfallkurve verfügbar",
+            "impulse_response_title": "Impulsantwort (Zeit-Bereich)",
+            "frequency_response_title": "Frequenzantwort (1/3-Oktavbänder)",
+            "amplitude": "Amplitude",
+            "ideal_label": "Ideal (0 dB)",
+            "schroeder_title": "Schröder-Kurve",
+            "curve": "Kurve",
             "raytracing_performance": {
                 "fast": "Schnell",
                 "medium": "Mittel",
@@ -349,7 +356,13 @@
         },
         "progress": {
             "title": "Simulation läuft",
-            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment."
+            "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment.",
+            "error": "Simulation fehlgeschlagen.",
+            "tasks": {
+                "connection": "Verbindung zum Backend erfolgreich",
+                "payload": "Daten erfolgreich an das Backend gesendet",
+                "completed": "Simulation abgeschlossen"
+            }
         },
         "timeline": {
             "title": "Simulations-Ablauf",

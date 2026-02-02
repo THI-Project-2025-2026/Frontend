@@ -58,8 +58,9 @@ GatewayConfig _buildGatewayConfig() {
     config = GatewayConfig();
   }
 
-  // For web builds, use secure WebSocket through nginx proxy
-  if (kIsWeb) {
+  // For web builds in production, use secure WebSocket through nginx proxy
+  // In debug mode, use the configuration from default_configuration.json (localhost)
+  if (kIsWeb && !kDebugMode) {
     return GatewayConfig(
       scheme: 'wss',
       host: Uri.base.host, // Use current domain (sonalyze.de)
