@@ -946,10 +946,7 @@ enum _RaytracingPerformance {
   fast(3, 'Fast'),
   medium(5, 'Medium'),
   high(7, 'High'),
-  extreme(10, 'Extreme'),
-  bonkers(15, 'Bonkers'),
-  bonkersPlus(20, 'Bonkers+'),
-  serverCrasher(30, 'Servercrasher');
+  extreme(10, 'Extreme');
 
   const _RaytracingPerformance(this.bounces, this.label);
   final int bounces;
