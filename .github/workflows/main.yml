@@ -24,3 +24,10 @@ jobs:
             git fetch origin main
             git checkout main
             git pull --ff-only origin main
+            
+            # Use Flutter from server installation
+            export PATH="$PATH:/home/aal/.sdk/flutter/bin:$HOME/.pub-cache/bin"
+            
+            melos bootstrap
+            
+            flutter build web --release --output prod/web
