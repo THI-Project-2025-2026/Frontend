@@ -845,7 +845,7 @@ class _RoomStructureOptionsState extends State<_RoomStructureOptions> {
         return DropdownMenuItem<AcousticMaterial>(
           value: material,
           child: Text(
-            material.displayName,
+            RoomModelingL10n.translateMaterial(material.id, material.displayName),
             overflow: TextOverflow.ellipsis,
           ),
         );

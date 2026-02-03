@@ -1,6 +1,7 @@
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:l10n_service/l10n_service.dart';
 
 part 'simulation_page_event.dart';
 part 'simulation_page_state.dart';
@@ -165,7 +166,7 @@ class SimulationPageBloc
       emit(
         state.copyWith(
           referenceProfilesStatus: SimulationReferenceProfilesStatus.failure,
-          referenceProfilesError: 'Reference repository unavailable',
+          referenceProfilesError: AppConstants.translation('simulation_page.errors.reference_repository_unavailable') as String? ?? 'Reference repository unavailable',
         ),
       );
       return;
