@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:audio_session/audio_session.dart' as audio_session;
 import 'package:audioplayers/audioplayers.dart';
@@ -51,6 +52,12 @@ class MeasurementPageBloc
     on<_ProfileUpdateReceived>(_onProfileUpdateReceived);
     on<_BroadcastCurrentState>(_onBroadcastCurrentState);
     on<MeasurementDebugAudioRequested>(_onDebugAudioRequested);
+    on<MeasurementValidationSimulationRequested>(
+      _onValidationSimulationRequested,
+    );
+    on<_ValidationSimulationCompleted>(_onValidationSimulationCompleted);
+    on<_ValidationSimulationFailed>(_onValidationSimulationFailed);
+    on<MeasurementValidationSimulationReset>(_onValidationSimulationReset);
 
     _gatewaySubscription = _gatewayBloc.envelopes.listen((envelope) {
       if (!envelope.isEvent) {
@@ -1330,5 +1337,165 @@ class MeasurementPageBloc
     } finally {
       await player.dispose();
     }
+  }
+
+  Future<void> _onValidationSimulationRequested(
+    MeasurementValidationSimulationRequested event,
+    Emitter<MeasurementPageState> emit,
+  ) async {
+    debugPrint('[MeasurementPageBloc] Validation simulation requested');
+
+    // Check if we have room data
+    final roomPlan = state.sharedRoomPlan;
+    if (roomPlan == null) {
+      debugPrint('[MeasurementPageBloc] No room plan available for simulation');
+      add(const _ValidationSimulationFailed(
+        error: 'No room data available for simulation',
+      ));
+      return;
+    }
+
+    // Check if we have analysis results to compare against
+    if (state.analysisResults == null) {
+      debugPrint('[MeasurementPageBloc] No measurement results to compare');
+      add(const _ValidationSimulationFailed(
+        error: 'No measurement results available for comparison',
+      ));
+      return;
+    }
+
+    emit(state.copyWith(
+      validationSimulationStatus: ValidationSimulationStatus.connecting,
+      validationSimulationError: null,
+    ));
+
+    try {
+      // Ensure gateway connection
+      if (_gatewayBloc.state.status != GatewayConnectionStatus.connected) {
+        debugPrint('[MeasurementPageBloc] Connecting to gateway...');
+        _gatewayBloc.add(const GatewayConnectionRequested());
+        await _gatewayBloc.stream
+            .firstWhere(
+              (s) => s.status == GatewayConnectionStatus.connected,
+            )
+            .timeout(const Duration(seconds: 12));
+      }
+
+      emit(state.copyWith(
+        validationSimulationStatus: ValidationSimulationStatus.sending,
+      ));
+
+      // Generate a unique request ID
+      final requestId =
+          'validation-${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(10000)}';
+
+      // Prepare simulation payload using the shared room plan
+      final payload = <String, dynamic>{
+        'event': 'simulation.run',
+        'request_id': requestId,
+        'data': {
+          'room_model': roomPlan,
+          'include_rir': false,
+          'use_raytracing': false,
+        },
+      };
+
+      debugPrint(
+        '[MeasurementPageBloc] Sending validation simulation: $requestId',
+      );
+      debugPrint(
+        '[MeasurementPageBloc] Room plan: ${jsonEncode(roomPlan)}',
+      );
+
+      // Set up response listener before sending
+      final responseFuture = _gatewayBloc.envelopes
+          .where(
+            (envelope) =>
+                envelope.requestId == requestId &&
+                envelope.event == 'simulation.run',
+          )
+          .first
+          .timeout(const Duration(seconds: 45));
+
+      // Send the request
+      await _repository.sendJson(payload);
+
+      emit(state.copyWith(
+        validationSimulationStatus: ValidationSimulationStatus.running,
+      ));
+
+      debugPrint('[MeasurementPageBloc] Waiting for simulation response...');
+
+      // Wait for response
+      final envelope = await responseFuture;
+
+      if (envelope.isError) {
+        final errorMsg = jsonEncode(envelope.error ?? {'message': 'error'});
+        throw StateError('Simulation failed: $errorMsg');
+      }
+
+      debugPrint(
+        '[MeasurementPageBloc] Validation simulation completed: ${jsonEncode(envelope.data)}',
+      );
+
+      // Parse and emit success
+      if (envelope.data is Map<String, dynamic>) {
+        add(_ValidationSimulationCompleted(
+          result: Map<String, dynamic>.from(envelope.data as Map),
+        ));
+      } else if (envelope.data is Map) {
+        add(_ValidationSimulationCompleted(
+          result: (envelope.data as Map)
+              .map((k, v) => MapEntry(k.toString(), v)),
+        ));
+      } else {
+        add(const _ValidationSimulationFailed(
+          error: 'Invalid simulation response format',
+        ));
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[MeasurementPageBloc] Validation simulation failed: $error',
+      );
+      debugPrint('[MeasurementPageBloc] Stack trace: $stackTrace');
+      add(_ValidationSimulationFailed(error: error.toString()));
+    }
+  }
+
+  void _onValidationSimulationCompleted(
+    _ValidationSimulationCompleted event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint('[MeasurementPageBloc] Processing validation simulation result');
+    final result = ValidationSimulationResult.fromJson(event.result);
+    emit(state.copyWith(
+      validationSimulationStatus: ValidationSimulationStatus.completed,
+      validationSimulationResult: result,
+      validationSimulationError: null,
+    ));
+  }
+
+  void _onValidationSimulationFailed(
+    _ValidationSimulationFailed event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    debugPrint(
+      '[MeasurementPageBloc] Validation simulation failed: ${event.error}',
+    );
+    emit(state.copyWith(
+      validationSimulationStatus: ValidationSimulationStatus.failed,
+      validationSimulationError: event.error,
+    ));
+  }
+
+  void _onValidationSimulationReset(
+    MeasurementValidationSimulationReset event,
+    Emitter<MeasurementPageState> emit,
+  ) {
+    emit(state.copyWith(
+      validationSimulationStatus: ValidationSimulationStatus.idle,
+      validationSimulationResult: null,
+      validationSimulationError: null,
+    ));
   }
 }

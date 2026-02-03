@@ -134,6 +134,81 @@ class MeasurementStepDescriptor {
 /// Playback phases within the sweep dialog.
 enum PlaybackPhase { idle, measurementPlaying }
 
+/// Status of the validation simulation process.
+enum ValidationSimulationStatus {
+  /// No validation simulation in progress.
+  idle,
+
+  /// Connecting to backend for simulation.
+  connecting,
+
+  /// Sending simulation request.
+  sending,
+
+  /// Waiting for simulation results.
+  running,
+
+  /// Validation simulation completed successfully.
+  completed,
+
+  /// Validation simulation failed.
+  failed,
+}
+
+/// Result metrics from the validation simulation for comparison.
+class ValidationSimulationResult {
+  const ValidationSimulationResult({
+    required this.sampleRateHz,
+    required this.metrics,
+    this.warnings = const [],
+  });
+
+  final int sampleRateHz;
+  final Map<String, double> metrics;
+  final List<String> warnings;
+
+  factory ValidationSimulationResult.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const ValidationSimulationResult(sampleRateHz: 48000, metrics: {});
+    }
+
+    final sampleRate = (json['sample_rate_hz'] as num?)?.toInt() ?? 48000;
+    final pairs = json['pairs'] as List<dynamic>?;
+    final extractedMetrics = <String, double>{};
+    final warnings = <String>[];
+
+    if (pairs != null && pairs.isNotEmpty) {
+      // Extract metrics from the first source-mic pair
+      final firstPair = pairs.first as Map<String, dynamic>?;
+      if (firstPair != null) {
+        final metricsMap = firstPair['metrics'] as Map<String, dynamic>?;
+        if (metricsMap != null) {
+          metricsMap.forEach((key, value) {
+            if (key != 'sti_method' && value is num) {
+              extractedMetrics[key] = value.toDouble();
+            }
+          });
+        }
+        final pairWarnings = firstPair['warnings'] as List<dynamic>?;
+        if (pairWarnings != null) {
+          warnings.addAll(pairWarnings.whereType<String>());
+        }
+      }
+    }
+
+    final globalWarnings = json['warnings'] as List<dynamic>?;
+    if (globalWarnings != null) {
+      warnings.addAll(globalWarnings.whereType<String>());
+    }
+
+    return ValidationSimulationResult(
+      sampleRateHz: sampleRate,
+      metrics: extractedMetrics,
+      warnings: warnings,
+    );
+  }
+}
+
 /// Representation of a connected device in the lobby.
 class MeasurementDevice {
   const MeasurementDevice({
@@ -211,6 +286,9 @@ class MeasurementPageState {
     this.sweepError,
     this.playbackPhase = PlaybackPhase.idle,
     this.analysisResults,
+    this.validationSimulationStatus = ValidationSimulationStatus.idle,
+    this.validationSimulationResult,
+    this.validationSimulationError,
   }) : devices = List<MeasurementDevice>.unmodifiable(devices),
        steps = List<MeasurementStepDescriptor>.unmodifiable(steps);
 
@@ -237,6 +315,15 @@ class MeasurementPageState {
   final String? sweepError;
   final PlaybackPhase playbackPhase;
   final AnalysisResults? analysisResults;
+
+  /// Status of the validation simulation.
+  final ValidationSimulationStatus validationSimulationStatus;
+
+  /// Results from the validation simulation for comparison with measurement.
+  final ValidationSimulationResult? validationSimulationResult;
+
+  /// Error message if validation simulation failed.
+  final String? validationSimulationError;
 
   MeasurementDevice? get localDevice {
     for (final device in devices) {
@@ -293,6 +380,9 @@ class MeasurementPageState {
     String? sweepError,
     PlaybackPhase? playbackPhase,
     AnalysisResults? analysisResults,
+    ValidationSimulationStatus? validationSimulationStatus,
+    ValidationSimulationResult? validationSimulationResult,
+    String? validationSimulationError,
   }) {
     return MeasurementPageState(
       lobbyActive: lobbyActive ?? this.lobbyActive,
@@ -317,6 +407,12 @@ class MeasurementPageState {
       sweepError: sweepError ?? this.sweepError,
       playbackPhase: playbackPhase ?? this.playbackPhase,
       analysisResults: analysisResults ?? this.analysisResults,
+      validationSimulationStatus:
+          validationSimulationStatus ?? this.validationSimulationStatus,
+      validationSimulationResult:
+          validationSimulationResult ?? this.validationSimulationResult,
+      validationSimulationError:
+          validationSimulationError ?? this.validationSimulationError,
     );
   }
 
