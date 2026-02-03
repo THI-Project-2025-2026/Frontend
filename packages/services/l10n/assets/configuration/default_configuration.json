@@ -1,6 +1,6 @@
 {
   "defaultLanguage": "us",
-  "defaultTheme": "dark",
+  "defaultTheme": "light",
   "backend": {
     "gateway": {
       "scheme": "ws",

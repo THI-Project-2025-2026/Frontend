@@ -50,7 +50,7 @@ class SonalyzeApp extends StatelessWidget {
               );
 
           return MaterialApp(
-            title: 'sonalyze',
+            title: AppConstants.translation('app.title') as String? ?? 'sonalyze',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               colorScheme: colorScheme,
