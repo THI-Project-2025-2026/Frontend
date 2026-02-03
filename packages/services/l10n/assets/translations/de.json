@@ -390,6 +390,7 @@
             "description": "Unsere Server berechnen die akustische Antwort für deine Raumkonfiguration. Das dauert nur einen Moment.",
             "tasks": {
                 "connection": "Verbindung zum Backend erfolgreich",
+                "payload": "Daten erfolgreich an Backend gesendet",
                 "data_sent": "Daten erfolgreich an Backend gesendet",
                 "completed": "Simulation abgeschlossen"
             }

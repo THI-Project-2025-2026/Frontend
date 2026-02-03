@@ -390,6 +390,7 @@
             "description": "Our servers are calculating the acoustic response for your room configuration. This will only take a moment.",
             "tasks": {
                 "connection": "Connection to backend successful",
+                "payload": "Data sent to backend successful",
                 "data_sent": "Data sent to backend successful",
                 "completed": "Simulation completed"
             }
