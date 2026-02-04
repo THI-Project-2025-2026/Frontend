@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:backend_gateway/backend_gateway.dart';
 import 'package:core_ui/core_ui.dart';
@@ -323,9 +324,18 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
   static const Uuid _uuid = Uuid();
 
   final List<_SimulationTask> _tasks = <_SimulationTask>[
-    const _SimulationTask(label: 'Connection to backend successful'),
-    const _SimulationTask(label: 'Data sent to backend successful'),
-    const _SimulationTask(label: 'Simulation completed'),
+    const _SimulationTask(
+      labelKey: 'simulation_page.progress.tasks.connection',
+      fallbackLabel: 'Connection to backend successful',
+    ),
+    const _SimulationTask(
+      labelKey: 'simulation_page.progress.tasks.payload',
+      fallbackLabel: 'Data sent to backend successful',
+    ),
+    const _SimulationTask(
+      labelKey: 'simulation_page.progress.tasks.completed',
+      fallbackLabel: 'Simulation completed',
+    ),
   ];
 
   bool _hasError = false;
@@ -582,7 +592,11 @@ class _SimulationProgressDialogState extends State<_SimulationProgressDialog> {
               ],
               if (_hasError) ...[
                 Text(
-                  _errorMessage ?? 'Simulation failed.',
+                  _errorMessage ??
+                      _localizedOr(
+                        'simulation_page.progress.error',
+                        'Simulation failed.',
+                      ),
                   style: textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.error,
                   ),
@@ -680,7 +694,7 @@ class _ProgressStatusRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                task.label,
+                task.localizedLabel(),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
@@ -708,14 +722,18 @@ enum _SimulationTaskStatus { pending, active, success, failure }
 
 class _SimulationTask {
   const _SimulationTask({
-    required this.label,
+    required this.labelKey,
+    required this.fallbackLabel,
     this.status = _SimulationTaskStatus.pending,
     this.detail,
   });
 
-  final String label;
+  final String labelKey;
+  final String fallbackLabel;
   final _SimulationTaskStatus status;
   final String? detail;
+
+  String localizedLabel() => _localizedOr(labelKey, fallbackLabel);
 
   _SimulationTask copyWith({
     _SimulationTaskStatus? status,
@@ -723,7 +741,8 @@ class _SimulationTask {
     bool resetDetail = false,
   }) {
     return _SimulationTask(
-      label: label,
+      labelKey: labelKey,
+      fallbackLabel: fallbackLabel,
       status: status ?? this.status,
       detail: resetDetail ? null : (detail ?? this.detail),
     );
@@ -907,6 +926,22 @@ class _SimulationMetricSectionState extends State<_SimulationMetricSection> {
                     raytracingSampleRateHz: rayResult?.sampleRateHz,
                     accentColor: accentColor,
                   ),
+                  const SizedBox(height: 24),
+                  _ImpulseResponseTimeChart(
+                    pairs: rirPairs,
+                    sampleRateHz: result.sampleRateHz,
+                    raytracingPairs: raytracingPairs,
+                    raytracingSampleRateHz: rayResult?.sampleRateHz,
+                    accentColor: accentColor,
+                  ),
+                  const SizedBox(height: 24),
+                  _FrequencyResponseChart(
+                    pairs: rirPairs,
+                    sampleRateHz: result.sampleRateHz,
+                    raytracingPairs: raytracingPairs,
+                    raytracingSampleRateHz: rayResult?.sampleRateHz,
+                    accentColor: accentColor,
+                  ),
                 ],
                 if (result.warnings.any((w) => !w.contains('STI'))) ...[
                   const SizedBox(height: 24),
@@ -946,10 +981,7 @@ enum _RaytracingPerformance {
   fast(3, 'Fast'),
   medium(5, 'Medium'),
   high(7, 'High'),
-  extreme(10, 'Extreme'),
-  bonkers(15, 'Bonkers'),
-  bonkersPlus(20, 'Bonkers+'),
-  serverCrasher(30, 'Servercrasher');
+  extreme(10, 'Extreme');
 
   const _RaytracingPerformance(this.bounces, this.label);
   final int bounces;
@@ -1154,7 +1186,10 @@ class _RirPreviewState extends State<_RirPreview> {
             children: [
               Expanded(
                 child: Text(
-                  'Schroeder-Kurve',
+                  _localizedOr(
+                    'simulation_page.results.schroeder_title',
+                    'Schroeder-Kurve',
+                  ),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w700,
@@ -1271,7 +1306,7 @@ class _RirPreviewState extends State<_RirPreview> {
         ),
       ),
     );
-    labels.add('Measured');
+    labels.add(_localizedOr('simulation_page.results.measured', 'Measured'));
 
     if (idealSpots.isNotEmpty) {
       lineBars.add(
@@ -1284,7 +1319,7 @@ class _RirPreviewState extends State<_RirPreview> {
           dotData: const FlDotData(show: false),
         ),
       );
-      labels.add('Ideal');
+      labels.add(_localizedOr('simulation_page.results.ideal', 'Ideal'));
     }
 
     if (raytracingSpots.isNotEmpty) {
@@ -1298,7 +1333,8 @@ class _RirPreviewState extends State<_RirPreview> {
           dotData: const FlDotData(show: false),
         ),
       );
-      labels.add('Raytracing');
+        labels
+          .add(_localizedOr('simulation_page.results.raytracing', 'Raytracing'));
     }
 
     return LineChartData(
@@ -1322,9 +1358,9 @@ class _RirPreviewState extends State<_RirPreview> {
             return touchedSpots.map((spot) {
               final timeStr = _formatTime(spot.x);
               final dbStr = spot.y.toStringAsFixed(1);
-              final label = (spot.barIndex < labels.length)
+                final label = (spot.barIndex < labels.length)
                   ? labels[spot.barIndex]
-                  : 'Curve';
+                  : _localizedOr('simulation_page.results.curve', 'Curve');
               return LineTooltipItem(
                 '$label\n$timeStr\n$dbStr dB',
                 const TextStyle(
@@ -1393,6 +1429,742 @@ class _RirPreviewState extends State<_RirPreview> {
     } else {
       return '${seconds.toStringAsFixed(0)}s';
     }
+  }
+}
+
+/// Widget displaying impulse response in time domain
+class _ImpulseResponseTimeChart extends StatefulWidget {
+  const _ImpulseResponseTimeChart({
+    required this.pairs,
+    required this.sampleRateHz,
+    this.raytracingPairs = const <SimulationResultPair>[],
+    this.raytracingSampleRateHz,
+    required this.accentColor,
+  });
+
+  final List<SimulationResultPair> pairs;
+  final int sampleRateHz;
+  final List<SimulationResultPair> raytracingPairs;
+  final int? raytracingSampleRateHz;
+  final Color accentColor;
+
+  @override
+  State<_ImpulseResponseTimeChart> createState() =>
+      _ImpulseResponseTimeChartState();
+}
+
+class _ImpulseResponseTimeChartState
+    extends State<_ImpulseResponseTimeChart> {
+  int _selectedIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _ImpulseResponseTimeChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedIndex >= widget.pairs.length) {
+      _selectedIndex = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = widget.pairs[_selectedIndex];
+    final raytracingMap = {
+      for (final p in widget.raytracingPairs)
+        '${p.sourceId}:${p.microphoneId}': p,
+    };
+    final raytracingPair =
+        raytracingMap['${pair.sourceId}:${pair.microphoneId}'];
+    
+    final rir = pair.rir ?? const <double>[];
+    final raytracingRir = raytracingPair?.rir ?? const <double>[];
+    
+    if (rir.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final sampleRate = widget.sampleRateHz > 0 ? widget.sampleRateHz : 48000;
+    final raytracingSampleRateRaw =
+        widget.raytracingSampleRateHz ?? widget.sampleRateHz;
+    final raytracingSampleRate = raytracingSampleRateRaw > 0
+        ? raytracingSampleRateRaw
+        : 48000;
+    
+    // Process main RIR - show first 1 second to capture full decay
+    final maxSamples = (1.0 * sampleRate).toInt(); // First 1000ms
+    final rirData = rir.take(maxSamples).toList();
+    final timeMs = <double>[];
+    for (var i = 0; i < rirData.length; i++) {
+      timeMs.add((i / sampleRate) * 1000.0);
+    }
+    
+    // Normalize amplitude
+    final maxAmp = rirData.map((x) => x.abs()).reduce((a, b) => a > b ? a : b);
+    final normalized = maxAmp > 0
+        ? rirData.map((x) => x / maxAmp).toList()
+        : rirData;
+    
+    // Prepare spots for main chart
+    final spots = <FlSpot>[];
+    const maxPoints = 800;
+    final step = (normalized.length / maxPoints).ceil().clamp(1, normalized.length);
+    for (var i = 0; i < normalized.length; i += step) {
+      spots.add(FlSpot(timeMs[i], normalized[i]));
+    }
+
+    // Process raytracing RIR
+    final raytracingSpots = <FlSpot>[];
+    if (raytracingRir.isNotEmpty) {
+      final rtMaxSamples = (1.0 * raytracingSampleRate).toInt(); // First 1000ms
+      final rtRirData = raytracingRir.take(rtMaxSamples).toList();
+      final rtMaxAmp = rtRirData.map((x) => x.abs()).reduce((a, b) => a > b ? a : b);
+      final rtNormalized = rtMaxAmp > 0
+          ? rtRirData.map((x) => x / rtMaxAmp).toList()
+          : rtRirData;
+      final rtStep = (rtNormalized.length / maxPoints).ceil().clamp(1, rtNormalized.length);
+      for (var i = 0; i < rtNormalized.length; i += rtStep) {
+        final time = (i / raytracingSampleRate) * 1000.0;
+        raytracingSpots.add(FlSpot(time, rtNormalized[i]));
+      }
+    }
+
+    var minY = -1.0;
+    var maxY = 1.0;
+    for (final amp in normalized) {
+      if (amp < minY) minY = amp;
+      if (amp > maxY) maxY = amp;
+    }
+    for (final spot in raytracingSpots) {
+      if (spot.y < minY) minY = spot.y;
+      if (spot.y > maxY) maxY = spot.y;
+    }
+    final padding = (maxY - minY) * 0.1;
+    minY -= padding;
+    maxY += padding;
+
+    const measuredColor = Color(0xFF3B82F6);
+    const raytracingColor = Color(0xFFEF4444);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.9),
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHigh
+                .withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 35,
+            offset: const Offset(0, 25),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  _localizedOr(
+                    'simulation_page.results.impulse_response_title',
+                    'Impulse Response (Time Domain)',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              if (widget.pairs.length > 1)
+                DropdownButton<int>(
+                  value: _selectedIndex,
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedIndex = value);
+                    }
+                  },
+                  items: [
+                    for (var i = 0; i < widget.pairs.length; i++)
+                      DropdownMenuItem(
+                        value: i,
+                        child: Text(
+                          '${widget.pairs[i].sourceId} -> ${widget.pairs[i].microphoneId}',
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 240,
+            child: LineChart(
+              LineChartData(
+                minY: minY,
+                maxY: maxY,
+                clipData: const FlClipData.all(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: measuredColor.withValues(alpha: 0.15),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      getTitlesWidget: (value, meta) {
+                        final timeStr = value < 1.0
+                            ? '${value.toStringAsFixed(0)} ms'
+                            : value < 10.0
+                                ? '${value.toStringAsFixed(1)} ms'
+                                : '${value.toStringAsFixed(0)} ms';
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            timeStr,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: measuredColor.withValues(alpha: 0.7),
+                                      fontSize: 10,
+                                    ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(2),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: measuredColor.withValues(alpha: 0.7),
+                                    fontSize: 10,
+                                  ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: measuredColor,
+                    barWidth: 2.5,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: measuredColor.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  if (raytracingSpots.isNotEmpty)
+                    LineChartBarData(
+                      spots: raytracingSpots,
+                      isCurved: true,
+                      color: raytracingColor,
+                      barWidth: 2.5,
+                      dashArray: [4, 4],
+                      dotData: const FlDotData(show: false),
+                    ),
+                ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      final labels = [
+                        _localizedOr('simulation_page.results.measured', 'Measured'),
+                        _localizedOr('simulation_page.results.raytracing', 'Raytracing'),
+                      ];
+                      return touchedSpots.map((spot) {
+                        final label = (spot.barIndex < labels.length)
+                          ? labels[spot.barIndex]
+                          : _localizedOr('simulation_page.results.curve', 'Curve');
+                        final amplitudeLabel = _localizedOr(
+                          'simulation_page.results.amplitude',
+                          'Amplitude',
+                        );
+                        return LineTooltipItem(
+                          '$label\n${spot.x.toStringAsFixed(1)} ms\n$amplitudeLabel: ${spot.y.toStringAsFixed(3)}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget displaying 1/3-octave frequency response
+class _FrequencyResponseChart extends StatefulWidget {
+  const _FrequencyResponseChart({
+    required this.pairs,
+    required this.sampleRateHz,
+    this.raytracingPairs = const <SimulationResultPair>[],
+    this.raytracingSampleRateHz,
+    required this.accentColor,
+  });
+
+  final List<SimulationResultPair> pairs;
+  final int sampleRateHz;
+  final List<SimulationResultPair> raytracingPairs;
+  final int? raytracingSampleRateHz;
+  final Color accentColor;
+
+  @override
+  State<_FrequencyResponseChart> createState() =>
+      _FrequencyResponseChartState();
+}
+
+class _FrequencyResponseChartState extends State<_FrequencyResponseChart> {
+  int _selectedIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _FrequencyResponseChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedIndex >= widget.pairs.length) {
+      _selectedIndex = 0;
+    }
+  }
+
+  // Calculate 1/3-octave bands according to IEC 61260
+  List<double> _getThirdOctaveBands() {
+    const fRef = 1000.0;
+    final bands = <double>[];
+    for (var n = -18; n < 14; n++) {
+      final f = fRef * pow(2.0, n / 3.0);
+      if (f >= 20.0 && f <= 20000.0) {
+        bands.add(f);
+      }
+    }
+    return bands;
+  }
+
+  // Compute frequency response in 1/3-octave bands
+  Map<String, List<double>> _computeThirdOctave(
+    List<double> rir,
+    int sampleRate,
+  ) {
+    if (rir.isEmpty) {
+      return {'frequencies': [], 'magnitudes': []};
+    }
+
+    // Compute FFT using a simplified real-valued DFT
+    final nFft = pow(2, (log(max(4096, rir.length)) / log(2)).ceil()).toInt();
+    final windowed = List<double>.filled(nFft, 0.0);
+    
+    // Apply Hann window
+    for (var i = 0; i < min(rir.length, nFft); i++) {
+      final window = 0.5 * (1 - cos(2 * pi * i / (rir.length - 1)));
+      windowed[i] = rir[i] * window;
+    }
+
+    // Compute magnitude spectrum
+    final spec = <double>[];
+    final freqs = <double>[];
+    for (var k = 0; k <= nFft ~/ 2; k++) {
+      freqs.add(k * sampleRate / nFft);
+      
+      var real = 0.0;
+      var imag = 0.0;
+      for (var n = 0; n < nFft; n++) {
+        final angle = -2 * pi * k * n / nFft;
+        real += windowed[n] * cos(angle);
+        imag += windowed[n] * sin(angle);
+      }
+      
+      final mag = sqrt(real * real + imag * imag);
+      spec.add(mag);
+    }
+
+    // Compute 1/3-octave bands
+    final bands = _getThirdOctaveBands();
+    final magnitudes = <double>[];
+
+    for (final fc in bands) {
+      final fLower = fc / pow(2.0, 1.0 / 6.0);
+      final fUpper = fc * pow(2.0, 1.0 / 6.0);
+
+      var sumMag = 0.0;
+      var count = 0;
+      for (var i = 0; i < freqs.length; i++) {
+        if (freqs[i] >= fLower && freqs[i] <= fUpper) {
+          sumMag += spec[i] * spec[i];
+          count++;
+        }
+      }
+
+      final rms = count > 0 ? sqrt(sumMag / count) : 1e-10;
+      magnitudes.add(rms);
+    }
+
+    // Normalize to 0 dB peak and clip minimum at -60 dB
+    final maxMag = magnitudes.isEmpty ? 1.0 : magnitudes.reduce(max);
+    final magnitudesDb = magnitudes.map((m) {
+      final ratio = m / max(maxMag, 1e-10);
+      final db = 20 * log(max(ratio, 1e-6)) / ln10; // -6 corresponds to -120dB, clamped below
+      return db.clamp(-60.0, 20.0); // Clip to reasonable range
+    }).toList();
+
+    return {'frequencies': bands, 'magnitudes': magnitudesDb};
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = widget.pairs[_selectedIndex];
+    final raytracingMap = {
+      for (final p in widget.raytracingPairs)
+        '${p.sourceId}:${p.microphoneId}': p,
+    };
+    final raytracingPair =
+        raytracingMap['${pair.sourceId}:${pair.microphoneId}'];
+    
+    final rir = pair.rir ?? const <double>[];
+    final raytracingRir = raytracingPair?.rir ?? const <double>[];
+
+    if (rir.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final sampleRate = widget.sampleRateHz > 0 ? widget.sampleRateHz : 48000;
+    final raytracingSampleRateRaw =
+        widget.raytracingSampleRateHz ?? widget.sampleRateHz;
+    final raytracingSampleRate = raytracingSampleRateRaw > 0
+        ? raytracingSampleRateRaw
+        : 48000;
+    
+    final result = _computeThirdOctave(rir, sampleRate);
+    final frequencies = result['frequencies'] as List<double>;
+    final magnitudes = result['magnitudes'] as List<double>;
+
+    // Compute raytracing frequency response
+    List<double> raytracingMagnitudes = [];
+    if (raytracingRir.isNotEmpty) {
+      final rtResult = _computeThirdOctave(raytracingRir, raytracingSampleRate);
+      raytracingMagnitudes = rtResult['magnitudes'] as List<double>;
+    }
+
+    if (frequencies.isEmpty || magnitudes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Create ideal flat frequency response (0 dB for all frequencies)
+    final idealMagnitudes = List<double>.filled(frequencies.length, 0.0);
+
+    // Prepare bar groups with measured, raytracing, and ideal data
+    final barGroups = <BarChartGroupData>[];
+    for (var i = 0; i < frequencies.length; i++) {
+      if (i < magnitudes.length) {
+        final rods = <BarChartRodData>[
+          BarChartRodData(
+            toY: magnitudes[i],
+            color: const Color(0xFF3B82F6),
+            width: raytracingMagnitudes.isNotEmpty ? 5 : 8,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(4),
+            ),
+          ),
+        ];
+        
+        if (raytracingMagnitudes.isNotEmpty && i < raytracingMagnitudes.length) {
+          rods.add(
+            BarChartRodData(
+              toY: raytracingMagnitudes[i],
+              color: const Color(0xFFEF4444),
+              width: 5,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(4),
+              ),
+            ),
+          );
+        }
+        
+        barGroups.add(
+          BarChartGroupData(
+            x: i,
+            barRods: rods,
+            barsSpace: 2,
+          ),
+        );
+      }
+    }
+
+    var minDb = magnitudes[0];
+    var maxDb = magnitudes[0];
+    for (final db in magnitudes) {
+      if (db < minDb) minDb = db;
+      if (db > maxDb) maxDb = db;
+    }
+    for (final db in raytracingMagnitudes) {
+      if (db < minDb) minDb = db;
+      if (db > maxDb) maxDb = db;
+    }
+    // Include 0 dB (ideal) in the range
+    if (0.0 < minDb) minDb = 0.0;
+    if (0.0 > maxDb) maxDb = 0.0;
+    
+    final padding = max((maxDb - minDb) * 0.1, 5.0);
+    minDb -= padding;
+    maxDb += padding;
+
+    const measuredColor = Color(0xFF3B82F6);
+    const raytracingColor = Color(0xFFEF4444);
+    const idealColor = Color(0xFF22C55E);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.9),
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHigh
+                .withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 35,
+            offset: const Offset(0, 25),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  _localizedOr(
+                    'simulation_page.results.frequency_response_title',
+                    'Frequency Response (1/3-Octave Bands)',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              if (widget.pairs.length > 1)
+                DropdownButton<int>(
+                  value: _selectedIndex,
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedIndex = value);
+                    }
+                  },
+                  items: [
+                    for (var i = 0; i < widget.pairs.length; i++)
+                      DropdownMenuItem(
+                        value: i,
+                        child: Text(
+                          '${widget.pairs[i].sourceId} -> ${widget.pairs[i].microphoneId}',
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 280,
+            child: Stack(
+              children: [
+                BarChart(
+                  BarChartData(
+                    minY: minDb,
+                    maxY: maxDb,
+                    barGroups: barGroups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: 10, // Grid line every 10 dB
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: measuredColor.withValues(alpha: 0.15),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
+                    extraLinesData: ExtraLinesData(
+                      horizontalLines: [
+                        HorizontalLine(
+                          y: 0.0,
+                          color: idealColor,
+                          strokeWidth: 2,
+                          dashArray: [5, 5],
+                          label: HorizontalLineLabel(
+                            show: true,
+                            alignment: Alignment.topRight,
+                            padding: const EdgeInsets.only(right: 5, bottom: 5),
+                            style: TextStyle(
+                              color: idealColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            labelResolver: (line) => _localizedOr(
+                              'simulation_page.results.ideal_label',
+                              'Ideal (0 dB)',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= frequencies.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final freq = frequencies[index];
+                        final showLabel = freq == 31.5 ||
+                            freq.round() == 63 ||
+                            freq.round() == 125 ||
+                            freq.round() == 250 ||
+                            freq.round() == 500 ||
+                            freq.round() == 1000 ||
+                            freq.round() == 2000 ||
+                            freq.round() == 4000 ||
+                            freq.round() == 8000 ||
+                            freq.round() == 16000;
+                        if (!showLabel) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            freq >= 1000
+                                ? '${(freq / 1000).toStringAsFixed(freq >= 1000 && freq < 2000 ? 1 : 0)}k'
+                                : freq.toStringAsFixed(freq < 100 ? 1 : 0),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: measuredColor.withValues(alpha: 0.7),
+                                      fontSize: 10,
+                                    ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          '${value.toInt()} dB',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: measuredColor.withValues(alpha: 0.7),
+                                    fontSize: 10,
+                                  ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      if (groupIndex >= frequencies.length) {
+                        return null;
+                      }
+                      final freq = frequencies[groupIndex];
+                      final freqStr = freq >= 1000
+                          ? '${(freq / 1000).toStringAsFixed(1)} kHz'
+                          : '${freq.toStringAsFixed(0)} Hz';
+                      return BarTooltipItem(
+                        '$freqStr\n${rod.toY.toStringAsFixed(1)} dB',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

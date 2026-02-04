@@ -29,7 +29,7 @@ class SettingsDialog extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Settings',
+                    AppConstants.translation('landing_page.settings_dialog.title') as String? ?? 'Settings',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -45,13 +45,13 @@ class SettingsDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle(context, 'Theme'),
+              _buildSectionTitle(context, AppConstants.translation('landing_page.settings_dialog.theme_section') as String? ?? 'Theme'),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _OptionButton(
-                      label: 'Light',
+                      label: AppConstants.translation('landing_page.settings_dialog.theme.light') as String? ?? 'Light',
                       icon: Icons.light_mode,
                       isSelected: activeTheme == 'light',
                       onTap: () => context.read<JsonHotReloadBloc>().add(
@@ -62,7 +62,7 @@ class SettingsDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _OptionButton(
-                      label: 'Dark',
+                      label: AppConstants.translation('landing_page.settings_dialog.theme.dark') as String? ?? 'Dark',
                       icon: Icons.dark_mode,
                       isSelected: activeTheme == 'dark',
                       onTap: () => context.read<JsonHotReloadBloc>().add(
@@ -73,13 +73,13 @@ class SettingsDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle(context, 'Language'),
+              _buildSectionTitle(context, AppConstants.translation('landing_page.settings_dialog.language_section') as String? ?? 'Language'),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _OptionButton(
-                      label: 'English',
+                      label: AppConstants.translation('landing_page.settings_dialog.language.english') as String? ?? 'English',
                       countryCode: 'us',
                       isSelected: activeLanguage == 'us',
                       onTap: () => context.read<JsonHotReloadBloc>().add(
@@ -90,7 +90,7 @@ class SettingsDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _OptionButton(
-                      label: 'Deutsch',
+                      label: AppConstants.translation('landing_page.settings_dialog.language.german') as String? ?? 'Deutsch',
                       countryCode: 'de',
                       isSelected: activeLanguage == 'de',
                       onTap: () => context.read<JsonHotReloadBloc>().add(
