@@ -47,7 +47,7 @@ void _registerGatewayDependencies() {
 GatewayConfig _buildGatewayConfig() {
   final dynamic rawGateway = AppConstants.config('backend.gateway');
   GatewayConfig config;
-  
+
   if (rawGateway is Map<String, dynamic>) {
     config = GatewayConfig.fromJson(rawGateway);
   } else if (rawGateway is Map) {
@@ -59,7 +59,7 @@ GatewayConfig _buildGatewayConfig() {
   }
 
   // For web builds in production, use secure WebSocket through nginx proxy
-  // In debug mode, use the configuration from default_configuration.json (localhost)
+  // In debug mode, use the configuration from default_configuration.json (152.53.160.24)
   if (kIsWeb && !kDebugMode) {
     return GatewayConfig(
       scheme: 'wss',

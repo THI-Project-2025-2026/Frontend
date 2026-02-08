@@ -40,7 +40,7 @@ class GatewayConfig {
           : 'ws',
       host: (json['host'] as String?)?.trim().isNotEmpty == true
           ? json['host'] as String
-          : 'localhost', // Original: '152.53.160.24'
+          : '152.53.160.24',
       port: _parsePort(json['port']) ?? 8000,
       path: (json['path'] as String?) ?? '/ws',
       queryParameters: qp,
